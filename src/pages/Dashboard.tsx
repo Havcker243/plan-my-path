@@ -9,7 +9,8 @@ import {
   Plus,
   ArrowRight,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { exportToICS } from '@/utils/icsExport';
+import { toast } from '@/hooks/use-toast';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -39,6 +42,15 @@ export function Dashboard() {
   if (!isOnboarded) {
     return null;
   }
+
+  // Personalized greeting
+  const displayName = studentProfile?.name || 'Student';
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
 
   const progressPercent = useMemo(() => {
     return totalCredits > 0 ? Math.round((earnedCredits / totalCredits) * 100) : 0;
@@ -66,6 +78,14 @@ export function Dashboard() {
     return issues;
   }, [semesters]);
 
+  const handleExportICS = () => {
+    exportToICS(semesters);
+    toast({
+      title: "Calendar exported",
+      description: "Your .ics file has been downloaded",
+    });
+  };
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -76,7 +96,7 @@ export function Dashboard() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back{studentProfile?.name ? `, ${studentProfile.name}` : ''}!
+            {greeting}, {displayName}!
           </h1>
           <p className="text-muted-foreground">
             Here's an overview of your academic progress.
@@ -123,9 +143,9 @@ export function Dashboard() {
               <CardContent>
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-bold text-foreground">
-                    {currentGPA.toFixed(2)}
+                    {currentGPA.toFixed(3)}
                   </span>
-                  <span className="text-muted-foreground mb-1">/ 4.00</span>
+                  <span className="text-muted-foreground mb-1">/ 4.000</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
                   Based on {earnedCredits > 0 ? `${Math.floor(earnedCredits / 3)} courses` : 'no courses yet'}
@@ -217,6 +237,36 @@ export function Dashboard() {
                   <div className="text-left">
                     <p className="font-medium text-foreground">Add Courses</p>
                     <p className="text-xs text-muted-foreground">Import or add completed courses</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 justify-start gap-3 border-border hover:bg-accent/10 hover:border-accent"
+                  onClick={handleExportICS}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Download className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-foreground">Export Calendar</p>
+                    <p className="text-xs text-muted-foreground">Download .ics for Outlook/Google</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-auto py-4 justify-start gap-3 border-border hover:bg-accent/10 hover:border-accent"
+                  onClick={() => navigate('/planner')}
+                >
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-foreground">Calendar View</p>
+                    <p className="text-xs text-muted-foreground">See weekly schedule</p>
                   </div>
                   <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground" />
                 </Button>

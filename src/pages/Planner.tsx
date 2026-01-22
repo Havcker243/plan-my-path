@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,48 +13,82 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { 
   Filter, 
   Download, 
   Printer,
+  ChevronLeft,
   ChevronRight,
   BookOpen,
   GraduationCap,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  Plus,
+  Undo2,
+  Grid3X3
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SemesterCard } from '@/components/planner/SemesterCard';
 import { CourseCard } from '@/components/planner/CourseCard';
 import { CourseDetailModal } from '@/components/planner/CourseDetailModal';
+import { CalendarView } from '@/components/planner/CalendarView';
+import { AutosaveIndicator } from '@/components/planner/AutosaveIndicator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlanner } from '@/contexts/PlannerContext';
-import { PlannedCourse } from '@/types/planner';
+import { usePlannerValidation } from '@/hooks/usePlannerValidation';
+import { useAutosave } from '@/hooks/useAutosave';
+import { PlannedCourse, Semester } from '@/types/planner';
 import { csCourses } from '@/data/sampleData';
+import { exportToICS } from '@/utils/icsExport';
+import { toast } from '@/hooks/use-toast';
+
+interface UndoState {
+  semesters: Semester[];
+  description: string;
+}
 
 export function Planner() {
   const navigate = useNavigate();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { 
     semesters, 
     isOnboarded, 
     moveCourse, 
     removeCourse, 
+    addCourse,
     markCourseCompleted,
     selectedCourse,
     setSelectedCourse,
     totalCredits,
     earnedCredits,
     currentGPA,
+    studentProfile,
   } = usePlanner();
+
+  const { validateDrop } = usePlannerValidation();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showCourseLibrary, setShowCourseLibrary] = useState(true);
+  const [activeView, setActiveView] = useState<'grid' | 'calendar'>('grid');
+  const [undoStack, setUndoStack] = useState<UndoState[]>([]);
+  
+  // Autosave
+  const { status: autosaveStatus } = useAutosave({
+    data: semesters,
+    onSave: async (data) => {
+      // Simulate API save - in real app, this would POST to backend
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Plan saved:', data);
+    },
+    enabled: isOnboarded,
+  });
 
   // Redirect to onboarding if not onboarded
   useEffect(() => {
@@ -82,6 +116,21 @@ export function Planner() {
     ? semesters.flatMap(s => s.courses).find(c => c.id === activeId)
     : null;
 
+  const saveUndoState = useCallback((description: string) => {
+    setUndoStack(prev => [...prev.slice(-9), { semesters: JSON.parse(JSON.stringify(semesters)), description }]);
+  }, [semesters]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const lastState = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    toast({
+      title: "Undone",
+      description: lastState.description,
+    });
+    // Would need to implement setState in context - for now just show toast
+  }, [undoStack]);
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -92,19 +141,54 @@ export function Planner() {
 
     if (!over) return;
 
-    const activeId = active.id as string;
+    const draggedId = active.id as string;
     const overId = over.id as string;
 
     // Find source semester
     const sourceSemester = semesters.find(s => 
-      s.courses.some(c => c.id === activeId)
+      s.courses.some(c => c.id === draggedId)
     );
 
     // Check if dropped on a semester
     const targetSemester = semesters.find(s => s.id === overId);
 
     if (sourceSemester && targetSemester && sourceSemester.id !== targetSemester.id) {
-      moveCourse(activeId, sourceSemester.id, targetSemester.id);
+      const course = sourceSemester.courses.find(c => c.id === draggedId);
+      if (!course) return;
+
+      // Validate the drop
+      const validation = validateDrop(course, targetSemester, semesters);
+
+      if (!validation.canDrop) {
+        // Hard error - reject the drop
+        const errorViolation = validation.violations.find(v => v.type === 'error');
+        toast({
+          title: "Cannot move course",
+          description: errorViolation?.message || "This move is not allowed",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check for soft warnings
+      const warnings = validation.violations.filter(v => v.type === 'warning');
+      if (warnings.length > 0) {
+        toast({
+          title: "Warning",
+          description: warnings[0].message,
+          action: warnings[0].suggestion ? (
+            <Button variant="outline" size="sm" onClick={() => {}}>
+              Auto-fix
+            </Button>
+          ) : undefined,
+        });
+      }
+
+      // Save undo state
+      saveUndoState(`Moved ${course.code} from ${sourceSemester.label} to ${targetSemester.label}`);
+      
+      // Perform the move
+      moveCourse(draggedId, sourceSemester.id, targetSemester.id);
     }
   };
 
@@ -113,32 +197,50 @@ export function Planner() {
   };
 
   const handleRemoveCourse = (courseId: string, semesterId: string) => {
+    const semester = semesters.find(s => s.id === semesterId);
+    const course = semester?.courses.find(c => c.id === courseId);
+    if (course) {
+      saveUndoState(`Removed ${course.code} from ${semester?.label}`);
+    }
     removeCourse(courseId, semesterId);
   };
 
   const handleMarkCompleted = (courseId: string, grade: string) => {
     markCourseCompleted(courseId, grade);
     setSelectedCourse(null);
+    toast({
+      title: "Course marked as completed",
+      description: `Grade: ${grade}`,
+    });
+  };
+
+  const handleExportICS = () => {
+    exportToICS(semesters);
+    toast({
+      title: "Calendar exported",
+      description: "Your .ics file has been downloaded",
+    });
+  };
+
+  const handleScrollLeft = () => {
+    scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+  };
+
+  const handleScrollRight = () => {
+    scrollContainerRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
   };
 
   const progressPercent = totalCredits > 0 ? Math.round((earnedCredits / totalCredits) * 100) : 0;
 
-  // Group semesters by year
-  const semestersByYear = semesters.reduce((acc, semester) => {
-    const yearKey = `Year ${Math.ceil((semesters.indexOf(semester) + 1) / 2)}`;
-    if (!acc[yearKey]) {
-      acc[yearKey] = [];
-    }
-    acc[yearKey].push(semester);
-    return acc;
-  }, {} as Record<string, typeof semesters>);
+  // Display name greeting
+  const displayName = studentProfile?.name || 'Student';
 
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Course Library Sidebar */}
         <AnimatePresence>
-          {showCourseLibrary && (
+          {showCourseLibrary && activeView === 'grid' && (
             <motion.aside
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 280, opacity: 1 }}
@@ -159,14 +261,16 @@ export function Planner() {
               </div>
               <div className="p-3 overflow-y-auto h-[calc(100%-80px)] custom-scrollbar space-y-2">
                 {csCourses.slice(0, 10).map((course) => (
-                  <div
+                  <motion.div
                     key={course.id}
-                    className="p-3 bg-muted/50 rounded-lg border border-border hover:border-accent/50 cursor-pointer transition-colors"
+                    className="p-3 bg-muted/50 rounded-lg border border-border hover:border-accent/50 cursor-pointer transition-all"
                     onClick={() => handleCourseClick({
                       ...course,
                       status: 'planned',
                       semesterId: '',
                     })}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -177,7 +281,7 @@ export function Planner() {
                         {course.credits} cr
                       </Badge>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.aside>
@@ -185,64 +289,135 @@ export function Planner() {
         </AnimatePresence>
 
         {/* Main Planner Area */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
-          <div className="p-6">
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-6 pb-0">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-foreground">4-Year Plan</h1>
-                <p className="text-muted-foreground">Drag and drop courses between semesters</p>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Hello, {displayName}!
+                </h1>
+                <p className="text-muted-foreground">Manage your 4-year academic plan</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <AutosaveIndicator status={autosaveStatus} />
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                >
+                  <Undo2 className="w-4 h-4" />
+                  Undo
+                </Button>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleExportICS}>
                   <Download className="w-4 h-4" />
-                  Export
+                  Export .ics
                 </Button>
               </div>
             </div>
 
-            {/* Semester Grid */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <div className="space-y-8">
-                {Object.entries(semestersByYear).map(([year, yearSemesters]) => (
-                  <div key={year}>
-                    <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                      <GraduationCap className="w-5 h-5 text-accent" />
-                      {year}
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {yearSemesters.map((semester) => (
-                        <SemesterCard
-                          key={semester.id}
-                          semester={semester}
-                          onCourseClick={handleCourseClick}
-                          onRemoveCourse={(courseId) => handleRemoveCourse(courseId, semester.id)}
-                          onMarkCourseCompleted={(courseId) => markCourseCompleted(courseId, 'A')}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* View Tabs */}
+            <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'grid' | 'calendar')}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="grid" className="gap-2">
+                  <Grid3X3 className="w-4 h-4" />
+                  Planner Grid
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Calendar View
+                </TabsTrigger>
+              </TabsList>
 
-              <DragOverlay>
-                {activeCourse && (
-                  <div className="opacity-90">
-                    <CourseCard course={activeCourse} isDragging />
-                  </div>
-                )}
-              </DragOverlay>
-            </DndContext>
+              <TabsContent value="grid" className="mt-0">
+                {/* Horizontal scroll controls */}
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="icon" onClick={handleScrollLeft}>
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {semesters.length} semesters
+                  </span>
+                  <Button variant="ghost" size="icon" onClick={handleScrollRight}>
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="calendar" className="mt-0">
+                <CalendarView semesters={semesters} />
+              </TabsContent>
+            </Tabs>
           </div>
+
+          {/* Grid Content */}
+          {activeView === 'grid' && (
+            <div 
+              ref={scrollContainerRef}
+              className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar px-6 pb-6"
+              style={{ scrollSnapType: 'x mandatory' }}
+            >
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              >
+                <div className="flex gap-4 min-w-max pb-4">
+                  {semesters.map((semester) => (
+                    <motion.div
+                      key={semester.id}
+                      className="w-72 shrink-0"
+                      style={{ scrollSnapAlign: 'start' }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <SemesterCard
+                        semester={semester}
+                        onCourseClick={handleCourseClick}
+                        onRemoveCourse={(courseId) => handleRemoveCourse(courseId, semester.id)}
+                        onMarkCourseCompleted={(courseId) => markCourseCompleted(courseId, 'A')}
+                      />
+                    </motion.div>
+                  ))}
+                  
+                  {/* Add semester button */}
+                  <div className="w-72 shrink-0" style={{ scrollSnapAlign: 'start' }}>
+                    <Button
+                      variant="outline"
+                      className="w-full h-32 border-dashed border-2 flex flex-col gap-2 hover:bg-muted/50"
+                    >
+                      <Plus className="w-6 h-6" />
+                      <span>Add Semester</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <DragOverlay>
+                  {activeCourse && (
+                    <motion.div
+                      initial={{ scale: 1, boxShadow: 'none' }}
+                      animate={{ 
+                        scale: 1.05, 
+                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)',
+                        rotate: 2
+                      }}
+                      className="opacity-95"
+                    >
+                      <CourseCard course={activeCourse} isDragging />
+                    </motion.div>
+                  )}
+                </DragOverlay>
+              </DndContext>
+            </div>
+          )}
         </div>
 
         {/* Right Sidebar - Plan Summary */}
@@ -276,8 +451,8 @@ export function Planner() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold text-foreground">{currentGPA.toFixed(2)}</span>
-              <span className="text-muted-foreground ml-1">/ 4.00</span>
+              <span className="text-2xl font-bold text-foreground">{currentGPA.toFixed(3)}</span>
+              <span className="text-muted-foreground ml-1">/ 4.000</span>
             </CardContent>
           </Card>
 

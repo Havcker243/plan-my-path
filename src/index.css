@@ -208,10 +208,26 @@
   /* Drag and drop styles */
   .dragging {
     @apply opacity-50 scale-105 shadow-lg z-50;
+    animation: dragPulse 0.3s ease-out;
+  }
+
+  @keyframes dragPulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(var(--accent), 0); }
+    50% { transform: scale(1.02); box-shadow: 0 4px 20px rgba(var(--accent), 0.3); }
+    100% { transform: scale(1.05); box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
   }
 
   .drop-indicator {
     @apply border-2 border-dashed border-accent rounded-lg bg-accent/5;
+  }
+
+  .drop-success {
+    animation: dropHighlight 0.4s ease-out;
+  }
+
+  @keyframes dropHighlight {
+    0% { background-color: hsl(var(--accent) / 0.2); }
+    100% { background-color: transparent; }
   }
 
   /* Progress ring */
@@ -219,6 +235,26 @@
     transform: rotate(-90deg);
   }
 
+  /* Skeleton loader */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded;
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
   .progress-ring circle {
     transition: stroke-dashoffset 0.5s ease-out;
   }

@@ -9,7 +9,8 @@ import {
   Upload, 
   CheckCircle2,
   BookOpen,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { csCourses } from '@/data/sampleData';
+import { toast } from '@/hooks/use-toast';
 
 const steps = [
   { id: 1, title: 'Welcome', icon: Sparkles },
@@ -26,6 +28,13 @@ const steps = [
   { id: 4, title: 'Courses', icon: Upload },
   { id: 5, title: 'Generate', icon: GraduationCap },
 ];
+
+interface FormErrors {
+  majorId?: string;
+  catalogYear?: string;
+  admittedYear?: string;
+  targetGraduation?: string;
+}
 
 export function Onboarding() {
   const navigate = useNavigate();
@@ -38,8 +47,43 @@ export function Onboarding() {
     targetGraduation: '',
     completedCourses: [] as string[],
   });
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (step === 2) {
+      if (!formData.majorId) {
+        newErrors.majorId = 'Please select a major';
+      }
+      if (!formData.catalogYear) {
+        newErrors.catalogYear = 'Please select a catalog year';
+      }
+    }
+
+    if (step === 3) {
+      if (!formData.targetGraduation) {
+        newErrors.targetGraduation = 'Please select a target graduation term';
+      }
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      toast({
+        title: "Please complete required fields",
+        description: "Fill in all required fields to continue.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
 
   const handleNext = () => {
+    if (!validateStep(currentStep)) return;
+    
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
@@ -48,16 +92,21 @@ export function Onboarding() {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      setErrors({});
     }
   };
 
   const handleComplete = () => {
     completeOnboarding({
-      majorId: formData.majorId || 'cs',
-      catalogYear: formData.catalogYear || '2024-2025',
+      majorId: formData.majorId,
+      catalogYear: formData.catalogYear,
       admittedYear: formData.admittedYear,
-      targetGraduation: formData.targetGraduation || 'Spring 2028',
+      targetGraduation: formData.targetGraduation,
       completedCourses: formData.completedCourses,
+    });
+    toast({
+      title: "Plan generated!",
+      description: "Your personalized 4-year plan is ready.",
     });
     navigate('/dashboard');
   };
@@ -71,6 +120,16 @@ export function Onboarding() {
     }));
   };
 
+  const renderFieldError = (error?: string) => {
+    if (!error) return null;
+    return (
+      <p className="text-sm text-destructive flex items-center gap-1 mt-1" role="alert">
+        <AlertCircle className="w-3.5 h-3.5" />
+        {error}
+      </p>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left sidebar with steps */}
@@ -82,7 +141,7 @@ export function Onboarding() {
         </div>
 
         <div className="space-y-4 flex-1">
-          {steps.map((step, index) => (
+          {steps.map((step) => (
             <div
               key={step.id}
               className={`flex items-center gap-4 p-3 rounded-lg transition-all ${
@@ -175,12 +234,17 @@ export function Onboarding() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label>Major</Label>
+                      <Label className="flex items-center gap-1">
+                        Major <span className="text-destructive">*</span>
+                      </Label>
                       <Select
                         value={formData.majorId}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, majorId: value }))}
+                        onValueChange={(value) => {
+                          setFormData(prev => ({ ...prev, majorId: value }));
+                          setErrors(prev => ({ ...prev, majorId: undefined }));
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={errors.majorId ? 'border-destructive' : ''}>
                           <SelectValue placeholder="Select your major" />
                         </SelectTrigger>
                         <SelectContent>
@@ -190,15 +254,21 @@ export function Onboarding() {
                           <SelectItem value="physics">Physics</SelectItem>
                         </SelectContent>
                       </Select>
+                      {renderFieldError(errors.majorId)}
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Catalog Year</Label>
+                      <Label className="flex items-center gap-1">
+                        Catalog Year <span className="text-destructive">*</span>
+                      </Label>
                       <Select
                         value={formData.catalogYear}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, catalogYear: value }))}
+                        onValueChange={(value) => {
+                          setFormData(prev => ({ ...prev, catalogYear: value }));
+                          setErrors(prev => ({ ...prev, catalogYear: undefined }));
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={errors.catalogYear ? 'border-destructive' : ''}>
                           <SelectValue placeholder="Select catalog year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -207,6 +277,7 @@ export function Onboarding() {
                           <SelectItem value="2022-2023">2022-2023</SelectItem>
                         </SelectContent>
                       </Select>
+                      {renderFieldError(errors.catalogYear)}
                     </div>
                   </CardContent>
                 </Card>
@@ -225,7 +296,9 @@ export function Onboarding() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label>Admitted Year</Label>
+                      <Label className="flex items-center gap-1">
+                        Admitted Year <span className="text-destructive">*</span>
+                      </Label>
                       <Select
                         value={formData.admittedYear.toString()}
                         onValueChange={(value) => setFormData(prev => ({ ...prev, admittedYear: parseInt(value) }))}
@@ -243,12 +316,17 @@ export function Onboarding() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Target Graduation</Label>
+                      <Label className="flex items-center gap-1">
+                        Target Graduation <span className="text-destructive">*</span>
+                      </Label>
                       <Select
                         value={formData.targetGraduation}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, targetGraduation: value }))}
+                        onValueChange={(value) => {
+                          setFormData(prev => ({ ...prev, targetGraduation: value }));
+                          setErrors(prev => ({ ...prev, targetGraduation: undefined }));
+                        }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={errors.targetGraduation ? 'border-destructive' : ''}>
                           <SelectValue placeholder="Select target graduation" />
                         </SelectTrigger>
                         <SelectContent>
@@ -258,6 +336,7 @@ export function Onboarding() {
                           <SelectItem value="Fall 2026">Fall 2026</SelectItem>
                         </SelectContent>
                       </Select>
+                      {renderFieldError(errors.targetGraduation)}
                     </div>
                   </CardContent>
                 </Card>
@@ -342,16 +421,19 @@ export function Onboarding() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Major:</span>
                         <span className="font-medium text-foreground">
-                          {formData.majorId === 'cs' ? 'Computer Science' : formData.majorId || 'Computer Science'}
+                          {formData.majorId === 'cs' ? 'Computer Science' : 
+                           formData.majorId === 'ee' ? 'Electrical Engineering' :
+                           formData.majorId === 'math' ? 'Mathematics' :
+                           formData.majorId === 'physics' ? 'Physics' : formData.majorId}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Catalog Year:</span>
-                        <span className="font-medium text-foreground">{formData.catalogYear || '2024-2025'}</span>
+                        <span className="font-medium text-foreground">{formData.catalogYear}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Target Graduation:</span>
-                        <span className="font-medium text-foreground">{formData.targetGraduation || 'Spring 2028'}</span>
+                        <span className="font-medium text-foreground">{formData.targetGraduation}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Completed Courses:</span>
@@ -379,12 +461,12 @@ export function Onboarding() {
             </Button>
             
             {currentStep < 5 ? (
-              <Button onClick={handleNext} className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Button onClick={handleNext} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Continue
                 <ChevronRight className="w-4 h-4" />
               </Button>
             ) : (
-              <Button onClick={handleComplete} className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Button onClick={handleComplete} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                 Generate Plan
                 <Sparkles className="w-4 h-4" />
               </Button>

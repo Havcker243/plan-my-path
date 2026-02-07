@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Plan My Path
 
-## Project info
+A work-in-progress academic planning app that helps students map out a multi-semester course plan, track progress, and stay on track for graduation. The product is still evolving, so expect rough edges and rapid iteration.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What it does (so far)
 
-## How can I edit this code?
+- Onboarding flow to capture major, start term, graduation target, and completed courses.
+- Planner with drag-and-drop semesters, prerequisite validation, and credit warnings.
+- Course catalog browser and section availability checks.
+- Dashboard with progress, GPA, and upcoming semester preview.
+- Profile management backed by Supabase.
 
-There are several ways of editing your application.
+## Tech stack
 
-**Use Lovable**
+- Frontend: Vite, React, TypeScript, Tailwind, shadcn-ui
+- Backend: FastAPI (Python)
+- Data: Supabase Postgres
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Repo layout
 
-Changes made via Lovable will be committed automatically to this repo.
+- `Frontend/` React app
+- `Backend/` FastAPI app + data scripts
+- `data/` local data artifacts (not intended for production)
+- `logs/` local logs
 
-**Use your preferred IDE**
+## Local development
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Frontend
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Backend
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+cd Backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
 
-**Use GitHub Codespaces**
+## Environment variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Frontend expects:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_API_BASE_URL` (optional, defaults to `http://localhost:8000`)
 
-## What technologies are used for this project?
+Backend expects:
+- `SUPABASE_POOLER_URL`
+- `SUPABASE_JWT_SECRET`
 
-This project is built with:
+## Status
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Early-stage prototype. Features are still being shaped and data workflows are in flux.

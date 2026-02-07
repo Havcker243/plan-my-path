@@ -80,9 +80,8 @@ export function Landing() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
                 onClick={() => navigate('/dashboard')}
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-lg px-8 py-6"
+                className="bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/25 text-lg px-8 py-6"
               >
                 View Demo
               </Button>

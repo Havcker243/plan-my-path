@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   X, 
@@ -15,13 +15,14 @@ import {
   Meh,
   ThumbsDown
 } from 'lucide-react';
-import { PlannedCourse, CourseSection } from '@/types/planner';
+import { PlannedCourse } from '@/types/planner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { sampleSections } from '@/data/sampleData';
+import { searchCourses } from '@/lib/api';
 
 interface CourseDetailModalProps {
   course: PlannedCourse;
@@ -38,9 +39,65 @@ export function CourseDetailModal({
 }: CourseDetailModalProps) {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [sections, setSections] = useState<any[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [termFilter, setTermFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [openOnly, setOpenOnly] = useState(false);
 
-  const sections = sampleSections.filter(s => s.courseId === course.id);
   const hasPrereqs = course.prerequisites && course.prerequisites.length > 0;
+
+  useEffect(() => {
+    let mounted = true;
+    const loadSections = async () => {
+      setSectionsLoading(true);
+      try {
+        const response = await searchCourses(course.code, undefined, 1, 1);
+        const match = response.data.find((item) => item.course_code === course.code);
+        if (mounted) {
+          setSections(match?.sections ?? []);
+        }
+      } catch (error) {
+        if (mounted) {
+          setSections([]);
+        }
+      } finally {
+        if (mounted) {
+          setSectionsLoading(false);
+        }
+      }
+    };
+
+    void loadSections();
+    return () => {
+      mounted = false;
+    };
+  }, [course.code]);
+
+  const termOptions = useMemo(() => {
+    const terms = new Set<string>();
+    sections.forEach((section) => {
+      if (section.term) terms.add(section.term);
+    });
+    return Array.from(terms);
+  }, [sections]);
+
+  const statusOptions = useMemo(() => {
+    const statuses = new Set<string>();
+    sections.forEach((section) => {
+      if (section.status) statuses.add(section.status);
+    });
+    return Array.from(statuses);
+  }, [sections]);
+
+  const filteredSections = useMemo(() => {
+    return sections.filter((section) => {
+      if (termFilter !== 'all' && section.term !== termFilter) return false;
+      if (statusFilter !== 'all' && section.status !== statusFilter) return false;
+      if (openOnly && (section.seats?.available ?? 0) <= 0) return false;
+      return true;
+    });
+  }, [sections, termFilter, statusFilter, openOnly]);
 
   const handleMarkCompleted = () => {
     if (selectedGrade && onMarkCompleted) {
@@ -196,30 +253,91 @@ export function CourseDetailModal({
             </TabsContent>
 
             <TabsContent value="sections" className="mt-0">
-              {sections.length > 0 ? (
+              {sectionsLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Loading sections...</p>
+                </div>
+              ) : sections.length > 0 ? (
                 <div className="space-y-3">
-                  {sections.map((section) => (
+                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Term</span>
+                      <Select value={termFilter} onValueChange={setTermFilter}>
+                        <SelectTrigger className="h-8 w-40">
+                          <SelectValue placeholder="All terms" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All terms</SelectItem>
+                          {termOptions.map((term) => (
+                            <SelectItem key={term} value={term}>
+                              {term}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Status</span>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-8 w-36">
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          {statusOptions.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <label className="flex items-center gap-2">
+                      <Checkbox
+                        checked={openOnly}
+                        onCheckedChange={(value) => setOpenOnly(Boolean(value))}
+                      />
+                      Open seats only
+                    </label>
+                  </div>
+
+                  {filteredSections.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p>No sections match these filters.</p>
+                    </div>
+                  ) : filteredSections.map((section) => (
                     <div
-                      key={section.id}
+                      key={`${section.section_code}-${section.term_code}`}
                       className="p-4 bg-muted/50 rounded-lg border border-border hover:border-accent/50 transition-colors cursor-pointer"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <span className="font-medium text-foreground">
-                            Section {section.sectionNumber}
+                            Section {section.section_code}
                           </span>
-                          <p className="text-sm text-muted-foreground">{section.professor}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {section.instructors?.map((inst: any) => inst.name).join(', ') || 'Instructor TBA'}
+                          </p>
                         </div>
                         <Badge 
-                          variant={section.seatsOpen < 5 ? 'destructive' : 'secondary'}
-                          className={section.seatsOpen < 5 ? '' : 'bg-success/20 text-success border-0'}
+                          variant={section.seats?.available < 5 ? 'destructive' : 'secondary'}
+                          className={section.seats?.available < 5 ? '' : 'bg-success/20 text-success border-0'}
                         >
-                          {section.seatsOpen}/{section.seatsTotal} seats
+                          {section.seats?.available ?? 0}/{section.seats?.capacity ?? 0} seats
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="w-4 h-4" />
-                        {section.meetingTimes}
+                        {section.meeting_times?.map((mt: any) => {
+                          const time = mt.start_time && mt.end_time ? `${mt.start_time} - ${mt.end_time}` : 'Time TBA';
+                          const place = [mt.building, mt.room].filter(Boolean).join(' ');
+                          return `${mt.days ?? ''} ${time} ${place}`.trim();
+                        }).join(' | ') || 'Meeting time TBA'}
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {section.term || section.term_code || 'Term TBA'} • {section.status || 'Status TBA'}
                       </div>
                     </div>
                   ))}
@@ -227,7 +345,7 @@ export function CourseDetailModal({
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No section data available for demo.</p>
+                  <p>No section data available.</p>
                 </div>
               )}
             </TabsContent>

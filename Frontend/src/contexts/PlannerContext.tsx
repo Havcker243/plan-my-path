@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Plan, Semester, PlannedCourse, OnboardingData, StudentProfile } from '@/types/planner';
-import { generateSamplePlan, csMajor, csCourses } from '@/data/sampleData';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { Course, Plan, Semester, PlannedCourse, OnboardingData, StudentProfile } from '@/types/planner';
+import type { ProfilePayload } from '@/lib/api';
+import { fetchCourses } from '@/lib/api';
 
 interface PlannerContextType {
   // State
@@ -19,12 +20,16 @@ interface PlannerContextType {
   setSelectedCourse: (course: PlannedCourse | null) => void;
   generatePlan: () => void;
   resetPlan: () => void;
+  loadCourses: (subjectCode: string | null) => Promise<void>;
+  addSemester: (semester: Semester) => void;
+  hydrateProfile: (profile: ProfilePayload) => void;
+  setOnboarded: (value: boolean) => void;
   
   // Computed
   totalCredits: number;
   earnedCredits: number;
   currentGPA: number;
-  availableCourses: typeof csCourses;
+  availableCourses: Course[];
 }
 
 const PlannerContext = createContext<PlannerContextType | null>(null);
@@ -35,24 +40,76 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<PlannedCourse | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+
+  const loadCourses = useCallback(async (subjectCode: string | null) => {
+    if (!subjectCode) {
+      setAvailableCourses([]);
+      return;
+    }
+    try {
+      const courses = await fetchCourses(subjectCode);
+      if (courses.length) {
+        setAvailableCourses(courses);
+      } else {
+        setAvailableCourses([]);
+      }
+    } catch (error) {
+      console.error('Failed to load courses:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!studentProfile?.majorId) return;
+    if (studentProfile.majorId === 'UNDECLARED') {
+      setAvailableCourses([]);
+      return;
+    }
+    void loadCourses(studentProfile.majorId);
+  }, [studentProfile, loadCourses]);
+
+  const buildSemester = (term: Semester['type'], year: number) => ({
+    id: `${term}-${year}-${Math.random().toString(36).slice(2, 8)}`,
+    type: term,
+    year,
+    label: `${term.charAt(0).toUpperCase() + term.slice(1)} ${year}`,
+    courses: [],
+    maxCredits: 18,
+  });
+
+  const addSemester = useCallback((semester: Semester) => {
+    setSemesters((prev) => {
+      const next = [...prev, semester];
+      const order = { spring: 1, summer: 2, fall: 3, winter: 4 } as const;
+      next.sort((a, b) => (a.year - b.year) || (order[a.type] - order[b.type]));
+      return next;
+    });
+  }, []);
 
   const completeOnboarding = useCallback((data: OnboardingData) => {
+    const subjectCode = data.majorId === 'UNDECLARED' ? null : data.majorId;
+    if (subjectCode) {
+      void loadCourses(subjectCode);
+    }
+
     const profile: StudentProfile = {
       id: 'student-1',
       name: 'Student',
       email: 'student@university.edu',
       majorId: data.majorId,
-      catalogYear: data.catalogYear,
       admittedYear: data.admittedYear,
+      startTerm: data.startTerm,
+      graduationYear: data.graduationYear,
       targetGraduation: data.targetGraduation,
       completedCourses: [],
       currentGPA: data.existingGPA || 0,
-      totalCredits: csMajor.requiredCredits,
+      totalCredits: 0,
       earnedCredits: 0,
     };
     
     setStudentProfile(profile);
-    const newSemesters = generateSamplePlan(data.admittedYear);
+    const initialSemester = buildSemester(data.startTerm, data.admittedYear);
+    const newSemesters = [initialSemester];
     setSemesters(newSemesters);
     
     const plan: Plan = {
@@ -66,7 +123,36 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentPlan(plan);
     setIsOnboarded(true);
-  }, []);
+  }, [loadCourses]);
+
+  const hydrateProfile = useCallback((profile: ProfilePayload) => {
+    const majorId = profile.major_code ?? 'UNDECLARED';
+    const admittedYear = profile.start_year ?? new Date().getFullYear();
+    const startTerm = (profile.start_term?.toLowerCase() as Semester['type']) ?? 'fall';
+
+    const hydrated: StudentProfile = {
+      id: 'student-1',
+      name: profile.name ?? 'Student',
+      email: profile.email ?? '',
+      majorId,
+      admittedYear,
+      startTerm,
+      graduationYear: profile.graduation_year ?? admittedYear + 4,
+      targetGraduation: `${profile.graduation_term ?? 'Spring'} ${profile.graduation_year ?? admittedYear + 4}`,
+      completedCourses: [],
+      currentGPA: profile.gpa ?? 0,
+      totalCredits: 0,
+      earnedCredits: 0,
+    };
+
+    setStudentProfile(hydrated);
+    setIsOnboarded(true);
+    if (majorId !== 'UNDECLARED') {
+      void loadCourses(majorId);
+    } else {
+      setAvailableCourses([]);
+    }
+  }, [loadCourses]);
 
   const moveCourse = useCallback((courseId: string, fromSemesterId: string, toSemesterId: string) => {
     setSemesters(prev => {
@@ -140,8 +226,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
   const generatePlan = useCallback(() => {
     const admittedYear = studentProfile?.admittedYear || new Date().getFullYear();
-    const newSemesters = generateSamplePlan(admittedYear);
-    setSemesters(newSemesters);
+    const startTerm = studentProfile?.startTerm || 'fall';
+    setSemesters([buildSemester(startTerm, admittedYear)]);
   }, [studentProfile]);
 
   const resetPlan = useCallback(() => {
@@ -155,7 +241,11 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const allCourses = semesters.flatMap(s => s.courses);
   const completedCourses = allCourses.filter(c => c.status === 'completed');
   
-  const totalCredits = csMajor.requiredCredits;
+  const plannedCredits = semesters.reduce(
+    (sum, semester) => sum + semester.courses.reduce((inner, course) => inner + course.credits, 0),
+    0
+  );
+  const totalCredits = studentProfile?.totalCredits ?? plannedCredits;
   const earnedCredits = completedCourses.reduce((sum, c) => sum + c.credits, 0);
   
   const currentGPA = completedCourses.length > 0
@@ -177,10 +267,14 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     setSelectedCourse,
     generatePlan,
     resetPlan,
+    loadCourses,
+    addSemester,
+    hydrateProfile,
+    setOnboarded: setIsOnboarded,
     totalCredits,
     earnedCredits,
     currentGPA,
-    availableCourses: csCourses,
+    availableCourses,
   };
 
   return (

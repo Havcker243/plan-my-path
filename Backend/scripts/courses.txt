@@ -1,0 +1,72 @@
+Accounting : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=ACC
+AEROSPACE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=AERO
+ART: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=ART
+BIOLOGY: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=BIOL
+Business ADMINISTRATION : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=BAD
+CHEMISTRY :https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=CHEM
+COMPUTER SCIENCE : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=CSCI
+CONSTRUCTION: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=CONS
+CORE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=CORE
+CRIMINAL JUSTICE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=CRJ
+DATA SCIENCE :https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=DSCI
+ECONOMICS: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=ECON
+EDUCATION : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=EDUC
+ENGLISH: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=ENG
+EXECUTIVE LEADERSHIP: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MSEL
+FILM: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=FLM
+FINANCE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=FIN
+FRENCH:https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=FREN
+GRAPHIC DESIGN : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=GRD
+HEALTHCARE ADMINISTRATION: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HCA
+HEALTHCARE MANAGMENT :https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HCM
+HISTORY : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HIS
+HOMELAND SECURITY:https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HMLS
+HONORS: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HON
+HUMANITIES AND SOCIAL SCIENCES: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=HSS
+INSURANCE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=INS
+INTERIOR DEISGN : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=IND
+JAPANESE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=JFL
+MANAGMENT: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MGT
+KINESIOLOGY: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=KINS
+MARKETING: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MKT
+MATHEMATICS : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MATH
+MILITARY SCIENCE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MS
+MUSIC: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=MUS
+NATURAL SCIENCE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=NSCI
+NAVAL SCIENCE : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=NS
+PHILOSOPHY & RELIGIOUS STUDIES : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PHR
+PHOTOGRAPHY: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PHO
+PHYSICS : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PHYS
+POLITICAL SCIENCE: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PSCI
+PORTUGUESE : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PFL
+PSYCHOLOGY: https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=PSY
+SOCIAL JUSTICE : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=SOJ
+SOCIAL WORK : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=SW
+SOCIOLOGY : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=SOC
+SPANISH : https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=SPAN
+SPECIAL EDUCATION:https://fisk-ss.colleague.elluciancloud.com/student/Courses/Search?subjects=SPED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

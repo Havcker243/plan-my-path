@@ -38,7 +38,10 @@ function parseMeetingTime(meetingTime: string): { days: string[]; startTime: str
     'U': 'SU',
   };
 
-  const match = meetingTime.match(/^([MTWRFSU]+)\s+(\d{1,2}:\d{2})\s*(AM|PM)?-(\d{1,2}:\d{2})\s*(AM|PM)?$/i);
+  const normalized = meetingTime.replace(/Th/gi, 'R').replace(/\//g, '');
+  const match = normalized.match(
+    /^([MTWRFSU]+)\s+(\d{1,2}:\d{2})\s*(AM|PM)?-(\d{1,2}:\d{2})\s*(AM|PM)?$/i
+  );
   if (!match) return null;
 
   const [, dayChars, startTimeRaw, startPeriod, endTimeRaw, endPeriod] = match;

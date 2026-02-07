@@ -249,7 +249,6 @@ export const csCourses: Course[] = [
 export const csMajor: Major = {
   id: 'cs',
   name: 'Computer Science',
-  catalogYear: '2024-2025',
   requiredCredits: 120,
   coreCredits: 45,
   electiveCredits: 12,

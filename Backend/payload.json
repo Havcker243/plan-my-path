@@ -1,0 +1,26 @@
+{
+  "keyword": null,
+  "terms": [],
+  "requirement": null,
+  "subrequirement": null,
+  "courseIds": null,
+  "sectionIds": null,
+  "academicLevels": [],
+  "courseLevels": [],
+  "courseTypes": [],
+  "days": [],
+  "faculty": [],
+  "locations": [],
+  "openAndWaitlistedSections": null,
+  "openSections": null,
+  "pageNumber": 1,
+  "quantityPerPage": 100,
+  "searchResultsView": "CatalogListing",
+  "sortDirection": "Ascending",
+  "sortOn": "None",
+  "subjects": [
+    "CSCI"
+  ],
+  "synonyms": [],
+  "topicCodes": []
+}

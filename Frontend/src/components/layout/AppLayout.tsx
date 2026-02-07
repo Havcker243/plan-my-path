@@ -5,7 +5,6 @@ import {
   GraduationCap,
   LayoutDashboard,
   Calendar,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -29,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePlanner } from '@/contexts/PlannerContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -37,8 +37,9 @@ interface AppLayoutProps {
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Calendar, label: 'Planner', path: '/planner' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: FileText, label: 'Planner', path: '/planner' },
+  { icon: BookOpen, label: 'Courses', path: '/courses' },
+  { icon: Calendar, label: 'Calendar', path: '/calendar' },
 ];
 
 const quickActions = [
@@ -51,6 +52,7 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { resetPlan, generatePlan } = usePlanner();
+  const { signOut } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -211,6 +213,21 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
             <Button variant="ghost" size="icon" className="text-muted-foreground">
               <Bell className="w-5 h-5" />
             </Button>
+            <Button
+              variant="ghost"
+              className="gap-2 text-muted-foreground"
+              onClick={async () => {
+                try {
+                  await signOut();
+                } finally {
+                  resetPlan();
+                  navigate('/');
+                }
+              }}
+            >
+              <LogOut className="w-4 h-4" />
+              Log out
+            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -236,13 +253,17 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
                   Export Plan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="text-destructive"
-                  onClick={() => {
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={async () => {
+                  try {
+                    await signOut();
+                  } finally {
                     resetPlan();
                     navigate('/');
-                  }}
-                >
+                  }
+                }}
+              >
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>

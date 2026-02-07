@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
-import { Plus, AlertTriangle, BookOpen, Hash } from 'lucide-react';
+import { AlertTriangle, BookOpen, Hash } from 'lucide-react';
 import { Semester, PlannedCourse } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,6 @@ interface SemesterCardProps {
   onCourseClick?: (course: PlannedCourse) => void;
   onRemoveCourse?: (courseId: string) => void;
   onMarkCourseCompleted?: (courseId: string) => void;
-  onAddCourse?: () => void;
 }
 
 export function SemesterCard({
@@ -19,7 +18,6 @@ export function SemesterCard({
   onCourseClick,
   onRemoveCourse,
   onMarkCourseCompleted,
-  onAddCourse,
 }: SemesterCardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: semester.id,
@@ -112,16 +110,6 @@ export function SemesterCard({
             <span>Credits: {totalCredits}</span>
           </div>
         </div>
-
-        {/* Add course button */}
-        <button
-          onClick={onAddCourse}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-dashed border-border text-muted-foreground hover:border-accent hover:text-accent hover:bg-accent/5 transition-colors"
-          aria-label={`Add course to ${semester.label}`}
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-sm">Add course</span>
-        </button>
       </div>
     </motion.div>
   );

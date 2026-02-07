@@ -1,0 +1,788 @@
+{
+  "status": "success",
+  "data": [
+    {
+      "course_code": "CSCI-100",
+      "title": "Introduction to Computing",
+      "credits": 3.0,
+      "description": "This is an introduction to the fundamental concepts of computing. Designed to develop the student's understanding of how the computer works, its capabilities, limitations, and applications. Topics include types of computers, the central processing unit, data representation and storage, operating systems, applications software, and networks. To give life to these concepts, students will be introduced in laboratory sessions to specific applications software for word processing and data storage and manipulation.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Qi Li",
+          "available_seats": 3,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "M/W/F",
+              "start_time": "8:00 AM",
+              "end_time": "8:50 AM",
+              "location": "Park Johnson",
+              "building": "Park Johnson",
+              "room": "303"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Hina Raja",
+          "available_seats": 7,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "10:00 AM",
+              "end_time": "11:20 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        },
+        {
+          "section_id": "03",
+          "term": "Fall 2025",
+          "instructor": "Mr. Tsehay Demeke",
+          "available_seats": 3,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "3:00 PM",
+              "end_time": "4:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "04",
+          "term": "Fall 2025",
+          "instructor": "Mr. Tsehay Demeke",
+          "available_seats": 4,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "05",
+          "term": "Fall 2025",
+          "instructor": "Hina Raja",
+          "available_seats": 10,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "8:30 AM",
+              "end_time": "9:50 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Yu Zhang",
+          "available_seats": 0,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Spring 2026",
+          "instructor": "Hina Raja",
+          "available_seats": 3,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "9:00 AM",
+              "end_time": "10:20 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        },
+        {
+          "section_id": "03",
+          "term": "Spring 2026",
+          "instructor": "Mr. Tsehay Demeke",
+          "available_seats": 0,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "2:30 PM",
+              "end_time": "3:50 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-100PC",
+      "title": "Introduction to Computing(onli",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-100SI",
+      "title": "Introduction to Computing Supp",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-102",
+      "title": "Freshman Seminar",
+      "credits": 0.5,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-104",
+      "title": "Exploring Computer Science",
+      "credits": 2.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-106",
+      "title": "Intro to Mobile Apps",
+      "credits": 1.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-108",
+      "title": "Introduction to Web Apps",
+      "credits": 1.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-110",
+      "title": "Intro to Computer Science I",
+      "credits": 3.0,
+      "description": "This is a three-hour lecture and 2-hours lab. This course provides an introduction to the discipline of computing, emphasizing problem solving techniques, algorithm development, and software design concepts and their realization as computer programs. Topics will include control structures, iteration, recursion, data types, and procedural abstraction and their implementation in a high-level language.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 7,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "M/W/F",
+              "start_time": "11:00 AM",
+              "end_time": "11:50 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "318"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 22,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "M/W/F",
+              "start_time": "10:00 AM",
+              "end_time": "10:50 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "318"
+            }
+          ]
+        },
+        {
+          "section_id": "03",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 27,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "M/W/F",
+              "start_time": "2:00 PM",
+              "end_time": "2:50 PM",
+              "location": "Talley-Brady Hall",
+              "building": "Talley-Brady Hall",
+              "room": "LEC"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-110L",
+      "title": "Introduction to CS Lab I",
+      "credits": 1.0,
+      "description": "The laboratory course for CSCI 110.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 17,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T",
+              "start_time": "9:30 AM",
+              "end_time": "10:50 AM",
+              "location": "Talley-Brady Hall",
+              "building": "Talley-Brady Hall",
+              "room": "LEC"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 15,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T",
+              "start_time": "11:00 AM",
+              "end_time": "12:20 PM",
+              "location": "Talley-Brady Hall",
+              "building": "Talley-Brady Hall",
+              "room": "LEC"
+            }
+          ]
+        },
+        {
+          "section_id": "03",
+          "term": "Fall 2025",
+          "instructor": "Alex Loh, Ning Zhang",
+          "available_seats": 24,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "317"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-120",
+      "title": "Intro. to Computer Science II",
+      "credits": 3.0,
+      "description": "This is a three-hour lecture and 2-hours lab. Software design techniques needed for solving larger problems are introduced, including abstract data types, requirements and specifications, complexity analysis, and file organizations. The course includes an introduction to basic data structures (stacks, queues, trees, and graphs) and transformations (searching and sorting). The entire problem-solving procedure from design to debugging and validation is described.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Ning Zhang",
+          "available_seats": 24,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "M/W",
+              "start_time": "10:00 AM",
+              "end_time": "11:20 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Spring 2026",
+          "instructor": "Ning Zhang",
+          "available_seats": 19,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "M/W",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-120L",
+      "title": "Intro. to Comp. Sci. II Lab",
+      "credits": 1.0,
+      "description": "The laboratory course for CSCI 120.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Ning Zhang",
+          "available_seats": 21,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "11:00 AM",
+              "end_time": "12:00 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Spring 2026",
+          "instructor": "Ning Zhang",
+          "available_seats": 22,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "1:00 PM",
+              "end_time": "2:00 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-130",
+      "title": "Networking Prins&technologies",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-140",
+      "title": "Security Prins&technologies",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-174",
+      "title": "Intro to Computer",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-201",
+      "title": "Sophomore Seminar I",
+      "credits": 0.5,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-201M",
+      "title": "Sophomore Seminar I Online",
+      "credits": 0.5,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-202",
+      "title": "Sophomore Seminar II",
+      "credits": 0.5,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-210",
+      "title": "Sophomore Seminar",
+      "credits": 1.0,
+      "description": "This course is a seminar that will provide opportunities to enhance student learning and exposure via invited speakers, discussion groups, demonstrations, laboratory assistance, and outside investigation.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Hina Raja",
+          "available_seats": 2,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T",
+              "start_time": "12:00 PM",
+              "end_time": "12:55 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Hina Raja",
+          "available_seats": 20,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "Th",
+              "start_time": "12:00 PM",
+              "end_time": "12:55 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        },
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Yu Zhang",
+          "available_seats": 14,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "Th",
+              "start_time": "12:00 PM",
+              "end_time": "1:00 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-230",
+      "title": "Computer Organization",
+      "credits": 3.0,
+      "description": "This is a three-hour lecture and two-hours lab each week. Emphasizes the fundamentals of computer organization and machine architecture, using a layered approach. Topics include data representation, the machine language execution cycle, microprogramming, addressing modes, and symbolic assembly level of language. Interconnection structures, memory, I/O, and fundamental notions of an operating system. Coordinated laboratory exercises allow students to experiment with program behavior and machine elements at each level.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Hina Raja",
+          "available_seats": 11,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "10:30 AM",
+              "end_time": "11:50 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Spring 2026",
+          "instructor": "Hina Raja",
+          "available_seats": 0,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-230L",
+      "title": "Computer Organization Lab",
+      "credits": 1.0,
+      "description": "The laboratory course for CSCI 230.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Spring 2026",
+          "instructor": "Hina Raja",
+          "available_seats": 10,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "9:00 AM",
+              "end_time": "10:00 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Spring 2026",
+          "instructor": "Hina Raja",
+          "available_seats": 2,
+          "capacity": 30,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "10:00 AM",
+              "end_time": "11:00 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-231",
+      "title": "Computer Studio II",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-240",
+      "title": "Data Structures",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-241",
+      "title": "Data Structures and Algorithms",
+      "credits": 3.0,
+      "description": "This course continues the study of data structures and the design and analysis of algorithms. It will include an introduction to algorithm design techniques, including greedy algorithms and divide and conquer.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Ning Zhang",
+          "available_seats": 16,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "10:00 AM",
+              "end_time": "11:20 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "322"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Ning Zhang",
+          "available_seats": 5,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "321"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-241L",
+      "title": "Data Structures and Algo Lab",
+      "credits": 1.0,
+      "description": "The Laboratory course for CSCI-241 Data Structures and Algorithms",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Ning Zhang",
+          "available_seats": 13,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "2:30 PM",
+              "end_time": "3:50 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "318"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Ning Zhang",
+          "available_seats": 9,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "318"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-261",
+      "title": "Operating Systems",
+      "credits": 3.0,
+      "description": "This course is an introduction to major concepts in the design of operating systems, including process management, storage management, protection and security, and distributed systems. Case studies and team projects are used to develop parts of a modern operating system.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Yu Zhang",
+          "available_seats": 0,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "1:00 PM",
+              "end_time": "2:20 PM",
+              "location": "Talley-Brady Hall",
+              "building": "Talley-Brady Hall",
+              "room": "LEC"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Yu Zhang",
+          "available_seats": 13,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "T/Th",
+              "start_time": "10:00 AM",
+              "end_time": "11:20 AM",
+              "location": "Library",
+              "building": "Library",
+              "room": "316"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-261L",
+      "title": "Operating Systems Lab",
+      "credits": 1.0,
+      "description": "The Laboratory Course for CSCI 261 - Operating Systems.",
+      "sections": [
+        {
+          "section_id": "01",
+          "term": "Fall 2025",
+          "instructor": "Yu Zhang",
+          "available_seats": 3,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "2:00 PM",
+              "end_time": "3:00 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "317"
+            }
+          ]
+        },
+        {
+          "section_id": "02",
+          "term": "Fall 2025",
+          "instructor": "Yu Zhang",
+          "available_seats": 4,
+          "capacity": 35,
+          "meeting_times": [
+            {
+              "days": "F",
+              "start_time": "1:00 PM",
+              "end_time": "2:00 PM",
+              "location": "Library",
+              "building": "Library",
+              "room": "317"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "course_code": "CSCI-265",
+      "title": "Database Mgt Sys",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-280",
+      "title": "Math Modeling Biol Sys",
+      "credits": 3.0,
+      "description": "The course focuses on developing mathematical models with the goal of building upon intuitive understanding using mathematical approaches. Topics include: basic principles of model building; probability theory and statistics; markov chains and related stochastic models; matrices and their operations; differential equation models.",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-280L",
+      "title": "Math Modeling Biol Sys Lab",
+      "credits": 1.0,
+      "description": "The Laboratory course for CSCI 280 - Mathematical Modeling of Biological Systems",
+      "sections": []
+    },
+    {
+      "course_code": "CSCI-281",
+      "title": "Prin Oper Sys I",
+      "credits": 3.0,
+      "description": "",
+      "sections": []
+    }
+  ]
+}

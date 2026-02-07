@@ -42,7 +42,6 @@ export interface Semester {
 export interface Major {
   id: string;
   name: string;
-  catalogYear: string;
   requiredCredits: number;
   coreCredits: number;
   electiveCredits: number;
@@ -54,8 +53,9 @@ export interface StudentProfile {
   name: string;
   email: string;
   majorId: string;
-  catalogYear: string;
   admittedYear: number;
+  startTerm: SemesterType;
+  graduationYear: number;
   targetGraduation: string;
   completedCourses: PlannedCourse[];
   currentGPA: number;
@@ -96,8 +96,9 @@ export interface CourseSection {
 // Onboarding types
 export interface OnboardingData {
   majorId: string;
-  catalogYear: string;
   admittedYear: number;
+  startTerm: SemesterType;
+  graduationYear: number;
   targetGraduation: string;
   completedCourses: string[];
   existingGPA?: number;

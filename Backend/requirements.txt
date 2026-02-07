@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+selenium
+webdriver-manager
+psycopg2-binary
+fastapi
+uvicorn
+python-jose

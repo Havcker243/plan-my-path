@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -18,8 +18,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { usePlanner } from '@/contexts/PlannerContext';
-import { csCourses } from '@/data/sampleData';
 import { toast } from '@/hooks/use-toast';
+import { fetchMajors, updateProfile } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const steps = [
   { id: 1, title: 'Welcome', icon: Sparkles },
@@ -31,23 +32,42 @@ const steps = [
 
 interface FormErrors {
   majorId?: string;
-  catalogYear?: string;
   admittedYear?: string;
   targetGraduation?: string;
 }
 
 export function Onboarding() {
   const navigate = useNavigate();
-  const { completeOnboarding } = usePlanner();
+  const { completeOnboarding, availableCourses, loadCourses } = usePlanner();
+  const { accessToken, user } = useAuth();
+  const [majorOptions, setMajorOptions] = useState<{ code: string; name: string }[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     majorId: '',
-    catalogYear: '',
-    admittedYear: new Date().getFullYear(),
-    targetGraduation: '',
+    startYear: new Date().getFullYear(),
+    startTerm: 'Fall',
+    graduationYear: new Date().getFullYear() + 4,
+    graduationTerm: 'Spring',
     completedCourses: [] as string[],
+    gpa: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    const years = [];
+    for (let year = current - 5; year <= current + 5; year += 1) {
+      years.push(year);
+    }
+    return years;
+  }, []);
+
+  useEffect(() => {
+    fetchMajors()
+      .then(setMajorOptions)
+      .catch((error) => console.error('Failed to load majors:', error));
+  }, []);
 
   const validateStep = (step: number): boolean => {
     const newErrors: FormErrors = {};
@@ -56,13 +76,10 @@ export function Onboarding() {
       if (!formData.majorId) {
         newErrors.majorId = 'Please select a major';
       }
-      if (!formData.catalogYear) {
-        newErrors.catalogYear = 'Please select a catalog year';
-      }
     }
 
     if (step === 3) {
-      if (!formData.targetGraduation) {
+      if (!formData.graduationTerm || !formData.graduationYear) {
         newErrors.targetGraduation = 'Please select a target graduation term';
       }
     }
@@ -97,13 +114,29 @@ export function Onboarding() {
   };
 
   const handleComplete = () => {
+    const targetGraduation = `${formData.graduationTerm} ${formData.graduationYear}`;
     completeOnboarding({
       majorId: formData.majorId,
-      catalogYear: formData.catalogYear,
-      admittedYear: formData.admittedYear,
-      targetGraduation: formData.targetGraduation,
+      admittedYear: formData.startYear,
+      startTerm: formData.startTerm.toLowerCase() as 'fall' | 'spring',
+      graduationYear: formData.graduationYear,
+      targetGraduation,
       completedCourses: formData.completedCourses,
     });
+
+    if (accessToken) {
+      void updateProfile(accessToken, {
+        email: user?.email ?? undefined,
+        major_code: formData.majorId,
+        graduation_year: formData.graduationYear,
+        graduation_term: formData.graduationTerm,
+        start_year: formData.startYear,
+        start_term: formData.startTerm,
+        completed_courses: formData.completedCourses,
+        gpa: formData.gpa ? Number(formData.gpa) : undefined,
+      });
+    }
+
     toast({
       title: "Plan generated!",
       description: "Your personalized 4-year plan is ready.",
@@ -242,43 +275,24 @@ export function Onboarding() {
                         onValueChange={(value) => {
                           setFormData(prev => ({ ...prev, majorId: value }));
                           setErrors(prev => ({ ...prev, majorId: undefined }));
+                          const subject = value === 'UNDECLARED' ? null : value;
+                          void loadCourses(subject);
                         }}
                       >
                         <SelectTrigger className={errors.majorId ? 'border-destructive' : ''}>
                           <SelectValue placeholder="Select your major" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cs">Computer Science</SelectItem>
-                          <SelectItem value="ee">Electrical Engineering</SelectItem>
-                          <SelectItem value="math">Mathematics</SelectItem>
-                          <SelectItem value="physics">Physics</SelectItem>
+                          {majorOptions.map(option => (
+                            <SelectItem key={option.code} value={option.code}>
+                              {option.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       {renderFieldError(errors.majorId)}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        Catalog Year <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.catalogYear}
-                        onValueChange={(value) => {
-                          setFormData(prev => ({ ...prev, catalogYear: value }));
-                          setErrors(prev => ({ ...prev, catalogYear: undefined }));
-                        }}
-                      >
-                        <SelectTrigger className={errors.catalogYear ? 'border-destructive' : ''}>
-                          <SelectValue placeholder="Select catalog year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="2024-2025">2024-2025</SelectItem>
-                          <SelectItem value="2023-2024">2023-2024</SelectItem>
-                          <SelectItem value="2022-2023">2022-2023</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {renderFieldError(errors.catalogYear)}
-                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -300,42 +314,81 @@ export function Onboarding() {
                         Admitted Year <span className="text-destructive">*</span>
                       </Label>
                       <Select
-                        value={formData.admittedYear.toString()}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, admittedYear: parseInt(value) }))}
+                        value={formData.startYear.toString()}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, startYear: parseInt(value, 10) }))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select year" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="2024">Fall 2024</SelectItem>
-                          <SelectItem value="2023">Fall 2023</SelectItem>
-                          <SelectItem value="2022">Fall 2022</SelectItem>
-                          <SelectItem value="2021">Fall 2021</SelectItem>
+                          {yearOptions.map(year => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1">
-                        Target Graduation <span className="text-destructive">*</span>
+                        Start Term <span className="text-destructive">*</span>
                       </Label>
                       <Select
-                        value={formData.targetGraduation}
+                        value={formData.startTerm}
                         onValueChange={(value) => {
-                          setFormData(prev => ({ ...prev, targetGraduation: value }));
-                          setErrors(prev => ({ ...prev, targetGraduation: undefined }));
+                          setFormData(prev => ({ ...prev, startTerm: value }));
                         }}
                       >
-                        <SelectTrigger className={errors.targetGraduation ? 'border-destructive' : ''}>
-                          <SelectValue placeholder="Select target graduation" />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select term" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Spring 2028">Spring 2028</SelectItem>
-                          <SelectItem value="Fall 2027">Fall 2027</SelectItem>
-                          <SelectItem value="Spring 2027">Spring 2027</SelectItem>
-                          <SelectItem value="Fall 2026">Fall 2026</SelectItem>
+                          <SelectItem value="Fall">Fall</SelectItem>
+                          <SelectItem value="Spring">Spring</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1">
+                        Graduation Term <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Select
+                          value={formData.graduationTerm}
+                          onValueChange={(value) => {
+                            setFormData(prev => ({ ...prev, graduationTerm: value }));
+                            setErrors(prev => ({ ...prev, targetGraduation: undefined }));
+                          }}
+                        >
+                          <SelectTrigger className={errors.targetGraduation ? 'border-destructive' : ''}>
+                            <SelectValue placeholder="Term" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Spring">Spring</SelectItem>
+                            <SelectItem value="Fall">Fall</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={formData.graduationYear.toString()}
+                          onValueChange={(value) => {
+                            setFormData(prev => ({ ...prev, graduationYear: parseInt(value, 10) }));
+                            setErrors(prev => ({ ...prev, targetGraduation: undefined }));
+                          }}
+                        >
+                          <SelectTrigger className={errors.targetGraduation ? 'border-destructive' : ''}>
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {yearOptions.map(year => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       {renderFieldError(errors.targetGraduation)}
                     </div>
                   </CardContent>
@@ -354,10 +407,19 @@ export function Onboarding() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    <div className="space-y-3 mb-4">
+                      <Label>Search courses</Label>
+                      <input
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Search by code or keyword"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {formData.completedCourses.length > 0 ? (
                         formData.completedCourses.map(courseId => {
-                          const course = csCourses.find(c => c.id === courseId);
+                          const course = availableCourses.find(c => c.id === courseId);
                           return course ? (
                             <Badge 
                               key={courseId} 
@@ -375,7 +437,18 @@ export function Onboarding() {
                     </div>
                     
                     <div className="border border-border rounded-lg max-h-64 overflow-y-auto custom-scrollbar">
-                      {csCourses.filter(c => c.type === 'core' || c.type === 'general').slice(0, 8).map(course => (
+                      {availableCourses
+                        .filter(course => {
+                          const search = searchTerm.trim().toLowerCase();
+                          if (!search) return true;
+                          return (
+                            course.code.toLowerCase().includes(search) ||
+                            course.title.toLowerCase().includes(search) ||
+                            (course.description ?? '').toLowerCase().includes(search)
+                          );
+                        })
+                        .slice(0, 12)
+                        .map(course => (
                         <div
                           key={course.id}
                           onClick={() => toggleCourse(course.id)}
@@ -401,6 +474,15 @@ export function Onboarding() {
                     <p className="text-xs text-muted-foreground mt-3">
                       Click to select/deselect. You can also import from CSV later.
                     </p>
+                    <div className="mt-4 space-y-2">
+                      <Label>Current GPA (optional)</Label>
+                      <input
+                        value={formData.gpa}
+                        onChange={(event) => setFormData(prev => ({ ...prev, gpa: event.target.value }))}
+                        placeholder="3.5"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -421,19 +503,14 @@ export function Onboarding() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Major:</span>
                         <span className="font-medium text-foreground">
-                          {formData.majorId === 'cs' ? 'Computer Science' : 
-                           formData.majorId === 'ee' ? 'Electrical Engineering' :
-                           formData.majorId === 'math' ? 'Mathematics' :
-                           formData.majorId === 'physics' ? 'Physics' : formData.majorId}
+                          {majorOptions.find(option => option.code === formData.majorId)?.name || formData.majorId}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Catalog Year:</span>
-                        <span className="font-medium text-foreground">{formData.catalogYear}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Target Graduation:</span>
-                        <span className="font-medium text-foreground">{formData.targetGraduation}</span>
+                        <span className="font-medium text-foreground">
+                          {formData.graduationTerm} {formData.graduationYear}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Completed Courses:</span>

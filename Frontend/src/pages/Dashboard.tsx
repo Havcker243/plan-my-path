@@ -192,7 +192,7 @@ export function Dashboard() {
               <CardContent>
                 <p className="text-xl font-bold text-foreground">Computer Science</p>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Catalog {studentProfile?.catalogYear || '2024-2025'}
+                  Graduation {studentProfile?.graduationYear || new Date().getFullYear() + 4}
                 </p>
               </CardContent>
             </Card>

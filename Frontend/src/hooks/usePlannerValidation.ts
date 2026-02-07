@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { Semester, PlannedCourse, ConstraintViolation, SemesterType } from '@/types/planner';
-import { csCourses } from '@/data/sampleData';
+import { Semester, PlannedCourse, ConstraintViolation } from '@/types/planner';
 
 interface ValidationResult {
   canDrop: boolean;

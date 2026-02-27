@@ -80,6 +80,7 @@ export async function fetchMajors(): Promise<MajorOption[]> {
 export type ProfilePayload = {
   email?: string;
   name?: string;
+  phone?: string;
   avatar_url?: string;
   major_code?: string;
   graduation_year?: number;
@@ -124,4 +125,82 @@ export async function fetchSections(courseCodes: string[]): Promise<SectionResul
   });
   const payload = await request<{ data: SectionResult }>(`/api/sections?${params.toString()}`);
   return payload.data ?? {};
+}
+
+export async function fetchSectionsForTerm(
+  courseCodes: string[],
+  term: string
+): Promise<SectionResult> {
+  if (courseCodes.length === 0) return {};
+  const params = new URLSearchParams({
+    course_codes: courseCodes.join(','),
+    term,
+  });
+  const payload = await request<{ data: SectionResult }>(`/api/sections?${params.toString()}`);
+  return payload.data ?? {};
+}
+
+export type TermCalendarEntry = {
+  term: string;
+  year: number;
+  start_date: string;
+  end_date: string;
+};
+
+export async function fetchTermCalendar(): Promise<TermCalendarEntry[]> {
+  const payload = await request<{ data: TermCalendarEntry[] }>('/api/terms');
+  return payload.data ?? [];
+}
+
+export type PlanResponse = {
+  id: string;
+  name: string;
+  semesters: Array<{
+    id: string;
+    term: string;
+    year: number;
+    label: string;
+    start_date?: string | null;
+    end_date?: string | null;
+    courses: Array<{
+      id: string;
+      code: string;
+      title: string;
+      credits: number;
+      description?: string | null;
+      prerequisites?: string[];
+      offeredTerms?: Array<'fall' | 'spring' | 'summer' | 'winter'>;
+      type?: 'core' | 'elective' | 'general';
+      requirementBucket?: string | null;
+      status: string;
+      grade?: string | null;
+      semesterId?: string | null;
+      selectedSectionId?: string | null;
+    }>;
+  }>;
+};
+
+export async function fetchPlan(token: string): Promise<PlanResponse | null> {
+  const payload = await request<{ data: PlanResponse | null }>(
+    '/api/plan',
+    {},
+    token
+  );
+  return payload.data ?? null;
+}
+
+export async function updatePlan(
+  token: string,
+  plan: { name?: string; semesters: unknown[] }
+): Promise<PlanResponse | null> {
+  const payload = await request<{ data: PlanResponse | null }>(
+    '/api/plan',
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(plan),
+    },
+    token
+  );
+  return payload.data ?? null;
 }

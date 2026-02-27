@@ -10,6 +10,8 @@ import { toast } from '@/hooks/use-toast';
 export function Signup() {
   const navigate = useNavigate();
   const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,7 +19,7 @@ export function Signup() {
   const handleSignup = async () => {
     setIsSubmitting(true);
     try {
-      await signUpWithEmail(email, password);
+      await signUpWithEmail(email, password, name, phone);
       toast({
         title: 'Check your email',
         description: 'Confirm your email to complete signup.',
@@ -46,6 +48,17 @@ export function Signup() {
           <CardDescription>Start planning your academic path.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Link className="text-sm text-muted-foreground underline" to="/">
+            Back to home
+          </Link>
+          <div className="space-y-2">
+            <Label>Full name or nickname</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
+          </div>
           <div className="space-y-2">
             <Label>Email</Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
@@ -54,7 +67,11 @@ export function Signup() {
             <Label>Password</Label>
             <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
           </div>
-          <Button className="w-full" onClick={handleSignup} disabled={isSubmitting}>
+          <Button
+            className="w-full"
+            onClick={handleSignup}
+            disabled={isSubmitting || !email || !password || !name || !phone}
+          >
             Create account
           </Button>
           <button

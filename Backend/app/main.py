@@ -13,8 +13,11 @@ from app.db import (
     fetch_profile,
     fetch_sections_by_course_codes,
     fetch_subjects,
+    fetch_term_calendar,
+    fetch_plan,
     resolve_pooler_url,
     search_courses,
+    save_plan,
     upsert_profile,
 )
 
@@ -135,11 +138,11 @@ def search_courses_endpoint(
 
 
 @app.get("/api/sections")
-def list_sections(course_codes: str) -> Dict[str, Any]:
+def list_sections(course_codes: str, term: Optional[str] = None) -> Dict[str, Any]:
     codes = [code.strip().upper() for code in course_codes.split(",") if code.strip()]
     if not codes:
         raise HTTPException(status_code=400, detail="course_codes is required")
-    sections = fetch_sections_by_course_codes(POOLER_URL, codes)
+    sections = fetch_sections_by_course_codes(POOLER_URL, codes, term_filter=term)
     return {"data": sections}
 
 
@@ -167,4 +170,49 @@ def put_profile(payload: Dict[str, Any], user=Depends(get_current_user)) -> Dict
         raise HTTPException(status_code=401, detail="Invalid token")
     payload["user_id"] = user_id
     saved = upsert_profile(POOLER_URL, payload)
+    return {"data": saved}
+
+
+@app.get("/api/terms")
+def list_terms() -> Dict[str, Any]:
+    terms = fetch_term_calendar(POOLER_URL)
+    return {"data": terms}
+
+
+@app.get("/api/plan")
+def get_plan(user=Depends(get_current_user)) -> Dict[str, Any]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    plan = fetch_plan(POOLER_URL, user_id)
+    if not plan:
+        return {"data": None}
+
+    for semester in plan.get("semesters", []):
+        for course in semester.get("courses", []):
+            course["prerequisites"] = _normalize_requisites(course.get("prerequisites"))
+            course["offeredTerms"] = _derive_offered_terms(course.get("offered_terms", []))
+            course.pop("offered_terms", None)
+            course["requirementBucket"] = course.pop("requirement_bucket", None)
+            course["semesterId"] = course.pop("semester_id", None)
+            course["selectedSectionId"] = course.pop("selected_section_id", None)
+    return {"data": plan}
+
+
+@app.put("/api/plan")
+def put_plan(payload: Dict[str, Any], user=Depends(get_current_user)) -> Dict[str, Any]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    saved = save_plan(POOLER_URL, user_id, payload)
+    if not saved:
+        return {"data": None}
+    for semester in saved.get("semesters", []):
+        for course in semester.get("courses", []):
+            course["prerequisites"] = _normalize_requisites(course.get("prerequisites"))
+            course["offeredTerms"] = _derive_offered_terms(course.get("offered_terms", []))
+            course.pop("offered_terms", None)
+            course["requirementBucket"] = course.pop("requirement_bucket", None)
+            course["semesterId"] = course.pop("semester_id", None)
+            course["selectedSectionId"] = course.pop("selected_section_id", None)
     return {"data": saved}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import psycopg2
 
@@ -105,7 +105,11 @@ def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[Dict[st
     return results
 
 
-def _fetch_sections_by_course(pooler_url: str, course_ids: List[str]) -> Dict[str, Any]:
+def _fetch_sections_by_course(
+    pooler_url: str,
+    course_ids: List[str],
+    term_filter: Optional[str] = None,
+) -> Dict[str, Any]:
     if not course_ids:
         return {}
 
@@ -127,12 +131,17 @@ def _fetch_sections_by_course(pooler_url: str, course_ids: List[str]) -> Dict[st
           seats_enrolled,
           seats_waitlisted
         from sections
-        where course_id = any(%s);
+        where course_id = any(%s)
     """
+    params: List[Any] = [course_ids]
+    if term_filter:
+        sections_sql += " and lower(term) like %s"
+        params.append(f"%{term_filter.lower()}%")
+    sections_sql += ";"
 
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(sections_sql, (course_ids,))
+            cur.execute(sections_sql, params)
             section_rows = cur.fetchall()
 
             section_ids = [row[0] for row in section_rows]
@@ -207,6 +216,7 @@ def _fetch_sections_by_course(pooler_url: str, course_ids: List[str]) -> Dict[st
         course_id = row[1]
         sections_by_course.setdefault(course_id, []).append(
             {
+                "id": section_id,
                 "section_code": row[2],
                 "section_id": row[3],
                 "term": row[4],
@@ -231,7 +241,9 @@ def _fetch_sections_by_course(pooler_url: str, course_ids: List[str]) -> Dict[st
 
 
 def fetch_sections_by_course_codes(
-    pooler_url: str, course_codes: List[str]
+    pooler_url: str,
+    course_codes: List[str],
+    term_filter: Optional[str] = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     if not course_codes:
         return {}
@@ -250,7 +262,7 @@ def fetch_sections_by_course_codes(
 
     course_ids = [row[0] for row in rows]
     id_to_code = {row[0]: row[1] for row in rows}
-    sections_by_course_id = _fetch_sections_by_course(pooler_url, course_ids)
+    sections_by_course_id = _fetch_sections_by_course(pooler_url, course_ids, term_filter)
 
     sections_by_code: Dict[str, List[Dict[str, Any]]] = {}
     for course_id, sections in sections_by_course_id.items():
@@ -260,6 +272,205 @@ def fetch_sections_by_course_codes(
         sections_by_code[code] = sections
 
     return sections_by_code
+
+
+def fetch_term_calendar(pooler_url: str) -> List[Dict[str, Any]]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                select term, year, start_date, end_date
+                from term_calendar
+                order by year, term;
+                """
+            )
+            rows = cur.fetchall()
+    return [
+        {"term": row[0], "year": row[1], "start_date": row[2], "end_date": row[3]}
+        for row in rows
+    ]
+
+
+def _fetch_course_details_by_codes(
+    pooler_url: str, course_codes: List[str]
+) -> Dict[str, Dict[str, Any]]:
+    if not course_codes:
+        return {}
+    sql = """
+        select
+          c.course_code,
+          c.title,
+          c.description,
+          c.credits_min,
+          c.credits_max,
+          c.requisites,
+          array_agg(distinct s.term) as terms
+        from courses c
+        left join sections s on s.course_id = c.id
+        where c.course_code = any(%s)
+        group by c.course_code, c.title, c.description, c.credits_min, c.credits_max, c.requisites
+        order by c.course_code;
+    """
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, (course_codes,))
+            rows = cur.fetchall()
+    results: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        results[row[0]] = {
+            "course_code": row[0],
+            "title": row[1],
+            "description": row[2],
+            "credits_min": row[3],
+            "credits_max": row[4],
+            "requisites": row[5],
+            "terms": row[6] or [],
+        }
+    return results
+
+
+def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select id, name from plans where user_id = %s;", (user_id,))
+            plan_row = cur.fetchone()
+            if not plan_row:
+                return None
+            plan_id, plan_name = plan_row
+
+            cur.execute(
+                """
+                select id, term, year, label, start_date, end_date
+                from plan_semesters
+                where plan_id = %s;
+                """,
+                (plan_id,),
+            )
+            semester_rows = cur.fetchall()
+
+            semester_ids = [row[0] for row in semester_rows]
+            course_rows: List[Tuple[Any, ...]] = []
+            if semester_ids:
+                cur.execute(
+                    """
+                    select id, semester_id, course_code, status, grade, credits, selected_section_id
+                    from plan_courses
+                    where semester_id = any(%s);
+                    """,
+                    (semester_ids,),
+                )
+                course_rows = cur.fetchall()
+
+    course_codes = [row[2] for row in course_rows]
+    course_details = _fetch_course_details_by_codes(pooler_url, course_codes)
+
+    semesters: List[Dict[str, Any]] = []
+    courses_by_semester: Dict[str, List[Dict[str, Any]]] = {}
+    for row in course_rows:
+        course_id, semester_id, code, status, grade, credits, selected_section_id = row
+        detail = course_details.get(code, {})
+        credits_value = credits
+        if credits_value is None:
+            credits_value = detail.get("credits_min") or detail.get("credits_max") or 0
+        courses_by_semester.setdefault(semester_id, []).append(
+            {
+                "id": course_id,
+                "code": code,
+                "title": detail.get("title") or code,
+                "credits": credits_value,
+                "description": detail.get("description"),
+                "prerequisites": detail.get("requisites"),
+                "offered_terms": detail.get("terms") or [],
+                "type": "core",
+                "requirement_bucket": None,
+                "status": status,
+                "grade": grade,
+                "semester_id": semester_id,
+                "selected_section_id": selected_section_id,
+            }
+        )
+
+    for row in semester_rows:
+        semester_id, term, year, label, start_date, end_date = row
+        semesters.append(
+            {
+                "id": semester_id,
+                "term": term,
+                "year": year,
+                "label": label,
+                "start_date": start_date,
+                "end_date": end_date,
+                "courses": courses_by_semester.get(semester_id, []),
+            }
+        )
+
+    return {"id": plan_id, "name": plan_name, "semesters": semesters}
+
+
+def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    semesters = payload.get("semesters") or []
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select id from plans where user_id = %s;", (user_id,))
+            plan_row = cur.fetchone()
+            if plan_row:
+                plan_id = plan_row[0]
+                cur.execute(
+                    "update plans set updated_at = now() where id = %s;",
+                    (plan_id,),
+                )
+            else:
+                cur.execute(
+                    "insert into plans (user_id, name) values (%s, %s) returning id;",
+                    (user_id, payload.get("name") or "My Academic Plan"),
+                )
+                plan_id = cur.fetchone()[0]
+
+            cur.execute("delete from plan_semesters where plan_id = %s;", (plan_id,))
+
+            for semester in semesters:
+                cur.execute(
+                    """
+                    insert into plan_semesters (
+                      plan_id, term, year, label, start_date, end_date, updated_at
+                    ) values (%s, %s, %s, %s, %s, %s, now())
+                    returning id;
+                    """,
+                    (
+                        plan_id,
+                        semester.get("type") or semester.get("term"),
+                        semester.get("year"),
+                        semester.get("label"),
+                        semester.get("startDate") or semester.get("start_date"),
+                        semester.get("endDate") or semester.get("end_date"),
+                    ),
+                )
+                semester_id = cur.fetchone()[0]
+                for course in semester.get("courses", []):
+                    cur.execute(
+                        """
+                        insert into plan_courses (
+                          semester_id,
+                          course_code,
+                          status,
+                          grade,
+                          credits,
+                          selected_section_id,
+                          updated_at
+                        ) values (%s, %s, %s, %s, %s, %s, now());
+                        """,
+                        (
+                            semester_id,
+                            course.get("code"),
+                            course.get("status") or "planned",
+                            course.get("grade"),
+                            course.get("credits"),
+                            course.get("selectedSectionId") or course.get("selected_section_id"),
+                        ),
+                    )
+            conn.commit()
+
+    return fetch_plan(pooler_url, user_id) or {"id": plan_id, "name": payload.get("name"), "semesters": []}
 
 
 def search_courses(
@@ -346,6 +557,7 @@ def fetch_profile(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
           user_id,
           email,
           name,
+          phone,
           avatar_url,
           major_code,
           graduation_year,
@@ -367,14 +579,15 @@ def fetch_profile(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
         "user_id": row[0],
         "email": row[1],
         "name": row[2],
-        "avatar_url": row[3],
-        "major_code": row[4],
-        "graduation_year": row[5],
-        "graduation_term": row[6],
-        "start_year": row[7],
-        "start_term": row[8],
-        "completed_courses": row[9] or [],
-        "gpa": row[10],
+        "phone": row[3],
+        "avatar_url": row[4],
+        "major_code": row[5],
+        "graduation_year": row[6],
+        "graduation_term": row[7],
+        "start_year": row[8],
+        "start_term": row[9],
+        "completed_courses": row[10] or [],
+        "gpa": row[11],
     }
 
 
@@ -384,6 +597,7 @@ def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
           user_id,
           email,
           name,
+          phone,
           avatar_url,
           major_code,
           graduation_year,
@@ -393,10 +607,11 @@ def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
           completed_courses,
           gpa,
           updated_at
-        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
         on conflict (user_id) do update set
           email = excluded.email,
           name = excluded.name,
+          phone = excluded.phone,
           avatar_url = excluded.avatar_url,
           major_code = excluded.major_code,
           graduation_year = excluded.graduation_year,
@@ -416,6 +631,7 @@ def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
                     payload["user_id"],
                     payload.get("email"),
                     payload.get("name"),
+                    payload.get("phone"),
                     payload.get("avatar_url"),
                     payload.get("major_code"),
                     payload.get("graduation_year"),

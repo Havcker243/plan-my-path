@@ -10,21 +10,6 @@ interface ICSEvent {
   rrule?: string;
 }
 
-// Semester date ranges (sample data - adjust for your university)
-const semesterDates: Record<string, { start: Date; end: Date }> = {
-  fall: { 
-    start: new Date(2024, 7, 26), // Aug 26
-    end: new Date(2024, 11, 13)   // Dec 13
-  },
-  spring: { 
-    start: new Date(2025, 0, 13), // Jan 13
-    end: new Date(2025, 4, 9)     // May 9
-  },
-  summer: { 
-    start: new Date(2025, 4, 19), // May 19
-    end: new Date(2025, 7, 8)     // Aug 8
-  },
-};
 
 // Parse meeting times like "MWF 9:00-9:50 AM" or "TR 10:30 AM-11:45 AM"
 function parseMeetingTime(meetingTime: string): { days: string[]; startTime: string; endTime: string } | null {
@@ -76,15 +61,11 @@ function formatICSDate(date: Date, time?: string): string {
   return `${year}${month}${day}`;
 }
 
-// Get semester dates adjusted for year
-function getSemesterDates(semesterType: string, year: number): { start: Date; end: Date } {
-  const base = semesterDates[semesterType] || semesterDates.fall;
-  const yearDiff = year - base.start.getFullYear();
-  
-  return {
-    start: new Date(base.start.getFullYear() + yearDiff, base.start.getMonth(), base.start.getDate()),
-    end: new Date(base.end.getFullYear() + yearDiff, base.end.getMonth(), base.end.getDate()),
-  };
+// Get semester dates from backend-provided values (fallback to today)
+function getSemesterDates(semester: Semester): { start: Date; end: Date } {
+  const start = semester.startDate ? new Date(semester.startDate) : new Date();
+  const end = semester.endDate ? new Date(semester.endDate) : new Date();
+  return { start, end };
 }
 
 // Generate RRULE for weekly recurring events
@@ -95,7 +76,7 @@ function generateRRule(days: string[], untilDate: Date): string {
 
 // Create ICS event for a course (semester-span all-day event)
 function createSemesterSpanEvent(course: PlannedCourse, semester: Semester): ICSEvent {
-  const dates = getSemesterDates(semester.type, semester.year);
+  const dates = getSemesterDates(semester);
   
   return {
     uid: `${course.id}-${semester.id}@planner`,
@@ -115,7 +96,7 @@ function createRecurringEvent(
   const parsed = parseMeetingTime(section.meetingTimes);
   if (!parsed) return null;
 
-  const dates = getSemesterDates(semester.type, semester.year);
+  const dates = getSemesterDates(semester);
   
   // Find the first occurrence day
   const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };

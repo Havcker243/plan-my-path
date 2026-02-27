@@ -42,6 +42,9 @@ export function Login() {
           <CardDescription>Log in to continue your plan.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Link className="text-sm text-muted-foreground underline" to="/">
+            Back to home
+          </Link>
           <div className="space-y-2">
             <Label>Email</Label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
@@ -50,7 +53,11 @@ export function Login() {
             <Label>Password</Label>
             <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
           </div>
-          <Button className="w-full" onClick={handleEmailLogin} disabled={isSubmitting}>
+          <Button
+            className="w-full"
+            onClick={handleEmailLogin}
+            disabled={isSubmitting || !email || !password}
+          >
             Log in
           </Button>
           <button

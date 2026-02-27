@@ -55,13 +55,16 @@ export function Planner() {
     moveCourse,
     removeCourse,
     addSemester,
+    createSemester,
     markCourseCompleted,
     selectedCourse,
     setSelectedCourse,
     totalCredits,
     earnedCredits,
     currentGPA,
+    totalCourses,
     studentProfile,
+    savePlan,
   } = usePlanner();
 
   const { validateDrop } = usePlannerValidation();
@@ -74,9 +77,8 @@ export function Planner() {
 
   const { status: autosaveStatus } = useAutosave({
     data: semesters,
-    onSave: async (data) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log("Plan saved:", data);
+    onSave: async () => {
+      await savePlan();
     },
     enabled: isOnboarded,
   });
@@ -222,15 +224,45 @@ export function Planner() {
     return years;
   }, []);
 
+  const semesterOrder = { spring: 1, summer: 2, fall: 3, winter: 4 } as const;
+
   const handleCreateSemester = () => {
-    const semester = {
-      id: `${newSemesterTerm}-${newSemesterYear}-${Math.random().toString(36).slice(2, 8)}`,
-      type: newSemesterTerm,
-      year: newSemesterYear,
-      label: `${newSemesterTerm.charAt(0).toUpperCase() + newSemesterTerm.slice(1)} ${newSemesterYear}`,
-      courses: [],
-      maxCredits: 18,
-    };
+    const startYear = studentProfile?.admittedYear;
+    const startTerm = studentProfile?.startTerm;
+    const gradYear = studentProfile?.graduationYear;
+    const gradTerm = studentProfile?.graduationTerm;
+
+    if (startYear && startTerm) {
+      const beforeStart =
+        newSemesterYear < startYear ||
+        (newSemesterYear === startYear &&
+          semesterOrder[newSemesterTerm] < semesterOrder[startTerm]);
+      if (beforeStart) {
+        toast({
+          title: "Update start date",
+          description: "This semester is before your start term.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (gradYear && gradTerm) {
+      const afterGrad =
+        newSemesterYear > gradYear ||
+        (newSemesterYear === gradYear &&
+          semesterOrder[newSemesterTerm] > semesterOrder[gradTerm]);
+      if (afterGrad) {
+        toast({
+          title: "Update graduation date",
+          description: "This semester is after your expected graduation.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const semester = createSemester(newSemesterTerm, newSemesterYear);
     addSemester(semester);
     setShowSemesterDialog(false);
   };
@@ -336,13 +368,13 @@ export function Planner() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-accent" />
-                Credit Progress
+                Total Credits
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-end gap-2 mb-2">
-                <span className="text-2xl font-bold text-foreground">{earnedCredits}</span>
-                <span className="text-muted-foreground">/ {totalCredits}</span>
+                <span className="text-2xl font-bold text-foreground">{totalCredits}</span>
+                <span className="text-muted-foreground">credits</span>
               </div>
               <Progress value={progressPercent} className="h-2 mb-1" />
               <p className="text-xs text-muted-foreground">{progressPercent}% complete</p>
@@ -366,13 +398,12 @@ export function Planner() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-warning" />
-                Warnings
+                Total Courses
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Keep an eye on course availability before finalizing your plan.
-              </p>
+              <span className="text-2xl font-bold text-foreground">{totalCourses}</span>
+              <span className="text-muted-foreground ml-1">courses</span>
             </CardContent>
           </Card>
         </aside>

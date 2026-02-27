@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { toast } from '@/hooks/use-toast';
-import { fetchMajors, updateProfile } from '@/lib/api';
+import { fetchMajors, updateProfile, updatePlan } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 const steps = [
@@ -38,7 +38,7 @@ interface FormErrors {
 
 export function Onboarding() {
   const navigate = useNavigate();
-  const { completeOnboarding, availableCourses, loadCourses } = usePlanner();
+  const { completeOnboarding, availableCourses, loadCourses, createSemester } = usePlanner();
   const { accessToken, user } = useAuth();
   const [majorOptions, setMajorOptions] = useState<{ code: string; name: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,18 +115,23 @@ export function Onboarding() {
 
   const handleComplete = () => {
     const targetGraduation = `${formData.graduationTerm} ${formData.graduationYear}`;
+    const semester = createSemester(formData.startTerm.toLowerCase() as 'fall' | 'spring', formData.startYear);
     completeOnboarding({
       majorId: formData.majorId,
       admittedYear: formData.startYear,
       startTerm: formData.startTerm.toLowerCase() as 'fall' | 'spring',
       graduationYear: formData.graduationYear,
+      graduationTerm: formData.graduationTerm.toLowerCase() as 'fall' | 'spring',
       targetGraduation,
       completedCourses: formData.completedCourses,
     });
 
     if (accessToken) {
+      const metadata = user?.user_metadata as { name?: string; phone?: string } | undefined;
       void updateProfile(accessToken, {
         email: user?.email ?? undefined,
+        name: metadata?.name ?? undefined,
+        phone: metadata?.phone ?? undefined,
         major_code: formData.majorId,
         graduation_year: formData.graduationYear,
         graduation_term: formData.graduationTerm,
@@ -134,6 +139,20 @@ export function Onboarding() {
         start_term: formData.startTerm,
         completed_courses: formData.completedCourses,
         gpa: formData.gpa ? Number(formData.gpa) : undefined,
+      });
+      void updatePlan(accessToken, {
+        name: 'My Academic Plan',
+        semesters: [
+          {
+            id: semester.id,
+            type: semester.type,
+            year: semester.year,
+            label: semester.label,
+            startDate: semester.startDate ?? null,
+            endDate: semester.endDate ?? null,
+            courses: [],
+          },
+        ],
       });
     }
 

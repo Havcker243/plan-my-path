@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Course, Plan, Semester, PlannedCourse, OnboardingData, StudentProfile } from '@/types/planner';
 import type { ProfilePayload } from '@/lib/api';
-import { fetchCourses } from '@/lib/api';
+import { fetchCourses, fetchPlan, fetchTermCalendar, updatePlan } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlannerContextType {
   // State
@@ -22,13 +23,16 @@ interface PlannerContextType {
   resetPlan: () => void;
   loadCourses: (subjectCode: string | null) => Promise<void>;
   addSemester: (semester: Semester) => void;
+  createSemester: (term: Semester['type'], year: number) => Semester;
   hydrateProfile: (profile: ProfilePayload) => void;
   setOnboarded: (value: boolean) => void;
+  savePlan: () => Promise<void>;
   
   // Computed
   totalCredits: number;
   earnedCredits: number;
   currentGPA: number;
+  totalCourses: number;
   availableCourses: Course[];
 }
 
@@ -41,6 +45,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const [selectedCourse, setSelectedCourse] = useState<PlannedCourse | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [termCalendar, setTermCalendar] = useState<Array<{ term: string; year: number; start_date: string; end_date: string }>>([]);
+  const { accessToken, user } = useAuth();
 
   const loadCourses = useCallback(async (subjectCode: string | null) => {
     if (!subjectCode) {
@@ -68,14 +74,80 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     void loadCourses(studentProfile.majorId);
   }, [studentProfile, loadCourses]);
 
-  const buildSemester = (term: Semester['type'], year: number) => ({
+  useEffect(() => {
+    fetchTermCalendar()
+      .then(setTermCalendar)
+      .catch(() => setTermCalendar([]));
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    fetchPlan(accessToken)
+      .then((plan) => {
+        if (!plan) return;
+        const normalizedSemesters: Semester[] = plan.semesters.map((semester) => ({
+          id: semester.id,
+          type: semester.term.toLowerCase() as Semester['type'],
+          year: semester.year,
+          label: semester.label,
+          startDate: semester.start_date ?? null,
+          endDate: semester.end_date ?? null,
+          courses: semester.courses.map((course) => ({
+            id: course.id,
+            code: course.code,
+            title: course.title,
+            credits: course.credits,
+            description: course.description ?? undefined,
+            prerequisites: course.prerequisites ?? [],
+            offeredTerms: course.offeredTerms ?? ['fall', 'spring'],
+            type: (course.type ?? 'core') as PlannedCourse['type'],
+            requirementBucket: course.requirementBucket ?? undefined,
+            status: (course.status as PlannedCourse['status']) ?? 'planned',
+            grade: course.grade ?? undefined,
+            semesterId: semester.id,
+            selectedSectionId: course.selectedSectionId ?? null,
+          })),
+        }));
+        const order = { spring: 1, summer: 2, fall: 3, winter: 4 } as const;
+        normalizedSemesters.sort(
+          (a, b) => (a.year - b.year) || (order[a.type] - order[b.type])
+        );
+        setSemesters(normalizedSemesters);
+        setCurrentPlan({
+          id: plan.id,
+          name: plan.name,
+          majorId: studentProfile?.majorId ?? 'UNDECLARED',
+          semesters: normalizedSemesters,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isActive: true,
+        });
+      })
+      .catch(() => null);
+  }, [accessToken, studentProfile?.majorId]);
+
+  const resolveTermDates = useCallback((term: Semester['type'], year: number) => {
+    const found = termCalendar.find(
+      (entry) => entry.term.toLowerCase() === term && entry.year === year
+    );
+    return {
+      startDate: found?.start_date ?? null,
+      endDate: found?.end_date ?? null,
+    };
+  }, [termCalendar]);
+
+  const buildSemester = (term: Semester['type'], year: number) => {
+    const dates = resolveTermDates(term, year);
+    return {
     id: `${term}-${year}-${Math.random().toString(36).slice(2, 8)}`,
     type: term,
     year,
     label: `${term.charAt(0).toUpperCase() + term.slice(1)} ${year}`,
     courses: [],
-    maxCredits: 18,
-  });
+    startDate: dates.startDate,
+    endDate: dates.endDate,
+  };
+  };
 
   const addSemester = useCallback((semester: Semester) => {
     setSemesters((prev) => {
@@ -86,20 +158,27 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const createSemester = useCallback(
+    (term: Semester['type'], year: number) => buildSemester(term, year),
+    [buildSemester]
+  );
+
   const completeOnboarding = useCallback((data: OnboardingData) => {
     const subjectCode = data.majorId === 'UNDECLARED' ? null : data.majorId;
     if (subjectCode) {
       void loadCourses(subjectCode);
     }
 
+    const metadata = user?.user_metadata as { name?: string } | undefined;
     const profile: StudentProfile = {
       id: 'student-1',
-      name: 'Student',
-      email: 'student@university.edu',
+      name: studentProfile?.name ?? metadata?.name ?? 'Student',
+      email: studentProfile?.email ?? user?.email ?? '',
       majorId: data.majorId,
       admittedYear: data.admittedYear,
       startTerm: data.startTerm,
       graduationYear: data.graduationYear,
+      graduationTerm: (data.graduationTerm.toLowerCase() as Semester['type']) ?? 'spring',
       targetGraduation: data.targetGraduation,
       completedCourses: [],
       currentGPA: data.existingGPA || 0,
@@ -123,21 +202,24 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentPlan(plan);
     setIsOnboarded(true);
-  }, [loadCourses]);
+  }, [loadCourses, studentProfile?.email, studentProfile?.name, user?.email, user?.user_metadata]);
 
   const hydrateProfile = useCallback((profile: ProfilePayload) => {
     const majorId = profile.major_code ?? 'UNDECLARED';
     const admittedYear = profile.start_year ?? new Date().getFullYear();
     const startTerm = (profile.start_term?.toLowerCase() as Semester['type']) ?? 'fall';
+    const graduationTerm = (profile.graduation_term?.toLowerCase() as Semester['type']) ?? 'spring';
 
+    const metadata = user?.user_metadata as { name?: string } | undefined;
     const hydrated: StudentProfile = {
       id: 'student-1',
-      name: profile.name ?? 'Student',
-      email: profile.email ?? '',
+      name: profile.name ?? metadata?.name ?? 'Student',
+      email: profile.email ?? user?.email ?? '',
       majorId,
       admittedYear,
       startTerm,
       graduationYear: profile.graduation_year ?? admittedYear + 4,
+      graduationTerm,
       targetGraduation: `${profile.graduation_term ?? 'Spring'} ${profile.graduation_year ?? admittedYear + 4}`,
       completedCourses: [],
       currentGPA: profile.gpa ?? 0,
@@ -245,13 +327,38 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     (sum, semester) => sum + semester.courses.reduce((inner, course) => inner + course.credits, 0),
     0
   );
-  const totalCredits = studentProfile?.totalCredits ?? plannedCredits;
+  const totalCredits = plannedCredits;
   const earnedCredits = completedCourses.reduce((sum, c) => sum + c.credits, 0);
+  const totalCourses = semesters.reduce((sum, semester) => sum + semester.courses.length, 0);
   
   const currentGPA = completedCourses.length > 0
     ? completedCourses.reduce((sum, c) => sum + (c.gradePoints || 0) * c.credits, 0) / 
       completedCourses.reduce((sum, c) => sum + c.credits, 0)
     : 0;
+
+  const savePlan = useCallback(async () => {
+    if (!accessToken) return;
+    const payload = {
+      name: currentPlan?.name ?? 'My Academic Plan',
+      semesters: semesters.map((semester) => ({
+        id: semester.id,
+        type: semester.type,
+        year: semester.year,
+        label: semester.label,
+        startDate: semester.startDate ?? null,
+        endDate: semester.endDate ?? null,
+        courses: semester.courses.map((course) => ({
+          id: course.id,
+          code: course.code,
+          credits: course.credits,
+          status: course.status,
+          grade: course.grade ?? null,
+          selectedSectionId: course.selectedSectionId ?? null,
+        })),
+      })),
+    };
+    await updatePlan(accessToken, payload);
+  }, [accessToken, currentPlan?.name, semesters]);
 
   const value: PlannerContextType = {
     currentPlan,
@@ -269,11 +376,14 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     resetPlan,
     loadCourses,
     addSemester,
+    createSemester,
     hydrateProfile,
     setOnboarded: setIsOnboarded,
+    savePlan,
     totalCredits,
     earnedCredits,
     currentGPA,
+    totalCourses,
     availableCourses,
   };
 

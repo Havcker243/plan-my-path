@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
-import { AlertTriangle, BookOpen, Hash } from 'lucide-react';
+import { BookOpen, Hash } from 'lucide-react';
 import { Semester, PlannedCourse } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,6 @@ export function SemesterCard({
 
   const totalCredits = semester.courses.reduce((sum, c) => sum + c.credits, 0);
   const courseCount = semester.courses.length;
-  const isOverLimit = totalCredits > semester.maxCredits;
 
   const semesterTypeStyles = {
     fall: 'semester-fall',
@@ -48,19 +47,10 @@ export function SemesterCard({
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold text-foreground">{semester.label}</h3>
-          <div className={cn(
-            'text-sm font-medium',
-            isOverLimit ? 'text-destructive' : 'text-muted-foreground'
-          )}>
-            {totalCredits}/{semester.maxCredits} cr
+          <div className="text-sm font-medium text-muted-foreground">
+            {totalCredits} cr
           </div>
         </div>
-        {isOverLimit && (
-          <div className="flex items-center gap-1.5 text-xs text-destructive">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Exceeds credit limit</span>
-          </div>
-        )}
       </div>
 
       {/* Course list */}

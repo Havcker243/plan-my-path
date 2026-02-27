@@ -3,6 +3,7 @@ create table if not exists profiles (
   user_id uuid not null unique,
   email text,
   name text,
+  phone text,
   avatar_url text,
   major_code text,
   graduation_year int,

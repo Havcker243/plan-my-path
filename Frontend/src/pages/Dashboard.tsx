@@ -20,9 +20,11 @@ import { usePlanner } from '@/contexts/PlannerContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { exportToICS } from '@/utils/icsExport';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { 
     semesters, 
     studentProfile, 
@@ -44,7 +46,8 @@ export function Dashboard() {
   }
 
   // Personalized greeting
-  const displayName = studentProfile?.name || 'Student';
+  const metadata = user?.user_metadata as { name?: string } | undefined;
+  const displayName = studentProfile?.name || metadata?.name || 'Student';
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -68,15 +71,8 @@ export function Dashboard() {
   }, [semesters]);
 
   const warnings = useMemo(() => {
-    const issues: string[] = [];
-    semesters.forEach(semester => {
-      const semesterCredits = semester.courses.reduce((sum, c) => sum + c.credits, 0);
-      if (semesterCredits > semester.maxCredits) {
-        issues.push(`${semester.label} exceeds ${semester.maxCredits} credit limit`);
-      }
-    });
-    return issues;
-  }, [semesters]);
+    return [];
+  }, []);
 
   const handleExportICS = () => {
     exportToICS(semesters);
@@ -168,7 +164,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-foreground">
-                  {studentProfile?.targetGraduation || 'Spring 2028'}
+                  {studentProfile?.targetGraduation || 'Target graduation'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-3">
                   {plannedCredits} credits planned
@@ -190,7 +186,11 @@ export function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-xl font-bold text-foreground">Computer Science</p>
+                <p className="text-xl font-bold text-foreground">
+                  {studentProfile?.majorId && studentProfile.majorId !== 'UNDECLARED'
+                    ? studentProfile.majorId
+                    : 'Undeclared'}
+                </p>
                 <p className="text-xs text-muted-foreground mt-3">
                   Graduation {studentProfile?.graduationYear || new Date().getFullYear() + 4}
                 </p>

@@ -8,7 +8,7 @@ interface AuthContextValue {
   accessToken: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name?: string, phone?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -44,8 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       },
-      signUpWithEmail: async (email, password) => {
-        const { error } = await supabase.auth.signUp({ email, password });
+      signUpWithEmail: async (email, password, name, phone) => {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name || undefined,
+              phone: phone || undefined,
+            },
+          },
+        });
         if (error) throw error;
       },
       signOut: async () => {

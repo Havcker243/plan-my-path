@@ -62,7 +62,7 @@ export function Landing() {
             </h1>
 
             <p className="text-xl md:text-2xl text-primary-foreground/70 mb-10 max-w-2xl mx-auto">
-              Plan smarter, graduate on time. The intelligent course planner that keeps you on track.
+              Plan smarter, graduate on time. Build a multi-semester course plan that stays in sync with your goals.
             </p>
 
             <motion.div
@@ -73,17 +73,17 @@ export function Landing() {
             >
               <Button
                 size="lg"
-                onClick={() => navigate('/onboard')}
+                onClick={() => navigate('/signup')}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 shadow-glow"
               >
-                Get Started Free
+                Create Account
               </Button>
               <Button
                 size="lg"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/login')}
                 className="bg-primary-foreground/15 text-primary-foreground hover:bg-primary-foreground/25 text-lg px-8 py-6"
               >
-                View Demo
+                Log In
               </Button>
             </motion.div>
           </motion.div>
@@ -168,7 +168,7 @@ export function Landing() {
             </p>
             <Button
               size="lg"
-              onClick={() => navigate('/onboard')}
+              onClick={() => navigate('/signup')}
               className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8"
             >
               Start Planning Now

@@ -28,6 +28,7 @@ export interface PlannedCourse extends Course {
   semesterId: string;
   moodScore?: number;
   moodCount?: number;
+  selectedSectionId?: string | null;
 }
 
 export interface Semester {
@@ -36,7 +37,8 @@ export interface Semester {
   year: number;
   label: string;
   courses: PlannedCourse[];
-  maxCredits: number;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 export interface Major {
@@ -56,6 +58,7 @@ export interface StudentProfile {
   admittedYear: number;
   startTerm: SemesterType;
   graduationYear: number;
+  graduationTerm: SemesterType;
   targetGraduation: string;
   completedCourses: PlannedCourse[];
   currentGPA: number;
@@ -99,6 +102,7 @@ export interface OnboardingData {
   admittedYear: number;
   startTerm: SemesterType;
   graduationYear: number;
+  graduationTerm: SemesterType;
   targetGraduation: string;
   completedCourses: string[];
   existingGPA?: number;
@@ -106,7 +110,6 @@ export interface OnboardingData {
 
 // Constraint types for planner
 export interface PlanConstraints {
-  maxCreditsPerSemester: number;
   targetGraduation: string;
   preferredCourseLoad: 'light' | 'normal' | 'heavy';
   avoidSummer: boolean;

@@ -20,6 +20,7 @@ export function Profile() {
   const [form, setForm] = useState({
     name: '',
     avatar_url: '',
+    phone: '',
     major_code: 'UNDECLARED',
     graduation_year: new Date().getFullYear() + 4,
     graduation_term: 'Spring',
@@ -51,6 +52,7 @@ export function Profile() {
           ...prev,
           name: profile.name ?? '',
           avatar_url: profile.avatar_url ?? '',
+          phone: profile.phone ?? '',
           major_code: profile.major_code ?? 'UNDECLARED',
           graduation_year: profile.graduation_year ?? prev.graduation_year,
           graduation_term: profile.graduation_term ?? prev.graduation_term,
@@ -88,6 +90,7 @@ export function Profile() {
         email: user?.email ?? undefined,
         name: form.name,
         avatar_url: form.avatar_url,
+        phone: form.phone,
         major_code: form.major_code,
         graduation_year: form.graduation_year,
         graduation_term: form.graduation_term,
@@ -188,6 +191,15 @@ export function Profile() {
                   }}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="(555) 123-4567"
+              />
             </div>
 
             <div className="space-y-2">

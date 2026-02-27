@@ -59,28 +59,6 @@ export function usePlannerValidation() {
     return violations;
   }, []);
 
-  // Check credit limit
-  const checkCreditLimit = useCallback((
-    course: PlannedCourse,
-    targetSemester: Semester
-  ): ConstraintViolation[] => {
-    const violations: ConstraintViolation[] = [];
-
-    const currentCredits = targetSemester.courses.reduce((sum, c) => sum + c.credits, 0);
-    const newTotal = currentCredits + course.credits;
-
-    if (newTotal > targetSemester.maxCredits) {
-      violations.push({
-        type: 'warning',
-        courseId: course.id,
-        message: `Adding ${course.code} would exceed credit limit (${newTotal}/${targetSemester.maxCredits})`,
-        suggestion: 'Consider reducing course load or moving another course',
-      });
-    }
-
-    return violations;
-  }, []);
-
   // Main validation function
   const validateDrop = useCallback((
     course: PlannedCourse,
@@ -92,7 +70,6 @@ export function usePlannerValidation() {
     // Run all checks
     violations.push(...checkPrerequisites(course, targetSemester, allSemesters));
     violations.push(...checkOfferingTerm(course, targetSemester));
-    violations.push(...checkCreditLimit(course, targetSemester));
 
     // Check for duplicates
     const isDuplicate = targetSemester.courses.some(c => c.id === course.id);
@@ -111,7 +88,7 @@ export function usePlannerValidation() {
       canDrop: !hasHardErrors,
       violations,
     };
-  }, [checkPrerequisites, checkOfferingTerm, checkCreditLimit]);
+  }, [checkPrerequisites, checkOfferingTerm]);
 
   return { validateDrop };
 }

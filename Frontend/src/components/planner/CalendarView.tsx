@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Semester } from '@/types/planner';
-import { fetchSections } from '@/lib/api';
+import { fetchSectionsForTerm } from '@/lib/api';
 import { exportToICS } from '@/utils/icsExport';
 
 interface CalendarViewProps {
@@ -60,7 +60,7 @@ export function CalendarView({ semesters }: CalendarViewProps) {
   useEffect(() => {
     if (!currentSemester) return;
     const courseCodes = currentSemester.courses.map((course) => course.code);
-    fetchSections(courseCodes)
+    fetchSectionsForTerm(courseCodes, currentSemester.type)
       .then((data) => setSectionsByCourse(data))
       .catch(() => setSectionsByCourse({}));
   }, [currentSemester]);
@@ -69,7 +69,9 @@ export function CalendarView({ semesters }: CalendarViewProps) {
     const sectionsForExport = [];
     for (const course of currentSemester?.courses || []) {
       const sections = sectionsByCourse[course.code] || [];
-      const section = sections[0];
+      const section = course.selectedSectionId
+        ? sections.find((item) => item.id === course.selectedSectionId)
+        : sections[0];
       if (!section) continue;
       const meeting = section.meeting_times?.[0];
       const instructor = section.instructors?.[0]?.name;
@@ -93,7 +95,9 @@ export function CalendarView({ semesters }: CalendarViewProps) {
     for (const course of currentSemester.courses) {
       if (!enabledCourses.has(course.id)) continue;
       const sections = sectionsByCourse[course.code] || [];
-      const section = sections[0];
+      const section = course.selectedSectionId
+        ? sections.find((item) => item.id === course.selectedSectionId)
+        : sections[0];
       if (!section) continue;
       const meeting = section.meeting_times?.[0];
       if (!meeting || !meeting.days) continue;
@@ -212,7 +216,12 @@ export function CalendarView({ semesters }: CalendarViewProps) {
             <p className="text-xs text-muted-foreground">Toggle courses to include in calendar</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {currentSemester.courses.map((course) => (
+            {currentSemester.courses.map((course) => {
+              const sections = sectionsByCourse[course.code] || [];
+              const section = course.selectedSectionId
+                ? sections.find((item) => item.id === course.selectedSectionId)
+                : sections[0];
+              return (
               <div
                 key={course.id}
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
@@ -220,13 +229,17 @@ export function CalendarView({ semesters }: CalendarViewProps) {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-foreground">{course.code}</p>
                   <p className="text-xs text-muted-foreground truncate">{course.title}</p>
+                  {!section && (
+                    <p className="text-[11px] text-destructive mt-1">No sections yet for this term</p>
+                  )}
                 </div>
                 <Switch
                   checked={enabledCourses.has(course.id)}
                   onCheckedChange={() => toggleCourse(course.id)}
                 />
               </div>
-            ))}
+            );
+            })}
           </CardContent>
         </Card>
       </div>

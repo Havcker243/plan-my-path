@@ -21,7 +21,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { CourseLabel } from '@/lib/api';
 
 interface CourseCardProps {
   course: PlannedCourse;
@@ -29,14 +36,18 @@ interface CourseCardProps {
   onRemove?: () => void;
   onMarkCompleted?: () => void;
   isDragging?: boolean;
+  conflicts?: string[]; // Array of conflicting course codes
+  requirementLabel?: CourseLabel | null; // Requirement label (Required, Group Choice, etc.)
 }
 
-export function CourseCard({ 
-  course, 
-  onOpenDetail, 
+export function CourseCard({
+  course,
+  onOpenDetail,
   onRemove,
   onMarkCompleted,
-  isDragging 
+  isDragging,
+  conflicts = [],
+  requirementLabel = null
 }: CourseCardProps) {
   const {
     attributes,
@@ -166,7 +177,51 @@ export function CourseCard({
             <span className="text-xs text-muted-foreground">{course.credits} cr</span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
+            {requirementLabel && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] px-1.5 py-0",
+                        requirementLabel.label === 'Required' && "border-red-500/50 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20",
+                        requirementLabel.label === 'Group Choice' && "border-blue-500/50 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20",
+                        requirementLabel.label === 'Major Elective' && "border-green-500/50 text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-950/20",
+                        requirementLabel.label === 'General Elective' && "border-gray-500/50 text-gray-600 dark:text-gray-400"
+                      )}
+                    >
+                      {requirementLabel.label === 'Required' && '🔴'}
+                      {requirementLabel.label === 'Group Choice' && '🟡'}
+                      {requirementLabel.label === 'Major Elective' && '🟢'}
+                      {requirementLabel.label === 'General Elective' && '⚪'}
+                      <span className="ml-0.5">{requirementLabel.label}</span>
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs font-medium">{requirementLabel.detail}</p>
+                    <p className="text-xs text-muted-foreground">{requirementLabel.group_name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {conflicts.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-yellow-500/50 text-yellow-600 dark:text-yellow-400">
+                      <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                      Conflict
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">Time conflicts with:</p>
+                    <p className="text-xs font-medium">{conflicts.join(', ')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {isFallOnly && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-warning/50 text-warning">
                 Fall Only

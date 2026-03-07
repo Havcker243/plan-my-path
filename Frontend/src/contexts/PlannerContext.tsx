@@ -13,7 +13,7 @@ interface PlannerContextType {
   selectedCourse: PlannedCourse | null;
   
   // Actions
-  completeOnboarding: (data: OnboardingData) => void;
+  completeOnboarding: (data: OnboardingData) => Semester;
   moveCourse: (courseId: string, fromSemesterId: string, toSemesterId: string) => void;
   removeCourse: (courseId: string, semesterId: string) => void;
   addCourse: (course: PlannedCourse, semesterId: string) => void;
@@ -24,6 +24,7 @@ interface PlannerContextType {
   loadCourses: (subjectCode: string | null) => Promise<void>;
   addSemester: (semester: Semester) => void;
   createSemester: (term: Semester['type'], year: number) => Semester;
+  replaceSemesters: (semesters: Semester[]) => void;
   hydrateProfile: (profile: ProfilePayload) => void;
   setOnboarded: (value: boolean) => void;
   savePlan: () => Promise<void>;
@@ -158,16 +159,49 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const replaceSemesters = useCallback((nextSemesters: Semester[]) => {
+    const order = { spring: 1, summer: 2, fall: 3, winter: 4 } as const;
+    const normalized = nextSemesters
+      .map((semester) => ({
+        ...semester,
+        courses: semester.courses.map((course) => ({
+          ...course,
+          semesterId: semester.id,
+        })),
+      }))
+      .sort((a, b) => (a.year - b.year) || (order[a.type] - order[b.type]));
+
+    setSemesters(normalized);
+    setCurrentPlan((prev) =>
+      prev
+        ? {
+            ...prev,
+            semesters: normalized,
+            updatedAt: new Date(),
+          }
+        : prev
+    );
+  }, []);
+
   const createSemester = useCallback(
     (term: Semester['type'], year: number) => buildSemester(term, year),
     [buildSemester]
   );
 
-  const completeOnboarding = useCallback((data: OnboardingData) => {
+  const completeOnboarding = useCallback((data: OnboardingData): Semester => {
     const subjectCode = data.majorId === 'UNDECLARED' ? null : data.majorId;
     if (subjectCode) {
       void loadCourses(subjectCode);
     }
+
+    // Map completed course IDs to PlannedCourse objects using availableCourses
+    const completedCourseObjects: PlannedCourse[] = data.completedCourses
+      .map((courseId) => {
+        const course = availableCourses.find((c) => c.id === courseId || c.code === courseId);
+        if (!course) return null;
+        return { ...course, status: 'completed' as const, semesterId: '' };
+      })
+      .filter(Boolean) as PlannedCourse[];
 
     const metadata = user?.user_metadata as { name?: string } | undefined;
     const profile: StudentProfile = {
@@ -180,17 +214,17 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       graduationYear: data.graduationYear,
       graduationTerm: (data.graduationTerm.toLowerCase() as Semester['type']) ?? 'spring',
       targetGraduation: data.targetGraduation,
-      completedCourses: [],
-      currentGPA: data.existingGPA || 0,
+      completedCourses: completedCourseObjects,
+      currentGPA: data.existingGPA ?? 0,
       totalCredits: 0,
       earnedCredits: 0,
     };
-    
+
     setStudentProfile(profile);
     const initialSemester = buildSemester(data.startTerm, data.admittedYear);
     const newSemesters = [initialSemester];
     setSemesters(newSemesters);
-    
+
     const plan: Plan = {
       id: 'plan-1',
       name: 'My 4-Year Plan',
@@ -202,7 +236,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentPlan(plan);
     setIsOnboarded(true);
-  }, [loadCourses, studentProfile?.email, studentProfile?.name, user?.email, user?.user_metadata]);
+
+    return initialSemester;
+  }, [availableCourses, loadCourses, studentProfile?.email, studentProfile?.name, user?.email, user?.user_metadata]);
 
   const hydrateProfile = useCallback((profile: ProfilePayload) => {
     const majorId = profile.major_code ?? 'UNDECLARED';
@@ -377,6 +413,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     loadCourses,
     addSemester,
     createSemester,
+    replaceSemesters,
     hydrateProfile,
     setOnboarded: setIsOnboarded,
     savePlan,

@@ -204,3 +204,39 @@ export async function updatePlan(
   );
   return payload.data ?? null;
 }
+
+// Course Labels Types
+export type CourseLabel = {
+  label: 'Required' | 'Group Choice' | 'Major Elective' | 'General Elective';
+  group_name: string;
+  group_type: string;
+  detail: string;
+  credits: number | null;
+};
+
+export type CourseLabelsResponse = {
+  [courseCode: string]: CourseLabel;
+};
+
+/**
+ * Fetch course labels for a specific major
+ * @param majorCode - Major code (e.g., "CSCI")
+ * @param courseCodes - Optional array of course codes to label
+ * @returns Object mapping course codes to their labels
+ */
+export async function fetchCourseLabels(
+  majorCode: string,
+  courseCodes?: string[]
+): Promise<CourseLabelsResponse> {
+  const params = new URLSearchParams({ major_code: majorCode });
+
+  if (courseCodes && courseCodes.length > 0) {
+    params.set('course_codes', courseCodes.join(','));
+  }
+
+  const payload = await request<{ data: CourseLabelsResponse }>(
+    `/api/course-labels?${params.toString()}`
+  );
+
+  return payload.data ?? {};
+}

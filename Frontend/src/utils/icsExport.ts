@@ -10,43 +10,41 @@ interface ICSEvent {
   rrule?: string;
 }
 
+function parseMeetingDaysToByDay(days: string): string[] {
+  if (!days) return [];
 
-// Parse meeting times like "MWF 9:00-9:50 AM" or "TR 10:30 AM-11:45 AM"
-function parseMeetingTime(meetingTime: string): { days: string[]; startTime: string; endTime: string } | null {
   const dayMap: Record<string, string> = {
-    'M': 'MO',
-    'T': 'TU',
-    'W': 'WE',
-    'R': 'TH',
-    'F': 'FR',
-    'S': 'SA',
-    'U': 'SU',
+    M: 'MO',
+    T: 'TU',
+    W: 'WE',
+    R: 'TH',
+    F: 'FR',
+    S: 'SA',
+    U: 'SU',
   };
 
-  const normalized = meetingTime.replace(/Th/gi, 'R').replace(/\//g, '');
-  const match = normalized.match(
-    /^([MTWRFSU]+)\s+(\d{1,2}:\d{2})\s*(AM|PM)?-(\d{1,2}:\d{2})\s*(AM|PM)?$/i
-  );
+  const normalized = days.replace(/Th/gi, 'R').replace(/\//g, '');
+  return normalized
+    .split('')
+    .map((token) => dayMap[token.toUpperCase()])
+    .filter(Boolean);
+}
+
+function normalizeTimeToICS(time: string): string | null {
+  if (!time) return null;
+  const match = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (!match) return null;
 
-  const [, dayChars, startTimeRaw, startPeriod, endTimeRaw, endPeriod] = match;
-  
-  const days = dayChars.split('').map(d => dayMap[d]).filter(Boolean);
-  
-  // Convert to 24-hour format for ICS
-  const convertTo24Hr = (time: string, period?: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
-    let h = hours;
-    if (period?.toUpperCase() === 'PM' && hours !== 12) h += 12;
-    if (period?.toUpperCase() === 'AM' && hours === 12) h = 0;
-    return `${h.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}00`;
-  };
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3] ?? '0');
+  if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) {
+    return null;
+  }
 
-  return {
-    days,
-    startTime: convertTo24Hr(startTimeRaw, startPeriod || endPeriod),
-    endTime: convertTo24Hr(endTimeRaw, endPeriod),
-  };
+  return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${seconds
+    .toString()
+    .padStart(2, '0')}`;
 }
 
 // Format date for ICS (YYYYMMDD or YYYYMMDDTHHMMSS)
@@ -87,33 +85,69 @@ function createSemesterSpanEvent(course: PlannedCourse, semester: Semester): ICS
   };
 }
 
+function resolveSectionForCourse(course: PlannedCourse, sections?: CourseSection[]): CourseSection | null {
+  if (!sections || sections.length === 0) return null;
+
+  const bySelectedId =
+    course.selectedSectionId
+      ? sections.find((section) => section.id === course.selectedSectionId)
+      : null;
+  if (bySelectedId) return bySelectedId;
+
+  const byCourseId = sections.find(
+    (section) => section.courseId === course.id || section.course_id === course.id
+  );
+  return byCourseId ?? null;
+}
+
+function firstOccurrenceFrom(start: Date, byDay: string[]): Date {
+  const dayMap: Record<string, number> = {
+    SU: 0,
+    MO: 1,
+    TU: 2,
+    WE: 3,
+    TH: 4,
+    FR: 5,
+    SA: 6,
+  };
+  const targetDays = byDay.map((value) => dayMap[value]).filter((value) => value !== undefined);
+  if (targetDays.length === 0) return start;
+
+  const date = new Date(start);
+  for (let i = 0; i < 7; i += 1) {
+    if (targetDays.includes(date.getDay())) return date;
+    date.setDate(date.getDate() + 1);
+  }
+  return start;
+}
+
 // Create ICS event for a course with section times (recurring weekly)
 function createRecurringEvent(
-  course: PlannedCourse, 
-  section: CourseSection, 
+  course: PlannedCourse,
+  section: CourseSection,
   semester: Semester
 ): ICSEvent | null {
-  const parsed = parseMeetingTime(section.meetingTimes);
-  if (!parsed) return null;
+  const meeting = section.meeting_times?.[0];
+  if (!meeting?.days || !meeting.start_time || !meeting.end_time) return null;
+
+  const byDay = parseMeetingDaysToByDay(meeting.days);
+  const startTime = normalizeTimeToICS(meeting.start_time);
+  const endTime = normalizeTimeToICS(meeting.end_time);
+  if (byDay.length === 0 || !startTime || !endTime) return null;
 
   const dates = getSemesterDates(semester);
-  
-  // Find the first occurrence day
-  const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
-  const firstDay = Math.min(...parsed.days.map(d => dayMap[d]));
-  const startDate = new Date(dates.start);
-  while (startDate.getDay() !== firstDay) {
-    startDate.setDate(startDate.getDate() + 1);
-  }
+  const firstDate = firstOccurrenceFrom(dates.start, byDay);
+  const instructorNames = (section.instructors ?? []).map((item) => item.name).filter(Boolean);
+  const location = [meeting.location, meeting.building, meeting.room].filter(Boolean).join(' ');
 
   return {
     uid: `${course.id}-${section.id}-${semester.id}@planner`,
     summary: `${course.code} - ${course.title}`,
-    description: `Professor: ${section.professor}\\nSection: ${section.sectionNumber}\\n${course.credits} credits`,
-    location: 'TBD', // Add location if available
-    dtstart: formatICSDate(startDate, parsed.startTime),
-    dtend: formatICSDate(startDate, parsed.endTime),
-    rrule: generateRRule(parsed.days, dates.end),
+    description: `Instructor: ${instructorNames.join(', ') || 'TBA'}\\nSection: ${section.section_code}\\n${course.credits} credits`,
+    location: location || undefined,
+    dtstart: formatICSDate(firstDate, startTime),
+    dtend: formatICSDate(firstDate, endTime),
+    rrule: generateRRule(byDay, dates.end),
   };
 }
 
@@ -162,7 +196,7 @@ export function generateICSContent(events: ICSEvent[]): string {
 
 // Export semesters to ICS
 export function exportToICS(
-  semesters: Semester[], 
+  semesters: Semester[],
   sections?: CourseSection[],
   selectedCourseIds?: string[]
 ): void {
@@ -175,8 +209,7 @@ export function exportToICS(
         return;
       }
 
-      // Check if course has section with meeting times
-      const courseSection = sections?.find(s => s.courseId === course.id);
+      const courseSection = resolveSectionForCourse(course, sections);
       
       if (courseSection) {
         const recurringEvent = createRecurringEvent(course, courseSection, semester);

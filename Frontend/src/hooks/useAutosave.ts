@@ -16,13 +16,19 @@ export function useAutosave({ data, onSave, debounceMs = 2000, enabled = true }:
   const pendingDataRef = useRef<unknown>(null);
   const lastSavedRef = useRef<string>('');
 
+  // Keep a ref to saveData so the online listener always calls the latest version
+  const saveDataRef = useRef<typeof saveData>(saveData);
+  useEffect(() => {
+    saveDataRef.current = saveData;
+  }, [saveData]);
+
   // Track online/offline status
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Sync pending changes when back online
+      // Sync pending changes when back online using the latest saveData
       if (pendingDataRef.current) {
-        saveData(pendingDataRef.current);
+        void saveDataRef.current(pendingDataRef.current);
       }
     };
     const handleOffline = () => {

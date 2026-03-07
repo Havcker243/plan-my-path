@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
-import { BookOpen, Hash } from 'lucide-react';
+import { BookOpen, Hash, AlertTriangle } from 'lucide-react';
 import { Semester, PlannedCourse } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ interface SemesterCardProps {
   onCourseClick?: (course: PlannedCourse) => void;
   onRemoveCourse?: (courseId: string) => void;
   onMarkCourseCompleted?: (courseId: string) => void;
+  courseConflicts?: Record<string, string[]>; // Map of courseId -> array of conflicting course codes
 }
 
 export function SemesterCard({
@@ -18,6 +19,7 @@ export function SemesterCard({
   onCourseClick,
   onRemoveCourse,
   onMarkCourseCompleted,
+  courseConflicts = {},
 }: SemesterCardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: semester.id,
@@ -25,6 +27,11 @@ export function SemesterCard({
 
   const totalCredits = semester.courses.reduce((sum, c) => sum + c.credits, 0);
   const courseCount = semester.courses.length;
+
+  // Count courses with time conflicts
+  const conflictCount = Object.keys(courseConflicts).filter(
+    (courseId) => courseConflicts[courseId].length > 0
+  ).length;
 
   const semesterTypeStyles = {
     fall: 'semester-fall',
@@ -76,6 +83,7 @@ export function SemesterCard({
                 onOpenDetail={() => onCourseClick?.(course)}
                 onRemove={() => onRemoveCourse?.(course.id)}
                 onMarkCompleted={() => onMarkCourseCompleted?.(course.id)}
+                conflicts={courseConflicts[course.id] || []}
               />
             ))
           ) : (
@@ -100,6 +108,16 @@ export function SemesterCard({
             <span>Credits: {totalCredits}</span>
           </div>
         </div>
+
+        {/* Time conflict warning */}
+        {conflictCount > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/20 px-2 py-1 rounded-md">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>
+              {conflictCount} {conflictCount === 1 ? 'course has' : 'courses have'} time conflicts
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   );

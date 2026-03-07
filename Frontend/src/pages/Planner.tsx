@@ -35,18 +35,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePlanner } from "@/contexts/PlannerContext";
+import { SectionProvider, useSections } from "@/contexts/SectionContext";
 import { usePlannerValidation } from "@/hooks/usePlannerValidation";
 import { useAutosave } from "@/hooks/useAutosave";
 import { PlannedCourse, Semester, SemesterType } from "@/types/planner";
 import { exportToICS } from "@/utils/icsExport";
 import { toast } from "@/hooks/use-toast";
+import { isTBAOrOnline, doMeetingTimesConflict } from "@/utils/timeUtils";
 
 interface UndoState {
   semesters: Semester[];
   description: string;
 }
 
-export function Planner() {
+function PlannerContent() {
   const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const {
@@ -56,6 +58,7 @@ export function Planner() {
     removeCourse,
     addSemester,
     createSemester,
+    replaceSemesters,
     markCourseCompleted,
     selectedCourse,
     setSelectedCourse,
@@ -68,12 +71,14 @@ export function Planner() {
   } = usePlanner();
 
   const { validateDrop } = usePlannerValidation();
+  const { fetchSectionsForSemester, getSectionForCourse, isSemesterCached } = useSections();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoState[]>([]);
   const [showSemesterDialog, setShowSemesterDialog] = useState(false);
   const [newSemesterTerm, setNewSemesterTerm] = useState<SemesterType>("fall");
   const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
+  const [semesterConflicts, setSemesterConflicts] = useState<Record<string, Record<string, string[]>>>({});
 
   const { status: autosaveStatus } = useAutosave({
     data: semesters,
@@ -82,6 +87,82 @@ export function Planner() {
     },
     enabled: isOnboarded,
   });
+
+  // Prefetch sections and calculate conflicts when semesters change
+  useEffect(() => {
+    const prefetchAndCalculateConflicts = async () => {
+      if (!isOnboarded || semesters.length === 0) return;
+
+      // Prefetch sections for all semesters
+      await Promise.all(
+        semesters.map((semester) => {
+          if (!isSemesterCached(semester.id)) {
+            return fetchSectionsForSemester(semester);
+          }
+          return Promise.resolve();
+        })
+      );
+
+      // Calculate conflicts for each semester
+      const conflicts: Record<string, Record<string, string[]>> = {};
+
+      semesters.forEach((semester) => {
+        const semesterConflicts: Record<string, string[]> = {};
+
+        // Check each course against all other courses in the same semester
+        semester.courses.forEach((course) => {
+          const conflictingCourses: string[] = [];
+
+          const courseSection = getSectionForCourse(
+            course.code,
+            course.selectedSectionId,
+            semester.id
+          );
+
+          if (!courseSection || isTBAOrOnline(courseSection)) {
+            return;
+          }
+
+          const courseMeeting = courseSection.meeting_times?.[0];
+          if (!courseMeeting) return;
+
+          // Compare with other courses
+          semester.courses.forEach((otherCourse) => {
+            if (course.id === otherCourse.id) return;
+
+            const otherSection = getSectionForCourse(
+              otherCourse.code,
+              otherCourse.selectedSectionId,
+              semester.id
+            );
+
+            if (!otherSection || isTBAOrOnline(otherSection)) {
+              return;
+            }
+
+            const otherMeeting = otherSection.meeting_times?.[0];
+            if (!otherMeeting) return;
+
+            if (doMeetingTimesConflict(courseMeeting, otherMeeting)) {
+              conflictingCourses.push(otherCourse.code);
+            }
+          });
+
+          if (conflictingCourses.length > 0) {
+            semesterConflicts[course.id] = conflictingCourses;
+          }
+        });
+
+        if (Object.keys(semesterConflicts).length > 0) {
+          conflicts[semester.id] = semesterConflicts;
+        }
+      });
+
+      setSemesterConflicts(conflicts);
+    };
+
+    prefetchAndCalculateConflicts();
+  }, [semesters, isOnboarded, fetchSectionsForSemester, getSectionForCourse, isSemesterCached]);
 
   useEffect(() => {
     if (!isOnboarded) {
@@ -121,12 +202,13 @@ export function Planner() {
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return;
     const lastState = undoStack[undoStack.length - 1];
+    replaceSemesters(lastState.semesters);
     setUndoStack((prev) => prev.slice(0, -1));
     toast({
       title: "Undone",
       description: lastState.description,
     });
-  }, [undoStack]);
+  }, [undoStack, replaceSemesters]);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -337,6 +419,7 @@ export function Planner() {
                       onCourseClick={handleCourseClick}
                       onRemoveCourse={(courseId) => handleRemoveCourse(courseId, semester.id)}
                       onMarkCourseCompleted={(courseId) => markCourseCompleted(courseId, "A")}
+                      courseConflicts={semesterConflicts[semester.id] || {}}
                     />
                   </motion.div>
                 ))}
@@ -455,5 +538,14 @@ export function Planner() {
         </DialogContent>
       </Dialog>
     </AppLayout>
+  );
+}
+
+// Wrapper component that provides SectionContext
+export function Planner() {
+  return (
+    <SectionProvider>
+      <PlannerContent />
+    </SectionProvider>
   );
 }

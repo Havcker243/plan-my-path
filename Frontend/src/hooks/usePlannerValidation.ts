@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 import { Semester, PlannedCourse, ConstraintViolation } from '@/types/planner';
+import { useSections } from '@/contexts/SectionContext';
+import { isTBAOrOnline, doMeetingTimesConflict } from '@/utils/timeUtils';
 
 interface ValidationResult {
   canDrop: boolean;
@@ -7,6 +9,8 @@ interface ValidationResult {
 }
 
 export function usePlannerValidation() {
+  const { getSectionForCourse, isSemesterLoading } = useSections();
+
   // Check if prerequisites are satisfied
   const checkPrerequisites = useCallback((
     course: PlannedCourse,
@@ -59,6 +63,76 @@ export function usePlannerValidation() {
     return violations;
   }, []);
 
+  // Check for time conflicts with other courses in the semester
+  const checkTimeConflicts = useCallback((
+    course: PlannedCourse,
+    targetSemester: Semester
+  ): ConstraintViolation[] => {
+    const violations: ConstraintViolation[] = [];
+
+    // Skip if sections are still loading
+    if (isSemesterLoading(targetSemester.id)) {
+      return violations;
+    }
+
+    // Get section for the course being added/moved
+    const courseSection = getSectionForCourse(
+      course.code,
+      course.selectedSectionId,
+      targetSemester.id
+    );
+
+    // Skip if no section data or TBA/online
+    if (!courseSection || isTBAOrOnline(courseSection)) {
+      return violations;
+    }
+
+    // Get first meeting time for the course
+    const courseMeeting = courseSection.meeting_times?.[0];
+    if (!courseMeeting) {
+      return violations;
+    }
+
+    // Check against all existing courses in target semester
+    for (const existingCourse of targetSemester.courses) {
+      // Skip comparing with itself
+      if (existingCourse.id === course.id) {
+        continue;
+      }
+
+      // Get section for existing course
+      const existingSection = getSectionForCourse(
+        existingCourse.code,
+        existingCourse.selectedSectionId,
+        targetSemester.id
+      );
+
+      // Skip if no section or TBA/online
+      if (!existingSection || isTBAOrOnline(existingSection)) {
+        continue;
+      }
+
+      // Get first meeting time for existing course
+      const existingMeeting = existingSection.meeting_times?.[0];
+      if (!existingMeeting) {
+        continue;
+      }
+
+      // Check if meeting times conflict
+      if (doMeetingTimesConflict(courseMeeting, existingMeeting)) {
+        violations.push({
+          type: 'warning',
+          courseId: course.id,
+          conflictWith: existingCourse.id,
+          message: `Time conflict with ${existingCourse.code}`,
+          suggestion: `${course.code} and ${existingCourse.code} have overlapping meeting times`,
+        });
+      }
+    }
+
+    return violations;
+  }, [getSectionForCourse, isSemesterLoading]);
+
   // Main validation function
   const validateDrop = useCallback((
     course: PlannedCourse,
@@ -70,6 +144,7 @@ export function usePlannerValidation() {
     // Run all checks
     violations.push(...checkPrerequisites(course, targetSemester, allSemesters));
     violations.push(...checkOfferingTerm(course, targetSemester));
+    violations.push(...checkTimeConflicts(course, targetSemester));
 
     // Check for duplicates
     const isDuplicate = targetSemester.courses.some(c => c.id === course.id);
@@ -88,7 +163,7 @@ export function usePlannerValidation() {
       canDrop: !hasHardErrors,
       violations,
     };
-  }, [checkPrerequisites, checkOfferingTerm]);
+  }, [checkPrerequisites, checkOfferingTerm, checkTimeConflicts]);
 
   return { validateDrop };
 }

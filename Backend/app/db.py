@@ -408,10 +408,11 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
 
 
 def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    semesters = payload.get("semesters") or []
+    semesters_payload = payload.get("semesters") or []
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("select id from plans where user_id = %s;", (user_id,))
+            # Use FOR UPDATE to prevent concurrent saves corrupting data
+            cur.execute("select id from plans where user_id = %s for update;", (user_id,))
             plan_row = cur.fetchone()
             if plan_row:
                 plan_id = plan_row[0]
@@ -426,26 +427,52 @@ def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[st
                 )
                 plan_id = cur.fetchone()[0]
 
-            cur.execute("delete from plan_semesters where plan_id = %s;", (plan_id,))
+            # Get existing semester IDs so we can UPDATE instead of DELETE+INSERT
+            cur.execute(
+                "select id from plan_semesters where plan_id = %s;", (plan_id,)
+            )
+            existing_semester_ids = {str(row[0]) for row in cur.fetchall()}
+            incoming_semester_ids: set = set()
 
-            for semester in semesters:
+            for semester in semesters_payload:
+                incoming_id = str(semester.get("id") or "")
+                term = semester.get("type") or semester.get("term")
+                year = semester.get("year")
+                label = semester.get("label")
+                start_date = semester.get("startDate") or semester.get("start_date")
+                end_date = semester.get("endDate") or semester.get("end_date")
+
+                if incoming_id and incoming_id in existing_semester_ids:
+                    # Preserve existing semester ID — just update metadata
+                    cur.execute(
+                        """
+                        update plan_semesters set
+                          term = %s, year = %s, label = %s,
+                          start_date = %s, end_date = %s, updated_at = now()
+                        where id = %s;
+                        """,
+                        (term, year, label, start_date, end_date, incoming_id),
+                    )
+                    semester_id = incoming_id
+                else:
+                    # New semester — INSERT and get the DB-generated ID
+                    cur.execute(
+                        """
+                        insert into plan_semesters (
+                          plan_id, term, year, label, start_date, end_date, updated_at
+                        ) values (%s, %s, %s, %s, %s, %s, now())
+                        returning id;
+                        """,
+                        (plan_id, term, year, label, start_date, end_date),
+                    )
+                    semester_id = str(cur.fetchone()[0])
+
+                incoming_semester_ids.add(semester_id)
+
+                # Courses: delete and re-insert (simpler; courses have no stable client IDs)
                 cur.execute(
-                    """
-                    insert into plan_semesters (
-                      plan_id, term, year, label, start_date, end_date, updated_at
-                    ) values (%s, %s, %s, %s, %s, %s, now())
-                    returning id;
-                    """,
-                    (
-                        plan_id,
-                        semester.get("type") or semester.get("term"),
-                        semester.get("year"),
-                        semester.get("label"),
-                        semester.get("startDate") or semester.get("start_date"),
-                        semester.get("endDate") or semester.get("end_date"),
-                    ),
+                    "delete from plan_courses where semester_id = %s;", (semester_id,)
                 )
-                semester_id = cur.fetchone()[0]
                 for course in semester.get("courses", []):
                     cur.execute(
                         """
@@ -468,6 +495,15 @@ def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[st
                             course.get("selectedSectionId") or course.get("selected_section_id"),
                         ),
                     )
+
+            # Delete semesters that were removed from the plan
+            removed_ids = existing_semester_ids - incoming_semester_ids
+            if removed_ids:
+                cur.execute(
+                    "delete from plan_semesters where id = any(%s);",
+                    (list(removed_ids),),
+                )
+
             conn.commit()
 
     return fetch_plan(pooler_url, user_id) or {"id": plan_id, "name": payload.get("name"), "semesters": []}
@@ -480,6 +516,10 @@ def search_courses(
     page: int = 1,
     limit: int = 25,
 ) -> tuple[List[Dict[str, Any]], int]:
+    # Guard against excessively long queries that produce slow ILIKE scans
+    if len(query) > 200:
+        query = query[:200]
+    limit = min(limit, 100)
     offset = max(page - 1, 0) * limit
     sql = """
         select
@@ -644,3 +684,158 @@ def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             )
             conn.commit()
     return payload
+
+
+def fetch_course_labels(pooler_url: str, major_code: str) -> Dict[str, Dict[str, Any]]:
+    """
+    Fetch course labels for a specific major.
+    Returns a dictionary mapping course_code to label information.
+
+    Labels:
+    - "Required" - Must take this course (from all_of groups)
+    - "Group Choice" - Pick one from a group (from choose_one groups)
+    - "Major Elective" - Counts toward major electives (from rules)
+    - "General Elective" - Fills remaining credits
+    """
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            # Get all requirement courses for this major
+            cur.execute(
+                """
+                SELECT
+                    rc.course_code,
+                    rc.course_name,
+                    rc.credits,
+                    rc.is_required,
+                    rg.group_id,
+                    rg.group_name,
+                    rg.group_type,
+                    rg.description
+                FROM requirement_courses rc
+                JOIN requirement_groups rg ON rg.id = rc.group_id
+                JOIN majors m ON m.id = rg.major_id
+                WHERE m.code = %s
+                ORDER BY rg.display_order, rc.course_code
+                """,
+                (major_code,),
+            )
+
+            rows = cur.fetchall()
+            labels = {}
+
+            for row in rows:
+                course_code, course_name, credits, is_required, group_id, group_name, group_type, description = row
+
+                # Determine label based on group type
+                if group_type == 'all_of':
+                    label = 'Required'
+                    detail = f"Required for {group_name}"
+                elif group_type == 'choose_one':
+                    label = 'Group Choice'
+                    detail = f"Choose one from {group_name}"
+                elif group_type == 'choose_n':
+                    label = 'Group Choice'
+                    detail = f"Choose from {group_name}"
+                elif group_type == 'credit_threshold':
+                    label = 'Major Elective'
+                    detail = group_name
+                else:
+                    label = 'General Elective'
+                    detail = group_name
+
+                # Store the most specific label (Required > Group Choice > Elective)
+                if course_code not in labels or label == 'Required':
+                    labels[course_code] = {
+                        'label': label,
+                        'group_name': group_name,
+                        'group_type': group_type,
+                        'detail': detail,
+                        'credits': credits,
+                    }
+
+            # Get major electives rules
+            cur.execute(
+                """
+                SELECT
+                    rr.subject_code,
+                    rr.min_level,
+                    rr.max_level,
+                    rr.exclude_courses,
+                    rg.group_name
+                FROM requirement_rules rr
+                JOIN requirement_groups rg ON rg.id = rr.group_id
+                JOIN majors m ON m.id = rg.major_id
+                WHERE m.code = %s AND rr.rule_type = 'subject_level'
+                """,
+                (major_code,),
+            )
+
+            rules = cur.fetchall()
+
+            # Store rules for later application
+            elective_rules = []
+            for rule_row in rules:
+                subject_code, min_level, max_level, exclude_courses, group_name = rule_row
+                elective_rules.append({
+                    'subject_code': subject_code,
+                    'min_level': min_level,
+                    'max_level': max_level,
+                    'exclude_courses': set(exclude_courses or []),
+                    'group_name': group_name,
+                })
+
+    return {'labels': labels, 'rules': elective_rules}
+
+
+def get_course_label(course_code: str, labels_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Determine the label for a single course based on labels data.
+    This applies the labeling logic including pattern-matching rules.
+    """
+    labels = labels_data.get('labels', {})
+    rules = labels_data.get('rules', [])
+
+    # Check if course is explicitly in requirements
+    if course_code in labels:
+        return labels[course_code]
+
+    # Check if course matches elective rules
+    for rule in rules:
+        subject_code = rule['subject_code']
+        min_level = rule['min_level']
+        max_level = rule.get('max_level')
+        exclude_courses = rule.get('exclude_courses', set())
+
+        # Check if course matches pattern (e.g., CSCI-XXX)
+        if course_code.startswith(subject_code + '-'):
+            # Extract level from course code (e.g., CSCI-241 → 241)
+            try:
+                parts = course_code.split('-')
+                if len(parts) >= 2:
+                    # Remove any non-digit characters (e.g., CSCI-241L → 241)
+                    level_str = ''.join(filter(str.isdigit, parts[1]))
+                    if level_str:
+                        level = int(level_str)
+
+                        # Check if within level range
+                        if level >= min_level and (max_level is None or level <= max_level):
+                            # Check if not excluded
+                            if course_code not in exclude_courses:
+                                return {
+                                    'label': 'Major Elective',
+                                    'group_name': rule['group_name'],
+                                    'group_type': 'credit_threshold',
+                                    'detail': f"{subject_code} {min_level}+ level",
+                                    'credits': None,
+                                }
+            except (ValueError, IndexError):
+                pass
+
+    # Default to general elective
+    return {
+        'label': 'General Elective',
+        'group_name': 'General Electives',
+        'group_type': 'fill_remaining',
+        'detail': 'Counts toward 120 total credits',
+        'credits': None,
+    }

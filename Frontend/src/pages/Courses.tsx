@@ -5,10 +5,12 @@ import { usePlanner } from '@/contexts/PlannerContext';
 import { CourseDetailModal } from '@/components/planner/CourseDetailModal';
 import { PlannedCourse } from '@/types/planner';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchSectionsForTerm, searchCourses } from '@/lib/api';
+import { fetchSectionsForTerm, searchCourses, fetchCourseLabels, type CourseLabelsResponse } from '@/lib/api';
 import type { Semester } from '@/types/planner';
+import { cn } from '@/lib/utils';
 
 export function Courses() {
   const { availableCourses, semesters, addCourse, studentProfile } = usePlanner();
@@ -22,6 +24,7 @@ export function Courses() {
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [searchResults, setSearchResults] = useState<PlannedCourse[]>([]);
+  const [courseLabels, setCourseLabels] = useState<CourseLabelsResponse>({});
   const majorCode = studentProfile?.majorId ?? 'UNDECLARED';
 
   useEffect(() => {

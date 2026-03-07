@@ -86,14 +86,43 @@ export interface CourseFeedback {
   createdAt: Date;
 }
 
+export interface MeetingTime {
+  days: string;
+  start_time: string;
+  end_time: string;
+  location?: string | null;
+  building?: string | null;
+  room?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  modality?: string | null;
+}
+
 export interface CourseSection {
   id: string;
-  courseId: string;
-  sectionNumber: string;
-  professor: string;
-  seatsTotal: number;
-  seatsOpen: number;
-  meetingTimes: string;
+  courseId?: string;
+  course_id?: string;
+  section_code: string;
+  section_id: string;
+  term: string;
+  term_code?: string;
+  status?: string;
+  campus?: string;
+  modality?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  seats?: {
+    available: number;
+    capacity: number;
+    enrolled?: number;
+    waitlisted?: number;
+  };
+  instructors?: Array<{
+    name: string;
+    faculty_id?: string;
+    role?: string;
+  }>;
+  meeting_times?: MeetingTime[];
 }
 
 // Onboarding types
@@ -115,12 +144,21 @@ export interface PlanConstraints {
   avoidSummer: boolean;
 }
 
+// Time conflict types
+export interface TimeConflict {
+  course1: PlannedCourse;
+  course2: PlannedCourse;
+  conflictingDays: string[];
+  timeOverlap: { start: string; end: string };
+}
+
 // Validation result
 export interface ConstraintViolation {
   type: 'error' | 'warning';
   courseId: string;
   message: string;
   suggestion?: string;
+  conflictWith?: string; // For time conflicts - ID of conflicting course
 }
 
 export interface DropResult {

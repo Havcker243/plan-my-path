@@ -21,6 +21,7 @@ import { usePlanner } from '@/contexts/PlannerContext';
 import { toast } from '@/hooks/use-toast';
 import { fetchMajors, updateProfile, updatePlan } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { SemesterType } from '@/types/planner';
 
 const steps = [
   { id: 1, title: 'Welcome', icon: Sparkles },
@@ -38,7 +39,7 @@ interface FormErrors {
 
 export function Onboarding() {
   const navigate = useNavigate();
-  const { completeOnboarding, availableCourses, loadCourses, createSemester } = usePlanner();
+  const { completeOnboarding, availableCourses, loadCourses } = usePlanner();
   const { accessToken, user } = useAuth();
   const [majorOptions, setMajorOptions] = useState<{ code: string; name: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,15 +116,16 @@ export function Onboarding() {
 
   const handleComplete = () => {
     const targetGraduation = `${formData.graduationTerm} ${formData.graduationYear}`;
-    const semester = createSemester(formData.startTerm.toLowerCase() as 'fall' | 'spring', formData.startYear);
-    completeOnboarding({
+    // completeOnboarding returns the initial semester it created — use that for persistence
+    const initialSemester = completeOnboarding({
       majorId: formData.majorId,
       admittedYear: formData.startYear,
-      startTerm: formData.startTerm.toLowerCase() as 'fall' | 'spring',
+      startTerm: formData.startTerm.toLowerCase() as SemesterType,
       graduationYear: formData.graduationYear,
-      graduationTerm: formData.graduationTerm.toLowerCase() as 'fall' | 'spring',
+      graduationTerm: formData.graduationTerm.toLowerCase() as SemesterType,
       targetGraduation,
       completedCourses: formData.completedCourses,
+      existingGPA: formData.gpa ? Number(formData.gpa) : undefined,
     });
 
     if (accessToken) {
@@ -140,16 +142,17 @@ export function Onboarding() {
         completed_courses: formData.completedCourses,
         gpa: formData.gpa ? Number(formData.gpa) : undefined,
       });
+      // Use the exact same semester created by completeOnboarding (same ID)
       void updatePlan(accessToken, {
         name: 'My Academic Plan',
         semesters: [
           {
-            id: semester.id,
-            type: semester.type,
-            year: semester.year,
-            label: semester.label,
-            startDate: semester.startDate ?? null,
-            endDate: semester.endDate ?? null,
+            id: initialSemester.id,
+            type: initialSemester.type,
+            year: initialSemester.year,
+            label: initialSemester.label,
+            startDate: initialSemester.startDate ?? null,
+            endDate: initialSemester.endDate ?? null,
             courses: [],
           },
         ],
@@ -365,6 +368,8 @@ export function Onboarding() {
                         <SelectContent>
                           <SelectItem value="Fall">Fall</SelectItem>
                           <SelectItem value="Spring">Spring</SelectItem>
+                          <SelectItem value="Summer">Summer</SelectItem>
+                          <SelectItem value="Winter">Winter</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -387,6 +392,8 @@ export function Onboarding() {
                           <SelectContent>
                             <SelectItem value="Spring">Spring</SelectItem>
                             <SelectItem value="Fall">Fall</SelectItem>
+                            <SelectItem value="Summer">Summer</SelectItem>
+                            <SelectItem value="Winter">Winter</SelectItem>
                           </SelectContent>
                         </Select>
                         <Select

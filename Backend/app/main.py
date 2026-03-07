@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,16 +20,26 @@ from app.db import (
     search_courses,
     save_plan,
     upsert_profile,
+    fetch_course_labels,
+    get_course_label,
 )
 
 app = FastAPI(title="PlanMyPath API")
 
+# Build allowed origins: always include localhost dev ports, plus any
+# production frontend URL set via ALLOWED_ORIGINS env var (comma-separated).
+_default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+_extra = os.environ.get("ALLOWED_ORIGINS", "")
+_allowed_origins = _default_origins + [o.strip() for o in _extra.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-    ],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,7 +72,9 @@ def _derive_offered_terms(terms: List[Optional[str]]) -> List[str]:
         semester = _term_to_semester(term)
         if semester and semester not in found:
             found.append(semester)
-    return found or ["fall", "spring"]
+    # Return all four terms when we have no section data rather than silently
+    # assuming fall/spring — this prevents misleading "Fall Only" badges.
+    return found or ["fall", "spring", "summer", "winter"]
 
 
 def _normalize_requisites(value: Any) -> List[str]:
@@ -144,6 +157,41 @@ def list_sections(course_codes: str, term: Optional[str] = None) -> Dict[str, An
         raise HTTPException(status_code=400, detail="course_codes is required")
     sections = fetch_sections_by_course_codes(POOLER_URL, codes, term_filter=term)
     return {"data": sections}
+
+
+@app.get("/api/course-labels")
+def get_course_labels_endpoint(
+    major_code: str,
+    course_codes: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Get requirement labels for courses based on a major.
+
+    If course_codes is provided, returns labels for specific courses.
+    Otherwise, returns all labeled courses for the major.
+
+    Labels:
+    - Required: Must take this course
+    - Group Choice: Pick one from a group
+    - Major Elective: Counts toward major electives
+    - General Elective: Fills remaining credits
+    """
+    if not major_code:
+        raise HTTPException(status_code=400, detail="major_code is required")
+
+    # Fetch all labels and rules for this major
+    labels_data = fetch_course_labels(POOLER_URL, major_code.upper())
+
+    # If specific courses requested, filter and apply labeling logic
+    if course_codes:
+        codes = [code.strip().upper() for code in course_codes.split(",") if code.strip()]
+        result = {}
+        for code in codes:
+            result[code] = get_course_label(code, labels_data)
+        return {"data": result}
+
+    # Otherwise return all explicitly labeled courses
+    return {"data": labels_data.get('labels', {}), "rules": labels_data.get('rules', [])}
 
 
 def get_current_user(

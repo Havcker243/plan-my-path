@@ -28,6 +28,14 @@ export function Courses() {
   const majorCode = studentProfile?.majorId ?? 'UNDECLARED';
 
   useEffect(() => {
+    if (!majorCode || majorCode === 'UNDECLARED') {
+      setCourseLabels({});
+      return;
+    }
+    fetchCourseLabels(majorCode).then(setCourseLabels).catch(() => setCourseLabels({}));
+  }, [majorCode]);
+
+  useEffect(() => {
     if (!selectedForAdd) {
       setSectionsForCourse([]);
       setSelectedSectionId('');

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Semester, CourseSection } from '@/types/planner';
 import { fetchSectionsForTerm } from '@/lib/api';
 
@@ -50,6 +50,8 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 export function SectionProvider({ children }: { children: React.ReactNode }) {
   const [cache, setCache] = useState<SectionCache>({});
+  // Track in-flight fetch promises to prevent duplicate concurrent requests
+  const inFlightRef = useRef<Record<string, Promise<void>>>({});
 
   /**
    * Check if cache entry is still valid (not expired)
@@ -61,37 +63,31 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Fetch sections for all courses in a semester
+   * Fetch sections for all courses in a semester.
+   * Deduplicates concurrent calls via an in-flight promise cache.
    */
   const fetchSectionsForSemester = useCallback(
     async (semester: Semester) => {
-      // Check if already cached and valid
-      const existingCache = cache[semester.id];
-      if (existingCache && isCacheValid(existingCache)) {
-        return; // Cache is still valid, no need to fetch
+      // If a fetch for this semester is already in flight, wait for it
+      if (inFlightRef.current[semester.id]) {
+        return inFlightRef.current[semester.id];
       }
 
-      // Don't fetch if already loading
-      if (existingCache?.loading) {
+      // Check if cached and still valid
+      const existingCache = cache[semester.id];
+      if (existingCache && isCacheValid(existingCache)) {
         return;
       }
 
-      // Get all course codes in the semester
       const courseCodes = semester.courses.map((course) => course.code);
       if (courseCodes.length === 0) {
-        // Empty semester, store empty cache
         setCache((prev) => ({
           ...prev,
-          [semester.id]: {
-            data: {},
-            timestamp: Date.now(),
-            loading: false,
-          },
+          [semester.id]: { data: {}, timestamp: Date.now(), loading: false },
         }));
         return;
       }
 
-      // Mark as loading
       setCache((prev) => ({
         ...prev,
         [semester.id]: {
@@ -101,41 +97,38 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
         },
       }));
 
-      try {
-        // Build term string from semester (e.g., "fall2024")
-        const term = `${semester.type}${semester.year}`.toLowerCase();
+      const fetchPromise = (async () => {
+        try {
+          // Format: "fall 2024" — matches DB terms like "Fall 2024" via ILIKE
+          const term = `${semester.type} ${semester.year}`.toLowerCase();
+          const sectionsData = await fetchSectionsForTerm(courseCodes, term);
 
-        // Fetch sections from API
-        const sectionsData = await fetchSectionsForTerm(courseCodes, term);
+          const typedData: Record<string, CourseSection[]> = {};
+          Object.entries(sectionsData).forEach(([courseCode, sections]) => {
+            typedData[courseCode] = sections as CourseSection[];
+          });
 
-        // Transform to typed format
-        const typedData: Record<string, CourseSection[]> = {};
-        Object.entries(sectionsData).forEach(([courseCode, sections]) => {
-          typedData[courseCode] = sections as CourseSection[];
-        });
+          setCache((prev) => ({
+            ...prev,
+            [semester.id]: { data: typedData, timestamp: Date.now(), loading: false },
+          }));
+        } catch (error) {
+          console.error('Failed to fetch sections for semester:', semester.id, error);
+          setCache((prev) => ({
+            ...prev,
+            [semester.id]: {
+              data: prev[semester.id]?.data || {},
+              timestamp: Date.now(),
+              loading: false,
+            },
+          }));
+        } finally {
+          delete inFlightRef.current[semester.id];
+        }
+      })();
 
-        // Update cache
-        setCache((prev) => ({
-          ...prev,
-          [semester.id]: {
-            data: typedData,
-            timestamp: Date.now(),
-            loading: false,
-          },
-        }));
-      } catch (error) {
-        console.error('Failed to fetch sections for semester:', semester.id, error);
-
-        // Mark as not loading on error, keep existing data if any
-        setCache((prev) => ({
-          ...prev,
-          [semester.id]: {
-            data: prev[semester.id]?.data || {},
-            timestamp: Date.now(),
-            loading: false,
-          },
-        }));
-      }
+      inFlightRef.current[semester.id] = fetchPromise;
+      return fetchPromise;
     },
     [cache, isCacheValid]
   );

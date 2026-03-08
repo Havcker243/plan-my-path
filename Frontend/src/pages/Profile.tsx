@@ -8,11 +8,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { fetchMajors, fetchProfile, searchCourses, updateProfile } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { usePlanner } from '@/contexts/PlannerContext';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 type MajorOption = { code: string; name: string };
 
 export function Profile() {
   const { accessToken, user } = useAuth();
+  const { hydrateProfile } = usePlanner();
   const [majors, setMajors] = useState<MajorOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [courseQuery, setCourseQuery] = useState('');
@@ -84,9 +87,21 @@ export function Profile() {
 
   const handleSave = async () => {
     if (!accessToken) return;
+
+    // Validate GPA before saving
+    const gpaValue = form.gpa ? Number(form.gpa) : undefined;
+    if (form.gpa && (isNaN(gpaValue!) || gpaValue! < 0 || gpaValue! > 4)) {
+      toast({
+        title: 'Invalid GPA',
+        description: 'GPA must be a number between 0 and 4.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await updateProfile(accessToken, {
+      const profilePayload = {
         email: user?.email ?? undefined,
         name: form.name,
         avatar_url: form.avatar_url,
@@ -96,9 +111,12 @@ export function Profile() {
         graduation_term: form.graduation_term,
         start_year: form.start_year,
         start_term: form.start_term,
-        gpa: form.gpa ? Number(form.gpa) : undefined,
+        gpa: gpaValue,
         completed_courses: form.completed_courses,
-      });
+      };
+      await updateProfile(accessToken, profilePayload);
+      // Sync updated profile back into PlannerContext so Planner/Dashboard refresh
+      hydrateProfile(profilePayload);
       toast({ title: 'Profile saved' });
     } catch (error) {
       toast({
@@ -153,7 +171,8 @@ export function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-6 py-10">
+    <AppLayout>
+    <div className="px-6 py-10">
       <div className="mx-auto max-w-3xl space-y-6">
         <Card className="border-border shadow-card">
           <CardHeader>
@@ -234,6 +253,8 @@ export function Profile() {
                   <SelectContent>
                     <SelectItem value="Fall">Fall</SelectItem>
                     <SelectItem value="Spring">Spring</SelectItem>
+                    <SelectItem value="Summer">Summer</SelectItem>
+                    <SelectItem value="Winter">Winter</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -270,6 +291,8 @@ export function Profile() {
                   <SelectContent>
                     <SelectItem value="Spring">Spring</SelectItem>
                     <SelectItem value="Fall">Fall</SelectItem>
+                    <SelectItem value="Summer">Summer</SelectItem>
+                    <SelectItem value="Winter">Winter</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -348,5 +371,6 @@ export function Profile() {
         </Card>
       </div>
     </div>
+    </AppLayout>
   );
 }

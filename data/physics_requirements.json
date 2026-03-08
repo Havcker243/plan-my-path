@@ -1,0 +1,187 @@
+{
+  "major_code": "PHYS",
+  "major_name": "Physics",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "core_fixed",
+      "group_name": "CORE Requirements - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 22,
+      "description": "Required core curriculum courses",
+      "courses": [
+        { "course_code": "CORE 100", "course_name": "New Student Orientation", "credits": 1 },
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 120", "course_name": "Critical Thinking", "credits": 2 },
+        { "course_code": "CORE 131", "course_name": "Mathematics I (College Algebra)", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 4 }
+      ],
+      "notes": "MATH 101, 110, or 120 may substitute for CORE 131. MATH 100 does not count toward graduation credits."
+    },
+    {
+      "group_id": "core_group_a",
+      "group_name": "CORE - Group A: Cultural Exposure",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group A - Cultural Exposure",
+      "courses": [
+        { "course_code": "ART 291", "credits": 3 },
+        { "course_code": "ART 292", "credits": 3 },
+        { "course_code": "ENG 275", "credits": 3 },
+        { "course_code": "HIS 180", "credits": 3 },
+        { "course_code": "HIS 270", "credits": 3 },
+        { "course_code": "MUS 200", "credits": 2 },
+        { "course_code": "MUS 206", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_b",
+      "group_name": "CORE - Group B: Analytical Skills",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group B - Analytical Skills",
+      "courses": [
+        { "course_code": "CORE 132", "credits": 3 },
+        { "course_code": "BAD 200", "credits": 3 },
+        { "course_code": "BAD 260", "credits": 3 },
+        { "course_code": "MATH 125", "credits": 3 },
+        { "course_code": "MATH 120", "credits": 4 },
+        { "course_code": "NSCI 360", "credits": 3 },
+        { "course_code": "HSS 280", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_c",
+      "group_name": "CORE - Group C: The Arts",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group C - The Arts",
+      "courses": [
+        { "course_code": "CORE 220", "credits": 3 },
+        { "course_code": "MUS 207", "credits": 3 },
+        { "course_code": "MUS 208", "credits": 3 },
+        { "course_code": "MUS 205", "credits": 3 },
+        { "course_code": "ART 207", "credits": 3 },
+        { "course_code": "ART 208", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_d",
+      "group_name": "CORE - Group D: The Science",
+      "group_type": "choose_one",
+      "credits_required": 4,
+      "description": "Choose CORE 240 OR one lecture+lab pair from Group D",
+      "courses": [
+        { "course_code": "CORE 240", "credits": 3 },
+        { "course_code": "BIOL 101", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "credits": 1, "corequisite_for": "BIOL 101" },
+        { "course_code": "CHEM 113", "credits": 3, "requires_corequisite": "CHEM 103L" },
+        { "course_code": "CHEM 103L", "credits": 1, "corequisite_for": "CHEM 113" },
+        { "course_code": "PHYS 130", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "credits": 1, "corequisite_for": "PHYS 130" }
+      ]
+    },
+    {
+      "group_id": "core_group_e",
+      "group_name": "CORE - Group E: Social Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group E - Social Science",
+      "courses": [
+        { "course_code": "ECON 230", "credits": 3 },
+        { "course_code": "ECON 240", "credits": 3 },
+        { "course_code": "HIS 160", "credits": 3 },
+        { "course_code": "PSCI 122", "credits": 3 },
+        { "course_code": "PSY 180", "credits": 3 },
+        { "course_code": "PSY 205", "credits": 3 },
+        { "course_code": "SOC 100", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "foreign_language",
+      "group_name": "Foreign Language",
+      "group_type": "all_of",
+      "credits_required": 6,
+      "description": "Elementary foreign language I and II (not required for B.S., required for Phi Beta Kappa)",
+      "courses": [
+        { "course_code": "SPAN 101", "course_name": "Elementary Spanish I", "credits": 3 },
+        { "course_code": "SPAN 102", "course_name": "Elementary Spanish II", "credits": 3 },
+        { "course_code": "FREN 101", "course_name": "Elementary French I", "credits": 3 },
+        { "course_code": "FREN 102", "course_name": "Elementary French II", "credits": 3 }
+      ],
+      "notes": "Foreign language is NOT required for the B.S. degree. Required only for Phi Beta Kappa consideration. Complete one sequence: SPAN 101+102 or FREN 101+102."
+    },
+    {
+      "group_id": "cognates",
+      "group_name": "Required Cognates",
+      "group_type": "all_of",
+      "credits_required": 16,
+      "description": "Mathematics and computer science courses required for Physics major",
+      "courses": [
+        { "course_code": "CSCI 110", "course_name": "Introduction to Computer Science I", "credits": 3, "requires_corequisite": "CSCI 110L" },
+        { "course_code": "CSCI 110L", "course_name": "Introduction to CS Lab I", "credits": 1, "corequisite_for": "CSCI 110" },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4 },
+        { "course_code": "MATH 130", "course_name": "Calculus II", "credits": 4 },
+        { "course_code": "MATH 210", "course_name": "Calculus III", "credits": 4 }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 18,
+      "description": "Required Physics courses (shared by B.A. and B.S.)",
+      "courses": [
+        { "course_code": "PHYS 110", "course_name": "Physics Seminar", "credits": 0 },
+        { "course_code": "PHYS 130", "course_name": "University Physics I", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "course_name": "University Physics Experiments I", "credits": 1, "corequisite_for": "PHYS 130" },
+        { "course_code": "PHYS 140", "course_name": "University Physics II", "credits": 3, "requires_corequisite": "PHYS 140L" },
+        { "course_code": "PHYS 140L", "course_name": "Experiments in Physics II", "credits": 1, "corequisite_for": "PHYS 140" },
+        { "course_code": "PHYS 340", "course_name": "Methods in Theoretical Physics", "credits": 3 },
+        { "course_code": "PHYS 341", "course_name": "Theoretical Mechanics", "credits": 3 },
+        { "course_code": "PHYS 351", "course_name": "Intermediate Electricity and Magnetism", "credits": 3 },
+        { "course_code": "PHYS 490", "course_name": "Senior Seminar", "credits": 1 }
+      ]
+    },
+    {
+      "group_id": "major_electives",
+      "group_name": "Physics Electives (B.S.)",
+      "group_type": "credit_threshold",
+      "credits_required": {
+        "min": 22,
+        "max": 22
+      },
+      "description": "Any PHYS courses not already counted as major requirements (B.S. requires 22 elective hours, B.A. requires 14)",
+      "rules": {
+        "subject_code": "PHYS",
+        "min_level": 100,
+        "exclude_courses": [
+          "PHYS 110", "PHYS 130", "PHYS 130L", "PHYS 140", "PHYS 140L",
+          "PHYS 340", "PHYS 341", "PHYS 351", "PHYS 490"
+        ]
+      }
+    },
+    {
+      "group_id": "general_electives",
+      "group_name": "General Electives",
+      "group_type": "fill_remaining",
+      "credits_required": null,
+      "description": "Any courses to reach 120 total credits"
+    }
+  ],
+  "metadata": {
+    "source": "Balance Sheet - Physics (B.A./B.S.) - Fisk University",
+    "notes": [
+      "B.A. requires 14 hours of Physics electives; B.S. requires 22 hours",
+      "Foreign language (6 credits) is NOT required for B.S. but required for Phi Beta Kappa",
+      "MATH 101, 110, or 120 may substitute for CORE 131",
+      "MATH 100 credits do not count toward graduation",
+      "Physics/Education teaching licensure track requires an additional 23 EDUC credits (not modeled here)",
+      "Required minimum grade of C in all Physics courses for teaching licensure"
+    ]
+  }
+}

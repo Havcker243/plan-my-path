@@ -1,4 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+
+const GRADE_POINTS: Record<string, number> = {
+  'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+  'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+  'C+': 2.3, 'C': 2.0, 'C-': 1.7,
+  'D+': 1.3, 'D': 1.0, 'D-': 0.7,
+  'F': 0.0,
+};
 import { Course, Plan, Semester, PlannedCourse, OnboardingData, StudentProfile } from '@/types/planner';
 import type { ProfilePayload } from '@/lib/api';
 import { fetchCourses, fetchPlan, fetchTermCalendar, updatePlan } from '@/lib/api';
@@ -105,6 +113,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
             requirementBucket: course.requirementBucket ?? undefined,
             status: (course.status as PlannedCourse['status']) ?? 'planned',
             grade: course.grade ?? undefined,
+            gradePoints: course.grade ? (GRADE_POINTS[course.grade] ?? 0) : 0,
             semesterId: semester.id,
             selectedSectionId: course.selectedSectionId ?? null,
           })),
@@ -222,6 +231,11 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
     setStudentProfile(profile);
     const initialSemester = buildSemester(data.startTerm, data.admittedYear);
+    // Add completed courses into the initial semester so they persist in the plan
+    initialSemester.courses = completedCourseObjects.map((course) => ({
+      ...course,
+      semesterId: initialSemester.id,
+    }));
     const newSemesters = [initialSemester];
     setSemesters(newSemesters);
 
@@ -318,14 +332,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const markCourseCompleted = useCallback((courseId: string, grade: string) => {
-    const gradePoints: Record<string, number> = {
-      'A+': 4.0, 'A': 4.0, 'A-': 3.7,
-      'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-      'C+': 2.3, 'C': 2.0, 'C-': 1.7,
-      'D+': 1.3, 'D': 1.0, 'D-': 0.7,
-      'F': 0.0,
-    };
-
     setSemesters(prev => {
       return prev.map(semester => ({
         ...semester,
@@ -335,7 +341,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
             ...course,
             status: 'completed',
             grade,
-            gradePoints: gradePoints[grade] || 0,
+            gradePoints: GRADE_POINTS[grade] ?? 0,
           };
         }),
       }));

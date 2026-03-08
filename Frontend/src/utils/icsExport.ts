@@ -188,7 +188,7 @@ export function generateICSContent(events: ICSEvent[]): string {
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:My Academic Plan',
-    'X-WR-TIMEZONE:America/New_York',
+    `X-WR-TIMEZONE:${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
     ...eventStrings,
     'END:VCALENDAR',
   ].join('\r\n');

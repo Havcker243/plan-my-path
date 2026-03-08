@@ -5,6 +5,7 @@ import { BookOpen, Hash, AlertTriangle } from 'lucide-react';
 import { Semester, PlannedCourse } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
+import type { CourseLabelsResponse } from '@/lib/api';
 
 interface SemesterCardProps {
   semester: Semester;
@@ -12,6 +13,7 @@ interface SemesterCardProps {
   onRemoveCourse?: (courseId: string) => void;
   onMarkCourseCompleted?: (courseId: string) => void;
   courseConflicts?: Record<string, string[]>; // Map of courseId -> array of conflicting course codes
+  courseLabels?: CourseLabelsResponse; // Requirement labels keyed by course code
 }
 
 export function SemesterCard({
@@ -20,6 +22,7 @@ export function SemesterCard({
   onRemoveCourse,
   onMarkCourseCompleted,
   courseConflicts = {},
+  courseLabels = {},
 }: SemesterCardProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: semester.id,
@@ -84,6 +87,7 @@ export function SemesterCard({
                 onRemove={() => onRemoveCourse?.(course.id)}
                 onMarkCompleted={() => onMarkCourseCompleted?.(course.id)}
                 conflicts={courseConflicts[course.id] || []}
+                requirementLabel={courseLabels[course.code] ?? null}
               />
             ))
           ) : (

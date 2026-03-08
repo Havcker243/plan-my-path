@@ -142,7 +142,7 @@ export function Onboarding() {
         completed_courses: formData.completedCourses,
         gpa: formData.gpa ? Number(formData.gpa) : undefined,
       });
-      // Use the exact same semester created by completeOnboarding (same ID)
+      // Use the exact same semester created by completeOnboarding (same ID + completed courses)
       void updatePlan(accessToken, {
         name: 'My Academic Plan',
         semesters: [
@@ -153,7 +153,13 @@ export function Onboarding() {
             label: initialSemester.label,
             startDate: initialSemester.startDate ?? null,
             endDate: initialSemester.endDate ?? null,
-            courses: [],
+            courses: initialSemester.courses.map((course) => ({
+              code: course.code,
+              credits: course.credits,
+              status: course.status,
+              grade: course.grade ?? null,
+              selectedSectionId: course.selectedSectionId ?? null,
+            })),
           },
         ],
       });

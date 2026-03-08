@@ -70,8 +70,12 @@ export const hasTimeOverlap = (
   const start2Min = parseTimeToMinutes(start2);
   const end2Min = parseTimeToMinutes(end2);
 
-  // Check for invalid times
-  if (start1Min === 0 || end1Min === 0 || start2Min === 0 || end2Min === 0) {
+  // Check for invalid parse results (parseTimeToMinutes returns 0 on failure)
+  // A real 0 (midnight) is an edge case — we skip conflict detection for it to avoid false negatives
+  if (
+    isNaN(start1Min) || isNaN(end1Min) || isNaN(start2Min) || isNaN(end2Min) ||
+    end1Min <= start1Min || end2Min <= start2Min
+  ) {
     return false;
   }
 

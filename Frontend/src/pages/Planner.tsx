@@ -20,7 +20,6 @@ import {
   ChevronRight,
   BookOpen,
   TrendingUp,
-  AlertTriangle,
   Plus,
   Undo2,
 } from "lucide-react";
@@ -42,6 +41,7 @@ import { PlannedCourse, Semester, SemesterType } from "@/types/planner";
 import { exportToICS } from "@/utils/icsExport";
 import { toast } from "@/hooks/use-toast";
 import { isTBAOrOnline, doMeetingTimesConflict } from "@/utils/timeUtils";
+import { fetchCourseLabels, fetchMajors, type CourseLabelsResponse } from "@/lib/api";
 
 interface UndoState {
   semesters: Semester[];
@@ -79,6 +79,8 @@ function PlannerContent() {
   const [newSemesterTerm, setNewSemesterTerm] = useState<SemesterType>("fall");
   const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
   const [semesterConflicts, setSemesterConflicts] = useState<Record<string, Record<string, string[]>>>({});
+  const [courseLabels, setCourseLabels] = useState<CourseLabelsResponse>({});
+  const [majorName, setMajorName] = useState<string | null>(null);
 
   const { status: autosaveStatus } = useAutosave({
     data: semesters,
@@ -87,6 +89,23 @@ function PlannerContent() {
     },
     enabled: isOnboarded,
   });
+
+  // Fetch requirement labels and major name when major changes
+  useEffect(() => {
+    const majorId = studentProfile?.majorId;
+    if (!majorId || majorId === 'UNDECLARED') {
+      setCourseLabels({});
+      setMajorName('Undeclared');
+      return;
+    }
+    fetchCourseLabels(majorId).then(setCourseLabels).catch(() => setCourseLabels({}));
+    fetchMajors()
+      .then((majors) => {
+        const match = majors.find((m) => m.code === majorId);
+        setMajorName(match?.name ?? majorId);
+      })
+      .catch(() => setMajorName(majorId));
+  }, [studentProfile?.majorId]);
 
   // Prefetch sections and calculate conflicts when semesters change
   useEffect(() => {
@@ -309,6 +328,19 @@ function PlannerContent() {
   const semesterOrder = { spring: 1, summer: 2, fall: 3, winter: 4 } as const;
 
   const handleCreateSemester = () => {
+    // Prevent adding the same semester twice
+    const isDuplicate = semesters.some(
+      (s) => s.type === newSemesterTerm && s.year === newSemesterYear
+    );
+    if (isDuplicate) {
+      toast({
+        title: "Semester already exists",
+        description: `${newSemesterTerm.charAt(0).toUpperCase() + newSemesterTerm.slice(1)} ${newSemesterYear} is already in your plan.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const startYear = studentProfile?.admittedYear;
     const startTerm = studentProfile?.startTerm;
     const gradYear = studentProfile?.graduationYear;
@@ -350,9 +382,7 @@ function PlannerContent() {
   };
 
   const displayName = studentProfile?.name || "Student";
-  const majorLabel = studentProfile?.majorId && studentProfile.majorId !== "UNDECLARED"
-    ? studentProfile.majorId
-    : "Undeclared";
+  const majorLabel = majorName ?? (studentProfile?.majorId ?? "Undeclared");
 
   return (
     <AppLayout>
@@ -370,7 +400,7 @@ function PlannerContent() {
                   <Undo2 className="w-4 h-4" />
                   Undo
                 </Button>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
@@ -418,8 +448,13 @@ function PlannerContent() {
                       semester={semester}
                       onCourseClick={handleCourseClick}
                       onRemoveCourse={(courseId) => handleRemoveCourse(courseId, semester.id)}
-                      onMarkCourseCompleted={(courseId) => markCourseCompleted(courseId, "A")}
+                      onMarkCourseCompleted={(courseId) => {
+                        // Open the detail modal so the user can select a grade
+                        const course = semester.courses.find((c) => c.id === courseId);
+                        if (course) setSelectedCourse(course);
+                      }}
                       courseConflicts={semesterConflicts[semester.id] || {}}
+                      courseLabels={courseLabels}
                     />
                   </motion.div>
                 ))}
@@ -480,7 +515,7 @@ function PlannerContent() {
           <Card className="border-border">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" />
+                <BookOpen className="w-4 h-4 text-accent" />
                 Total Courses
               </CardTitle>
             </CardHeader>

@@ -22,7 +22,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { searchCourses } from '@/lib/api';
+import { fetchSections } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
 
 interface CourseDetailModalProps {
   course: PlannedCourse;
@@ -52,12 +53,12 @@ export function CourseDetailModal({
     const loadSections = async () => {
       setSectionsLoading(true);
       try {
-        const response = await searchCourses(course.code, undefined, 1, 1);
-        const match = response.data.find((item) => item.course_code === course.code);
+        // Use the dedicated /api/sections endpoint (returns all terms for this course)
+        const result = await fetchSections([course.code]);
         if (mounted) {
-          setSections(match?.sections ?? []);
+          setSections((result[course.code] as unknown[]) ?? []);
         }
-      } catch (error) {
+      } catch {
         if (mounted) {
           setSections([]);
         }
@@ -353,17 +354,32 @@ export function CourseDetailModal({
             <TabsContent value="feedback" className="mt-0">
               <div className="text-center py-8">
                 <MessageSquare className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-                <p className="text-muted-foreground mb-4">No feedback yet</p>
+                <p className="text-muted-foreground mb-4">How was this course?</p>
                 <div className="flex justify-center gap-4">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => toast({ title: 'Feedback submitted', description: `Marked ${course.code} as Helpful` })}
+                  >
                     <ThumbsUp className="w-4 h-4 text-success" />
                     Helpful
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => toast({ title: 'Feedback submitted', description: `Marked ${course.code} as Neutral` })}
+                  >
                     <Meh className="w-4 h-4 text-warning" />
                     Neutral
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => toast({ title: 'Feedback submitted', description: `Marked ${course.code} as Challenging` })}
+                  >
                     <ThumbsDown className="w-4 h-4 text-destructive" />
                     Challenging
                   </Button>

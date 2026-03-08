@@ -70,7 +70,7 @@ export function Signup() {
           <Button
             className="w-full"
             onClick={handleSignup}
-            disabled={isSubmitting || !email || !password || !name || !phone}
+            disabled={isSubmitting || !email || !password || !name}
           >
             Create account
           </Button>

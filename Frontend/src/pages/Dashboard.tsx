@@ -1,16 +1,16 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  GraduationCap, 
-  BookOpen, 
-  TrendingUp, 
-  Calendar, 
+import {
+  GraduationCap,
+  BookOpen,
+  TrendingUp,
+  Calendar,
   Plus,
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
-  Download
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,18 +21,35 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { exportToICS } from '@/utils/icsExport';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchMajors } from '@/lib/api';
+
+// Standard degree credit requirement — shown as denominator for progress
+const DEGREE_CREDITS_REQUIRED = 120;
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { 
-    semesters, 
-    studentProfile, 
-    totalCredits, 
-    earnedCredits, 
+  const {
+    semesters,
+    studentProfile,
+    earnedCredits,
     currentGPA,
-    isOnboarded 
+    isOnboarded,
   } = usePlanner();
+  const [majorName, setMajorName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!studentProfile?.majorId || studentProfile.majorId === 'UNDECLARED') {
+      setMajorName('Undeclared');
+      return;
+    }
+    fetchMajors()
+      .then((majors) => {
+        const match = majors.find((m) => m.code === studentProfile.majorId);
+        setMajorName(match?.name ?? studentProfile.majorId);
+      })
+      .catch(() => setMajorName(studentProfile.majorId));
+  }, [studentProfile?.majorId]);
 
   // Redirect to onboarding if not onboarded
   useEffect(() => {
@@ -56,23 +73,39 @@ export function Dashboard() {
   }, []);
 
   const progressPercent = useMemo(() => {
-    return totalCredits > 0 ? Math.round((earnedCredits / totalCredits) * 100) : 0;
-  }, [earnedCredits, totalCredits]);
+    return Math.min(100, Math.round((earnedCredits / DEGREE_CREDITS_REQUIRED) * 100));
+  }, [earnedCredits]);
+
+  const completedCourses = useMemo(() => {
+    return semesters.flatMap((s) => s.courses).filter((c) => c.status === 'completed');
+  }, [semesters]);
 
   const plannedCredits = useMemo(() => {
     return semesters
-      .flatMap(s => s.courses)
-      .filter(c => c.status === 'planned')
+      .flatMap((s) => s.courses)
+      .filter((c) => c.status === 'planned')
       .reduce((sum, c) => sum + c.credits, 0);
   }, [semesters]);
 
   const upcomingSemester = useMemo(() => {
-    return semesters.find(s => s.courses.some(c => c.status === 'planned'));
+    return semesters.find((s) => s.courses.some((c) => c.status === 'planned'));
   }, [semesters]);
 
+  // Compute real warnings from plan data (no SectionProvider needed)
   const warnings = useMemo(() => {
-    return [];
-  }, []);
+    const result: string[] = [];
+    semesters.forEach((s) => {
+      const credits = s.courses.reduce((sum, c) => sum + c.credits, 0);
+      if (credits > 18) result.push(`${s.label} has a heavy load: ${credits} credits.`);
+    });
+    if (!studentProfile?.targetGraduation) {
+      result.push('No graduation target set — visit your profile to add one.');
+    }
+    if (earnedCredits === 0 && semesters.flatMap((s) => s.courses).length > 0) {
+      result.push('No courses marked as completed yet.');
+    }
+    return result;
+  }, [semesters, studentProfile, earnedCredits]);
 
   const handleExportICS = () => {
     exportToICS(semesters);
@@ -116,10 +149,10 @@ export function Dashboard() {
               <CardContent>
                 <div className="flex items-end gap-2 mb-3">
                   <span className="text-3xl font-bold text-foreground">{earnedCredits}</span>
-                  <span className="text-muted-foreground mb-1">/ {totalCredits}</span>
+                  <span className="text-muted-foreground mb-1">/ {DEGREE_CREDITS_REQUIRED}</span>
                 </div>
                 <Progress value={progressPercent} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-2">{progressPercent}% complete</p>
+                <p className="text-xs text-muted-foreground mt-2">{progressPercent}% of degree complete</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -144,7 +177,7 @@ export function Dashboard() {
                   <span className="text-muted-foreground mb-1">/ 4.000</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Based on {earnedCredits > 0 ? `${Math.floor(earnedCredits / 3)} courses` : 'no courses yet'}
+                  Based on {completedCourses.length > 0 ? `${completedCourses.length} completed course${completedCourses.length === 1 ? '' : 's'}` : 'no courses yet'}
                 </p>
               </CardContent>
             </Card>
@@ -187,9 +220,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent>
                 <p className="text-xl font-bold text-foreground">
-                  {studentProfile?.majorId && studentProfile.majorId !== 'UNDECLARED'
-                    ? studentProfile.majorId
-                    : 'Undeclared'}
+                  {majorName ?? (studentProfile?.majorId ?? 'Undeclared')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-3">
                   Graduation {studentProfile?.graduationYear || new Date().getFullYear() + 4}
@@ -230,13 +261,14 @@ export function Dashboard() {
                 <Button
                   variant="outline"
                   className="h-auto py-4 justify-start gap-3 border-border hover:bg-accent/10 hover:border-accent"
+                  onClick={() => navigate('/courses')}
                 >
                   <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
                     <Plus className="w-5 h-5 text-accent" />
                   </div>
                   <div className="text-left">
-                    <p className="font-medium text-foreground">Add Courses</p>
-                    <p className="text-xs text-muted-foreground">Import or add completed courses</p>
+                    <p className="font-medium text-foreground">Browse Courses</p>
+                    <p className="text-xs text-muted-foreground">Search and add courses to your plan</p>
                   </div>
                   <ArrowRight className="w-4 h-4 ml-auto text-muted-foreground" />
                 </Button>
@@ -259,7 +291,7 @@ export function Dashboard() {
                 <Button
                   variant="outline"
                   className="h-auto py-4 justify-start gap-3 border-border hover:bg-accent/10 hover:border-accent"
-                  onClick={() => navigate('/planner')}
+                  onClick={() => navigate('/calendar')}
                 >
                   <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-accent" />

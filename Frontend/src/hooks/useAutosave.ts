@@ -9,26 +9,77 @@ interface UseAutosaveOptions {
   enabled?: boolean;
 }
 
+const RETRY_DELAY_MS = 30_000; // retry a failed save after 30 seconds
+
 export function useAutosave({ data, onSave, debounceMs = 2000, enabled = true }: UseAutosaveOptions) {
   const [status, setStatus] = useState<AutosaveStatus>('idle');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDataRef = useRef<unknown>(null);
   const lastSavedRef = useRef<string>('');
 
-  // Keep a ref to saveData so the online listener always calls the latest version
-  const saveDataRef = useRef<typeof saveData>(saveData);
+  // Keep onSave in a ref so the online/retry handlers always use the latest version
+  // without being listed as effect dependencies.
+  const onSaveRef = useRef(onSave);
   useEffect(() => {
-    saveDataRef.current = saveData;
-  }, [saveData]);
+    onSaveRef.current = onSave;
+  }, [onSave]);
 
-  // Track online/offline status
+  const saveData = useCallback(
+    async (dataToSave: unknown) => {
+      const dataString = JSON.stringify(dataToSave);
+
+      // Skip if nothing changed since last successful save
+      if (dataString === lastSavedRef.current) return;
+
+      if (!navigator.onLine) {
+        pendingDataRef.current = dataToSave;
+        localStorage.setItem('planner_pending_changes', dataString);
+        setStatus('offline');
+        return;
+      }
+
+      // Clear any pending retry since we're attempting now
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
+      setStatus('saving');
+      try {
+        await onSaveRef.current(dataToSave);
+        lastSavedRef.current = dataString;
+        pendingDataRef.current = null;
+        localStorage.removeItem('planner_pending_changes');
+        setStatus('saved');
+
+        // Reset to idle after 2 seconds
+        setTimeout(() => setStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Autosave failed:', error);
+        pendingDataRef.current = dataToSave;
+        localStorage.setItem('planner_pending_changes', dataString);
+        setStatus('error');
+
+        // Schedule a retry in 30 seconds
+        retryTimeoutRef.current = setTimeout(() => {
+          if (pendingDataRef.current) {
+            void saveData(pendingDataRef.current);
+          }
+        }, RETRY_DELAY_MS);
+      }
+    },
+    [] // no deps — uses refs for onSave and online status
+  );
+
+  // Track online/offline and sync pending changes when back online
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      // Sync pending changes when back online using the latest saveData
       if (pendingDataRef.current) {
-        void saveDataRef.current(pendingDataRef.current);
+        void saveData(pendingDataRef.current);
       }
     };
     const handleOffline = () => {
@@ -38,71 +89,37 @@ export function useAutosave({ data, onSave, debounceMs = 2000, enabled = true }:
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [saveData]);
 
-  const saveData = useCallback(async (dataToSave: unknown) => {
-    const dataString = JSON.stringify(dataToSave);
-    
-    // Skip if nothing changed
-    if (dataString === lastSavedRef.current) return;
-
-    if (!isOnline) {
-      pendingDataRef.current = dataToSave;
-      // Store in localStorage for crash recovery
-      localStorage.setItem('planner_pending_changes', dataString);
-      setStatus('offline');
-      return;
-    }
-
-    setStatus('saving');
-    try {
-      await onSave(dataToSave);
-      lastSavedRef.current = dataString;
-      pendingDataRef.current = null;
-      localStorage.removeItem('planner_pending_changes');
-      setStatus('saved');
-      
-      // Reset to idle after 2 seconds
-      setTimeout(() => {
-        setStatus('idle');
-      }, 2000);
-    } catch (error) {
-      console.error('Autosave failed:', error);
-      pendingDataRef.current = dataToSave;
-      localStorage.setItem('planner_pending_changes', dataString);
-      setStatus('error');
-    }
-  }, [isOnline, onSave]);
-
-  // Debounced save on data change
+  // Debounced save when data changes
   useEffect(() => {
     if (!enabled) return;
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     timeoutRef.current = setTimeout(() => {
-      saveData(data);
+      void saveData(data);
     }, debounceMs);
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [data, debounceMs, enabled, saveData]);
 
+  // Cleanup retry timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
+
   const forceSave = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    saveData(data);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    void saveData(data);
   }, [data, saveData]);
 
   return { status, isOnline, forceSave };

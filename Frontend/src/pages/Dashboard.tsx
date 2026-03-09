@@ -34,7 +34,6 @@ export function Dashboard() {
     studentProfile,
     earnedCredits,
     currentGPA,
-    isOnboarded,
   } = usePlanner();
   const [majorName, setMajorName] = useState<string | null>(null);
 
@@ -50,17 +49,6 @@ export function Dashboard() {
       })
       .catch(() => setMajorName(studentProfile.majorId));
   }, [studentProfile?.majorId]);
-
-  // Redirect to onboarding if not onboarded
-  useEffect(() => {
-    if (!isOnboarded) {
-      navigate('/onboard');
-    }
-  }, [isOnboarded, navigate]);
-
-  if (!isOnboarded) {
-    return null;
-  }
 
   // Personalized greeting
   const metadata = user?.user_metadata as { name?: string } | undefined;

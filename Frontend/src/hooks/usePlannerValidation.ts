@@ -146,8 +146,9 @@ export function usePlannerValidation() {
     violations.push(...checkOfferingTerm(course, targetSemester));
     violations.push(...checkTimeConflicts(course, targetSemester));
 
-    // Check for duplicates
-    const isDuplicate = targetSemester.courses.some(c => c.id === course.id);
+    // Check for duplicates (compare by code, not id — added courses have code as id,
+    // but courses loaded from DB have a UUID id)
+    const isDuplicate = targetSemester.courses.some(c => c.code === course.code);
     if (isDuplicate) {
       violations.push({
         type: 'error',

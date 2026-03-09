@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DndContext,
@@ -34,7 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePlanner } from "@/contexts/PlannerContext";
-import { SectionProvider, useSections } from "@/contexts/SectionContext";
+import { useSections } from "@/contexts/SectionContext";
 import { usePlannerValidation } from "@/hooks/usePlannerValidation";
 import { useAutosave } from "@/hooks/useAutosave";
 import { PlannedCourse, Semester, SemesterType } from "@/types/planner";
@@ -49,7 +49,6 @@ interface UndoState {
 }
 
 function PlannerContent() {
-  const navigate = useNavigate();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const {
     semesters,
@@ -182,16 +181,6 @@ function PlannerContent() {
 
     prefetchAndCalculateConflicts();
   }, [semesters, isOnboarded, fetchSectionsForSemester, getSectionForCourse, isSemesterCached]);
-
-  useEffect(() => {
-    if (!isOnboarded) {
-      navigate("/onboard");
-    }
-  }, [isOnboarded, navigate]);
-
-  if (!isOnboarded) {
-    return null;
-  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -576,11 +565,6 @@ function PlannerContent() {
   );
 }
 
-// Wrapper component that provides SectionContext
 export function Planner() {
-  return (
-    <SectionProvider>
-      <PlannerContent />
-    </SectionProvider>
-  );
+  return <PlannerContent />;
 }

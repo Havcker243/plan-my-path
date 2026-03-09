@@ -12,10 +12,22 @@ dist
 dist-ssr
 *.local
 
-# Environment files
+# Environment files - never commit secrets
 .env
 .env.*
 .ennv
+Backend/.env
+Frontend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Test coverage
+coverage/
 
 # Editor directories and files
 .vscode/*

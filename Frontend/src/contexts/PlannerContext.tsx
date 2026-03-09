@@ -19,9 +19,8 @@ interface PlannerContextType {
   studentProfile: StudentProfile | null;
   isOnboarded: boolean;
   selectedCourse: PlannedCourse | null;
-  
+
   // Actions
-  completeOnboarding: (data: OnboardingData) => Semester;
   moveCourse: (courseId: string, fromSemesterId: string, toSemesterId: string) => void;
   removeCourse: (courseId: string, semesterId: string) => void;
   addCourse: (course: PlannedCourse, semesterId: string) => void;
@@ -34,9 +33,8 @@ interface PlannerContextType {
   createSemester: (term: Semester['type'], year: number) => Semester;
   replaceSemesters: (semesters: Semester[]) => void;
   hydrateProfile: (profile: ProfilePayload) => void;
-  setOnboarded: (value: boolean) => void;
   savePlan: () => Promise<void>;
-  
+
   // Computed
   totalCredits: number;
   earnedCredits: number;
@@ -231,7 +229,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
 
     setStudentProfile(profile);
     const initialSemester = buildSemester(data.startTerm, data.admittedYear);
-    // Add completed courses into the initial semester so they persist in the plan
     initialSemester.courses = completedCourseObjects.map((course) => ({
       ...course,
       semesterId: initialSemester.id,
@@ -249,7 +246,8 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       isActive: true,
     };
     setCurrentPlan(plan);
-    setIsOnboarded(true);
+    // isOnboarded is set by hydrateProfile (called from ProfileContext.markComplete)
+    // after the backend confirms the save — not here.
 
     return initialSemester;
   }, [availableCourses, loadCourses, studentProfile?.email, studentProfile?.name, user?.email, user?.user_metadata]);
@@ -321,8 +319,9 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     setSemesters(prev => {
       return prev.map(semester => {
         if (semester.id !== semesterId) return semester;
-        // Check if course already exists
-        if (semester.courses.some(c => c.id === course.id)) return semester;
+        // Check if course already exists (compare by code — DB-loaded courses have UUID ids
+        // while newly added courses use course_code as id)
+        if (semester.courses.some(c => c.code === course.code)) return semester;
         return {
           ...semester,
           courses: [...semester.courses, { ...course, semesterId }],
@@ -408,7 +407,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     studentProfile,
     isOnboarded,
     selectedCourse,
-    completeOnboarding,
     moveCourse,
     removeCourse,
     addCourse,
@@ -421,7 +419,6 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     createSemester,
     replaceSemesters,
     hydrateProfile,
-    setOnboarded: setIsOnboarded,
     savePlan,
     totalCredits,
     earnedCredits,

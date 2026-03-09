@@ -392,7 +392,7 @@ export function CourseDetailModal({
         {/* Footer */}
         <div className="p-6 border-t border-border bg-muted/30">
           <div className="flex items-center justify-between gap-4">
-            {course.status !== 'completed' && (
+            {course.status !== 'completed' && onMarkCompleted && (
               <div className="flex items-center gap-3">
                 <Label className="text-sm text-muted-foreground">Mark as completed:</Label>
                 <Select value={selectedGrade} onValueChange={setSelectedGrade}>

@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { CourseDetailModal } from '@/components/planner/CourseDetailModal';
-import { PlannedCourse } from '@/types/planner';
+import { PlannedCourse, Semester } from '@/types/planner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchSectionsForTerm, searchCourses, fetchCourseLabels, type CourseLabelsResponse } from '@/lib/api';
-import type { Semester } from '@/types/planner';
-import { cn } from '@/lib/utils';
+import { fetchSectionsForTerm, searchCourses } from '@/lib/api';
+import { usePlannerValidation } from '@/hooks/usePlannerValidation';
+import { toast } from '@/hooks/use-toast';
 
 export function Courses() {
   const { availableCourses, semesters, addCourse, studentProfile } = usePlanner();
-  const [search, setSearch] = useState('');
+  const { validateDrop } = usePlannerValidation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [selectedCourse, setSelectedCourse] = useState<PlannedCourse | null>(null);
   const [selectedForAdd, setSelectedForAdd] = useState<PlannedCourse | null>(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState('');
@@ -24,16 +27,16 @@ export function Courses() {
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [searchResults, setSearchResults] = useState<PlannedCourse[]>([]);
-  const [courseLabels, setCourseLabels] = useState<CourseLabelsResponse>({});
   const majorCode = studentProfile?.majorId ?? 'UNDECLARED';
 
+  // Sync search state to URL param
   useEffect(() => {
-    if (!majorCode || majorCode === 'UNDECLARED') {
-      setCourseLabels({});
-      return;
+    if (search.trim()) {
+      setSearchParams({ q: search.trim() }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
     }
-    fetchCourseLabels(majorCode).then(setCourseLabels).catch(() => setCourseLabels({}));
-  }, [majorCode]);
+  }, [search, setSearchParams]);
 
   useEffect(() => {
     if (!selectedForAdd) {
@@ -82,9 +85,11 @@ export function Courses() {
     return searchResults;
   }, [availableCourses, search, searchResults]);
 
-  const loadSectionsForSemester = async (courseCode: string, term: Semester['type']) => {
+  // Accepts a full Semester to build the correct "fall 2024" term string
+  const loadSectionsForSemester = async (courseCode: string, semester: Semester) => {
     setSectionsLoading(true);
     try {
+      const term = `${semester.type} ${semester.year}`;
       const data = await fetchSectionsForTerm([courseCode], term);
       setSectionsForCourse(data[courseCode] || []);
     } catch {
@@ -94,14 +99,56 @@ export function Courses() {
     }
   };
 
+  const openDetailModal = (course: PlannedCourse) => {
+    setSelectedCourse({ ...course, status: 'planned', semesterId: '' });
+  };
+
+  const openAddDialog = (course: PlannedCourse) => {
+    setSelectedForAdd({ ...course, status: 'planned', semesterId: '' });
+    setSelectedSemesterId('');
+    setSelectedSectionId('');
+    setSectionStep('semester');
+    setShowAddDialog(true);
+  };
+
+  const handleAddCourse = (sectionId?: string) => {
+    if (!selectedForAdd || !selectedSemesterId) return;
+    const targetSemester = semesters.find((s) => s.id === selectedSemesterId);
+    if (!targetSemester) return;
+
+    const validation = validateDrop(selectedForAdd, targetSemester, semesters);
+
+    if (!validation.canDrop) {
+      const err = validation.violations.find((v) => v.type === 'error');
+      toast({
+        title: 'Cannot add course',
+        description: err?.message ?? 'This course cannot be added to this semester.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const warnings = validation.violations.filter((v) => v.type === 'warning');
+    if (warnings.length > 0) {
+      toast({ title: 'Warning', description: warnings[0].message });
+    }
+
+    addCourse(
+      { ...selectedForAdd, semesterId: selectedSemesterId, selectedSectionId: sectionId ?? null },
+      selectedSemesterId
+    );
+    setSelectedSemesterId('');
+    setSelectedSectionId('');
+    setShowAddDialog(false);
+    setSelectedForAdd(null);
+  };
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 max-w-6xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground mb-2">Courses</h1>
-          <p className="text-muted-foreground">
-            Browse the full catalog and explore sections.
-          </p>
+          <p className="text-muted-foreground">Browse the full catalog and explore sections.</p>
         </div>
 
         <div className="mb-6">
@@ -115,61 +162,77 @@ export function Courses() {
 
         <div className="grid gap-4 md:grid-cols-2">
           {filteredCourses.map((course) => (
-            <motion.button
+            <motion.div
               key={course.id}
-              className="text-left rounded-xl border border-border bg-card p-4 shadow-sm hover:border-accent/50"
-              onClick={() => {
-                setSelectedForAdd({
-                  ...course,
-                  status: 'planned',
-                  semesterId: '',
-                });
-                setSelectedSemesterId('');
-                setSelectedSectionId('');
-                setSectionStep('semester');
-                setShowAddDialog(true);
-              }}
+              className="rounded-xl border border-border bg-card p-4 shadow-sm hover:border-accent/50 transition-colors"
               whileHover={{ scale: 1.01 }}
             >
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-3">
+                <button
+                  className="flex-1 text-left"
+                  onClick={() => openDetailModal(course as PlannedCourse)}
+                >
                   <p className="text-sm font-semibold text-foreground">{course.code}</p>
                   <p className="text-sm text-muted-foreground">{course.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                    {course.description || 'No description available.'}
+                  </p>
+                </button>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">{course.credits} cr</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7 px-2"
+                    onClick={() => openAddDialog(course as PlannedCourse)}
+                  >
+                    + Add
+                  </Button>
                 </div>
-                <span className="text-xs text-muted-foreground">{course.credits} cr</span>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground line-clamp-2">
-                {course.description || 'No description available.'}
-              </p>
-            </motion.button>
+            </motion.div>
           ))}
         </div>
       </div>
 
+      {/* Course detail modal — opened by clicking the course name/description */}
       {selectedCourse && (
-        <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
+        <CourseDetailModal
+          course={selectedCourse}
+          onClose={() => setSelectedCourse(null)}
+          onAddToPlanner={() => {
+            const course = selectedCourse;
+            setSelectedCourse(null);
+            openAddDialog(course);
+          }}
+        />
       )}
 
+      {/* Add to planner dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add course</DialogTitle>
+            <DialogTitle>Add to planner</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedForAdd?.code}</p>
               <p className="text-xs text-muted-foreground">{selectedForAdd?.title}</p>
             </div>
+
             {sectionStep === 'semester' && (
               <>
-                <Select value={selectedSemesterId} onValueChange={async (value) => {
-                  setSelectedSemesterId(value);
-                  const semester = semesters.find((item) => item.id === value);
-                  if (semester && selectedForAdd) {
-                    await loadSectionsForSemester(selectedForAdd.code, semester.type);
-                    setSectionStep('section');
-                  }
-                }}>
+                <Select
+                  value={selectedSemesterId}
+                  onValueChange={async (value) => {
+                    setSelectedSemesterId(value);
+                    const semester = semesters.find((s) => s.id === value);
+                    if (semester && selectedForAdd) {
+                      await loadSectionsForSemester(selectedForAdd.code, semester);
+                      setSectionStep('section');
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose semester" />
                   </SelectTrigger>
@@ -181,44 +244,25 @@ export function Courses() {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1"
-                    onClick={() => {
-                      if (!selectedForAdd || !selectedSemesterId) return;
-                      addCourse(
-                        { ...selectedForAdd, semesterId: selectedSemesterId },
-                        selectedSemesterId
-                      );
-                      setSelectedSemesterId('');
-                      setShowAddDialog(false);
-                    }}
-                    disabled={!selectedSemesterId}
-                  >
-                    Add course
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      if (!selectedForAdd) return;
-                      setShowAddDialog(false);
-                      setSelectedCourse(selectedForAdd);
-                    }}
-                  >
-                    View details
-                  </Button>
-                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => handleAddCourse()}
+                  disabled={!selectedSemesterId}
+                >
+                  Add without section
+                </Button>
               </>
             )}
 
             {sectionStep === 'section' && (
               <>
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Select a section</p>
-                  {sectionsLoading && <p className="text-sm text-muted-foreground">Loading sections…</p>}
+                  <p className="text-sm text-muted-foreground">Select a section (optional)</p>
+                  {sectionsLoading && (
+                    <p className="text-sm text-muted-foreground">Loading sections…</p>
+                  )}
                   {!sectionsLoading && sectionsForCourse.length === 0 && (
-                    <p className="text-sm text-destructive">No sections yet for this term</p>
+                    <p className="text-sm text-muted-foreground">No sections found for this term</p>
                   )}
                   {!sectionsLoading && sectionsForCourse.length > 0 && (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -227,7 +271,9 @@ export function Courses() {
                           key={section.id}
                           type="button"
                           className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                            selectedSectionId === section.id ? 'border-accent bg-accent/10' : 'border-border'
+                            selectedSectionId === section.id
+                              ? 'border-accent bg-accent/10'
+                              : 'border-border'
                           }`}
                           onClick={() => setSelectedSectionId(section.id)}
                         >
@@ -235,7 +281,8 @@ export function Courses() {
                             Section {section.section_code} · {section.term ?? 'Term TBA'}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {section.status ?? 'Status TBA'} · {section.seats?.available ?? 0}/{section.seats?.capacity ?? 0} seats
+                            {section.status ?? 'Status TBA'} ·{' '}
+                            {section.seats?.available ?? 0}/{section.seats?.capacity ?? 0} seats
                           </div>
                         </button>
                       ))}
@@ -256,20 +303,7 @@ export function Courses() {
                   </Button>
                   <Button
                     className="flex-1"
-                    onClick={() => {
-                      if (!selectedForAdd || !selectedSemesterId) return;
-                      addCourse(
-                        {
-                          ...selectedForAdd,
-                          semesterId: selectedSemesterId,
-                          selectedSectionId: selectedSectionId || null,
-                        },
-                        selectedSemesterId
-                      );
-                      setSelectedSemesterId('');
-                      setSelectedSectionId('');
-                      setShowAddDialog(false);
-                    }}
+                    onClick={() => handleAddCourse(selectedSectionId || undefined)}
                     disabled={!selectedSemesterId}
                   >
                     Add course

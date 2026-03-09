@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,10 +12,11 @@ import {
   User,
   LogOut,
   FileText,
-  Sparkles,
   BookOpen,
   RotateCcw,
   Save,
+  AlertTriangle,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,8 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
+import { exportToICS } from '@/utils/icsExport';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -43,7 +46,6 @@ const navItems = [
 ];
 
 const quickActions = [
-  { icon: Sparkles, label: 'Generate Plan', action: 'generate' },
   { icon: Save, label: 'Save Plan', action: 'save' },
   { icon: RotateCcw, label: 'Reset', action: 'reset' },
 ];
@@ -51,27 +53,72 @@ const quickActions = [
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetPlan, generatePlan } = usePlanner();
-  const { signOut } = useAuth();
+  const { savePlan, semesters, studentProfile } = usePlanner();
+  const { signOut, user } = useAuth();
+  const { resetProfile } = useProfile();
+
+  const notifications = useMemo(() => {
+    const items: { type: 'warning' | 'info'; message: string }[] = [];
+    semesters.forEach((s) => {
+      const credits = s.courses.reduce((sum, c) => sum + c.credits, 0);
+      if (credits > 18) {
+        items.push({ type: 'warning', message: `${s.label} — heavy load: ${credits} credits` });
+      }
+    });
+    if (!studentProfile?.targetGraduation) {
+      items.push({ type: 'info', message: 'No graduation target set — add one in Profile' });
+    }
+    const allCourses = semesters.flatMap((s) => s.courses);
+    if (allCourses.length > 0 && allCourses.every((c) => c.status !== 'completed')) {
+      items.push({ type: 'info', message: 'No courses marked as completed yet' });
+    }
+    return items;
+  }, [semesters, studentProfile]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleQuickAction = (action: string) => {
     switch (action) {
-      case 'generate':
-        generatePlan();
-        break;
       case 'reset':
-        if (confirm('Are you sure you want to reset your plan?')) {
-          resetPlan();
-          navigate('/onboard');
+        if (confirm('Are you sure you want to reset your plan? This will restart onboarding.')) {
+          resetProfile();
+          // ProtectedRoute will redirect to /onboard automatically
+          // once profileStatus becomes 'incomplete'
         }
         break;
       case 'save':
-        // TODO: Implement save functionality
+        void savePlan();
         break;
     }
   };
+
+  const handleSearchSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/courses?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } finally {
+      // ProfileContext clears plan state when user becomes null (via its own useEffect)
+      navigate('/');
+    }
+  };
+
+  // Build avatar initials from profile name or user metadata
+  const rawName =
+    studentProfile?.name ??
+    (user?.user_metadata as { name?: string } | undefined)?.name ??
+    user?.email ??
+    '';
+  const initials = rawName
+    .split(' ')
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .slice(0, 2)
+    .join('') || 'ME';
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -195,14 +242,15 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shrink-0">
-          {/* Search */}
+          {/* Search — press Enter to go to /courses?q=... */}
           <div className="flex-1 max-w-md">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search courses..."
+                placeholder="Search courses… (Enter)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchSubmit}
                 className="pl-10 bg-muted/50 border-transparent focus:bg-background focus:border-input"
               />
             </div>
@@ -210,20 +258,55 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Bell className="w-5 h-5" />
-            </Button>
+            {/* Notifications bell */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative text-muted-foreground">
+                  <Bell className="w-5 h-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0">
+                <div className="px-4 py-3 border-b border-border">
+                  <p className="text-sm font-semibold text-foreground">
+                    Notifications
+                    {notifications.length > 0 && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({notifications.length})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                    All clear — your plan looks good!
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto">
+                    {notifications.map((n, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-0"
+                      >
+                        {n.type === 'warning' ? (
+                          <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+                        ) : (
+                          <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                        )}
+                        <p className="text-sm text-foreground">{n.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="ghost"
               className="gap-2 text-muted-foreground"
-              onClick={async () => {
-                try {
-                  await signOut();
-                } finally {
-                  resetPlan();
-                  navigate('/');
-                }
-              }}
+              onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4" />
               Log out
@@ -234,36 +317,26 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
                 <Button variant="ghost" className="gap-2 px-2">
                   <Avatar className="w-8 h-8">
                     <AvatarFallback className="bg-accent text-accent-foreground text-sm">
-                      ST
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  My Programs
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    exportToICS(semesters);
+                  }}
+                >
                   <FileText className="w-4 h-4 mr-2" />
-                  Export Plan
+                  Export .ics
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive"
-                onClick={async () => {
-                  try {
-                    await signOut();
-                  } finally {
-                    resetPlan();
-                    navigate('/');
-                  }
-                }}
-              >
+                <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
@@ -273,9 +346,7 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto custom-scrollbar">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto custom-scrollbar">{children}</main>
       </div>
     </div>
   );

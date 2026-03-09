@@ -189,10 +189,6 @@ function PlannerContent() {
     }
   }, [isOnboarded, navigate]);
 
-  if (!isOnboarded) {
-    return null;
-  }
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -203,6 +199,10 @@ function PlannerContent() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  if (!isOnboarded) {
+    return null;
+  }
 
   const activeCourse = activeId
     ? semesters.flatMap((semester) => semester.courses).find((course) => course.id === activeId)

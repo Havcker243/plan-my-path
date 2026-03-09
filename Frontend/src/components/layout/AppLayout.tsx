@@ -51,7 +51,7 @@ const quickActions = [
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetPlan, generatePlan } = usePlanner();
+  const { resetPlan, generatePlan, savePlan } = usePlanner();
   const { signOut } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +68,7 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
         }
         break;
       case 'save':
-        // TODO: Implement save functionality
+        void savePlan();
         break;
     }
   };

@@ -58,10 +58,6 @@ export function Dashboard() {
     }
   }, [isOnboarded, navigate]);
 
-  if (!isOnboarded) {
-    return null;
-  }
-
   // Personalized greeting
   const metadata = user?.user_metadata as { name?: string } | undefined;
   const displayName = studentProfile?.name || metadata?.name || 'Student';
@@ -106,6 +102,10 @@ export function Dashboard() {
     }
     return result;
   }, [semesters, studentProfile, earnedCredits]);
+
+  if (!isOnboarded) {
+    return null;
+  }
 
   const handleExportICS = () => {
     exportToICS(semesters);

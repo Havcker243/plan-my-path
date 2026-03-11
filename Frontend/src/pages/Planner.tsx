@@ -182,15 +182,6 @@ function PlannerContent() {
     prefetchAndCalculateConflicts();
   }, [semesters, isOnboarded, fetchSectionsForSemester, getSectionForCourse, isSemesterCached]);
 
-<<<<<<< HEAD
-=======
-  useEffect(() => {
-    if (!isOnboarded) {
-      navigate("/onboard");
-    }
-  }, [isOnboarded, navigate]);
-
->>>>>>> 0fca6653d789e8eddfd6dd870fff88a7d406a29e
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {

@@ -50,6 +50,16 @@ export function Dashboard() {
       .catch(() => setMajorName(studentProfile.majorId));
   }, [studentProfile?.majorId]);
 
+<<<<<<< HEAD
+=======
+  // Redirect to onboarding if not onboarded
+  useEffect(() => {
+    if (!isOnboarded) {
+      navigate('/onboard');
+    }
+  }, [isOnboarded, navigate]);
+
+>>>>>>> 0fca6653d789e8eddfd6dd870fff88a7d406a29e
   // Personalized greeting
   const metadata = user?.user_metadata as { name?: string } | undefined;
   const displayName = studentProfile?.name || metadata?.name || 'Student';
@@ -94,6 +104,10 @@ export function Dashboard() {
     }
     return result;
   }, [semesters, studentProfile, earnedCredits]);
+
+  if (!isOnboarded) {
+    return null;
+  }
 
   const handleExportICS = () => {
     exportToICS(semesters);

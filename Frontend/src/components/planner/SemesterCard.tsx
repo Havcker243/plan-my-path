@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
-import { BookOpen, Hash, AlertTriangle } from 'lucide-react';
+import { BookOpen, Hash, AlertTriangle, Trash2 } from 'lucide-react';
 import { Semester, PlannedCourse } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ interface SemesterCardProps {
   onCourseClick?: (course: PlannedCourse) => void;
   onRemoveCourse?: (courseId: string) => void;
   onMarkCourseCompleted?: (courseId: string) => void;
+  onDeleteSemester?: () => void;
   courseConflicts?: Record<string, string[]>; // Map of courseId -> array of conflicting course codes
   courseLabels?: CourseLabelsResponse; // Requirement labels keyed by course code
 }
@@ -21,6 +22,7 @@ export function SemesterCard({
   onCourseClick,
   onRemoveCourse,
   onMarkCourseCompleted,
+  onDeleteSemester,
   courseConflicts = {},
   courseLabels = {},
 }: SemesterCardProps) {
@@ -57,8 +59,22 @@ export function SemesterCard({
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold text-foreground">{semester.label}</h3>
-          <div className="text-sm font-medium text-muted-foreground">
-            {totalCredits} cr
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">{totalCredits} cr</span>
+            {onDeleteSemester && (
+              <button
+                onClick={() => {
+                  const msg = semester.courses.length > 0
+                    ? `Delete ${semester.label}? This will also remove its ${semester.courses.length} course(s).`
+                    : `Delete ${semester.label}?`;
+                  if (confirm(msg)) onDeleteSemester();
+                }}
+                className="text-muted-foreground/40 hover:text-destructive transition-colors"
+                title="Delete semester"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>

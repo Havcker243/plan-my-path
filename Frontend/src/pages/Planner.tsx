@@ -182,6 +182,15 @@ function PlannerContent() {
     prefetchAndCalculateConflicts();
   }, [semesters, isOnboarded, fetchSectionsForSemester, getSectionForCourse, isSemesterCached]);
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+    if (!isOnboarded) {
+      navigate("/onboard");
+    }
+  }, [isOnboarded, navigate]);
+
+>>>>>>> 0fca6653d789e8eddfd6dd870fff88a7d406a29e
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -192,6 +201,10 @@ function PlannerContent() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  if (!isOnboarded) {
+    return null;
+  }
 
   const activeCourse = activeId
     ? semesters.flatMap((semester) => semester.courses).find((course) => course.id === activeId)
@@ -276,6 +289,12 @@ function PlannerContent() {
       saveUndoState(`Removed ${course.code} from ${semester?.label}`);
     }
     removeCourse(courseId, semesterId);
+  };
+
+  const handleDeleteSemester = (semesterId: string) => {
+    const semester = semesters.find((s) => s.id === semesterId);
+    if (semester) saveUndoState(`Deleted ${semester.label}`);
+    replaceSemesters(semesters.filter((s) => s.id !== semesterId));
   };
 
   const handleMarkCompleted = (courseId: string, grade: string) => {
@@ -442,6 +461,7 @@ function PlannerContent() {
                         const course = semester.courses.find((c) => c.id === courseId);
                         if (course) setSelectedCourse(course);
                       }}
+                      onDeleteSemester={() => handleDeleteSemester(semester.id)}
                       courseConflicts={semesterConflicts[semester.id] || {}}
                       courseLabels={courseLabels}
                     />

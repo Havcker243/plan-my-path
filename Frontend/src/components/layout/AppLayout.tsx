@@ -53,27 +53,8 @@ const quickActions = [
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { savePlan, semesters, studentProfile } = usePlanner();
-  const { signOut, user } = useAuth();
-  const { resetProfile } = useProfile();
-
-  const notifications = useMemo(() => {
-    const items: { type: 'warning' | 'info'; message: string }[] = [];
-    semesters.forEach((s) => {
-      const credits = s.courses.reduce((sum, c) => sum + c.credits, 0);
-      if (credits > 18) {
-        items.push({ type: 'warning', message: `${s.label} — heavy load: ${credits} credits` });
-      }
-    });
-    if (!studentProfile?.targetGraduation) {
-      items.push({ type: 'info', message: 'No graduation target set — add one in Profile' });
-    }
-    const allCourses = semesters.flatMap((s) => s.courses);
-    if (allCourses.length > 0 && allCourses.every((c) => c.status !== 'completed')) {
-      items.push({ type: 'info', message: 'No courses marked as completed yet' });
-    }
-    return items;
-  }, [semesters, studentProfile]);
+  const { resetPlan, generatePlan, savePlan } = usePlanner();
+  const { signOut } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 

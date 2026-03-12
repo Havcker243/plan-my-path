@@ -2,9 +2,177 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import List, Optional, Tuple
+from typing_extensions import TypedDict
 
 import psycopg2
+
+
+# ---------------------------------------------------------------------------
+# TypedDicts for DB row shapes
+# ---------------------------------------------------------------------------
+
+class SubjectRow(TypedDict):
+    id: str
+    code: str
+    name: str
+
+
+class CourseRow(TypedDict):
+    id: str
+    course_code: str
+    title: str
+    description: Optional[str]
+    credits_min: Optional[int]
+    credits_max: Optional[int]
+    credit_type: Optional[str]
+    requisites: object  # can be list, string, or None from DB
+    locations: object
+    attributes: object
+    terms: List[Optional[str]]
+
+
+class MeetingTimeRow(TypedDict):
+    days: Optional[str]
+    start_time: Optional[str]
+    end_time: Optional[str]
+    location: Optional[str]
+    building: Optional[str]
+    room: Optional[str]
+    start_date: Optional[str]
+    end_date: Optional[str]
+    modality: Optional[str]
+
+
+class InstructorRow(TypedDict):
+    name: str
+    faculty_id: Optional[str]
+    role: Optional[str]
+
+
+class SeatsRow(TypedDict):
+    available: int
+    capacity: int
+    enrolled: Optional[int]
+    waitlisted: Optional[int]
+
+
+class SectionRow(TypedDict):
+    id: str
+    section_code: str
+    section_id: str
+    term: str
+    term_code: Optional[str]
+    status: Optional[str]
+    campus: Optional[str]
+    modality: Optional[str]
+    start_date: Optional[str]
+    end_date: Optional[str]
+    seats: SeatsRow
+    instructors: List[InstructorRow]
+    meeting_times: List[MeetingTimeRow]
+
+
+class TermCalendarRow(TypedDict):
+    term: str
+    year: int
+    start_date: Optional[str]
+    end_date: Optional[str]
+
+
+class CourseDetailRow(TypedDict):
+    course_code: str
+    title: Optional[str]
+    description: Optional[str]
+    credits_min: Optional[int]
+    credits_max: Optional[int]
+    requisites: object
+    terms: List[Optional[str]]
+
+
+class PlanCourseRow(TypedDict):
+    id: str
+    code: str
+    title: str
+    credits: int
+    description: Optional[str]
+    prerequisites: object
+    offered_terms: List[Optional[str]]
+    type: str
+    requirement_bucket: None
+    status: str
+    grade: Optional[str]
+    semester_id: str
+    selected_section_id: Optional[str]
+
+
+class PlanSemesterRow(TypedDict):
+    id: str
+    term: str
+    year: int
+    label: str
+    start_date: Optional[str]
+    end_date: Optional[str]
+    courses: List[PlanCourseRow]
+
+
+class PlanRow(TypedDict):
+    id: str
+    name: str
+    semesters: List[PlanSemesterRow]
+
+
+class SearchCourseRow(TypedDict):
+    id: str
+    course_code: str
+    title: Optional[str]
+    description: Optional[str]
+    credits: dict  # {"min_credits": int|None, "max_credits": int|None, "credit_type": str|None}
+    requisites: object
+    locations: object
+    attributes: object
+    sections: List[SectionRow]
+
+
+class ProfileRow(TypedDict):
+    user_id: str
+    email: Optional[str]
+    name: Optional[str]
+    phone: Optional[str]
+    avatar_url: Optional[str]
+    major_code: Optional[str]
+    graduation_year: Optional[int]
+    graduation_term: Optional[str]
+    start_year: Optional[int]
+    start_term: Optional[str]
+    completed_courses: List[str]
+    gpa: Optional[float]
+
+
+class CourseLabelEntry(TypedDict):
+    label: str
+    group_name: str
+    group_type: str
+    detail: str
+    credits: Optional[float]
+
+
+class ElectiveRule(TypedDict):
+    subject_code: str
+    min_level: int
+    max_level: Optional[int]
+    exclude_courses: set  # set[str]
+    group_name: str
+
+
+class CourseLabelsData(TypedDict):
+    labels: dict  # dict[str, CourseLabelEntry]
+    rules: List[ElectiveRule]
+
+
+# ---------------------------------------------------------------------------
+# Env / connection helpers
+# ---------------------------------------------------------------------------
 
 
 def _load_env_lines(path: Path) -> List[tuple[str, str]]:
@@ -52,7 +220,7 @@ def connect(pooler_url: str):
     return psycopg2.connect(pooler_url)
 
 
-def fetch_subjects(pooler_url: str) -> List[Dict[str, Any]]:
+def fetch_subjects(pooler_url: str) -> List[SubjectRow]:
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
             cur.execute("select id, code, name from subjects order by code;")
@@ -60,7 +228,7 @@ def fetch_subjects(pooler_url: str) -> List[Dict[str, Any]]:
     return [{"id": row[0], "code": row[1], "name": row[2]} for row in rows]
 
 
-def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[Dict[str, Any]]:
+def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[CourseRow]:
     query = """
         select
           c.id,
@@ -85,7 +253,7 @@ def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[Dict[st
         with conn.cursor() as cur:
             cur.execute(query, (subject_code,))
             rows = cur.fetchall()
-    results: List[Dict[str, Any]] = []
+    results: List[CourseRow] = []
     for row in rows:
         results.append(
             {
@@ -109,7 +277,7 @@ def _fetch_sections_by_course(
     pooler_url: str,
     course_ids: List[str],
     term_filter: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, List[SectionRow]]:
     if not course_ids:
         return {}
 
@@ -133,7 +301,7 @@ def _fetch_sections_by_course(
         from sections
         where course_id = any(%s)
     """
-    params: List[Any] = [course_ids]
+    params: List[str | int] = [course_ids]  # type: ignore[assignment]  # psycopg2 accepts lists directly
     if term_filter:
         sections_sql += " and lower(term) like %s"
         params.append(f"%{term_filter.lower()}%")
@@ -184,7 +352,7 @@ def _fetch_sections_by_course(
                 )
                 instructor_rows = cur.fetchall()
 
-    meetings_by_section: Dict[str, List[Dict[str, Any]]] = {}
+    meetings_by_section: dict[str, List[MeetingTimeRow]] = {}
     for row in meeting_rows:
         meetings_by_section.setdefault(row[0], []).append(
             {
@@ -200,7 +368,7 @@ def _fetch_sections_by_course(
             }
         )
 
-    instructors_by_section: Dict[str, List[Dict[str, Any]]] = {}
+    instructors_by_section: dict[str, List[InstructorRow]] = {}
     for row in instructor_rows:
         instructors_by_section.setdefault(row[0], []).append(
             {
@@ -210,7 +378,7 @@ def _fetch_sections_by_course(
             }
         )
 
-    sections_by_course: Dict[str, List[Dict[str, Any]]] = {}
+    sections_by_course: dict[str, List[SectionRow]] = {}
     for row in section_rows:
         section_id = row[0]
         course_id = row[1]
@@ -244,7 +412,7 @@ def fetch_sections_by_course_codes(
     pooler_url: str,
     course_codes: List[str],
     term_filter: Optional[str] = None,
-) -> Dict[str, List[Dict[str, Any]]]:
+) -> dict[str, List[SectionRow]]:
     if not course_codes:
         return {}
 
@@ -264,7 +432,7 @@ def fetch_sections_by_course_codes(
     id_to_code = {row[0]: row[1] for row in rows}
     sections_by_course_id = _fetch_sections_by_course(pooler_url, course_ids, term_filter)
 
-    sections_by_code: Dict[str, List[Dict[str, Any]]] = {}
+    sections_by_code: dict[str, List[SectionRow]] = {}
     for course_id, sections in sections_by_course_id.items():
         code = id_to_code.get(course_id)
         if not code:
@@ -274,7 +442,7 @@ def fetch_sections_by_course_codes(
     return sections_by_code
 
 
-def fetch_term_calendar(pooler_url: str) -> List[Dict[str, Any]]:
+def fetch_term_calendar(pooler_url: str) -> List[TermCalendarRow]:
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -293,7 +461,7 @@ def fetch_term_calendar(pooler_url: str) -> List[Dict[str, Any]]:
 
 def _fetch_course_details_by_codes(
     pooler_url: str, course_codes: List[str]
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, CourseDetailRow]:
     if not course_codes:
         return {}
     sql = """
@@ -315,7 +483,7 @@ def _fetch_course_details_by_codes(
         with conn.cursor() as cur:
             cur.execute(sql, (course_codes,))
             rows = cur.fetchall()
-    results: Dict[str, Dict[str, Any]] = {}
+    results: dict[str, CourseDetailRow] = {}
     for row in rows:
         results[row[0]] = {
             "course_code": row[0],
@@ -329,7 +497,7 @@ def _fetch_course_details_by_codes(
     return results
 
 
-def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
+def fetch_plan(pooler_url: str, user_id: str) -> Optional[PlanRow]:
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
             cur.execute("select id, name from plans where user_id = %s;", (user_id,))
@@ -349,7 +517,7 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
             semester_rows = cur.fetchall()
 
             semester_ids = [row[0] for row in semester_rows]
-            course_rows: List[Tuple[Any, ...]] = []
+            course_rows: List[Tuple[str, str, str, str, Optional[str], int, Optional[str]]] = []
             if semester_ids:
                 cur.execute(
                     """
@@ -364,8 +532,8 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
     course_codes = [row[2] for row in course_rows]
     course_details = _fetch_course_details_by_codes(pooler_url, course_codes)
 
-    semesters: List[Dict[str, Any]] = []
-    courses_by_semester: Dict[str, List[Dict[str, Any]]] = {}
+    semesters: List[PlanSemesterRow] = []
+    courses_by_semester: dict[str, List[PlanCourseRow]] = {}
     for row in course_rows:
         course_id, semester_id, code, status, grade, credits, selected_section_id = row
         detail = course_details.get(code, {})
@@ -407,7 +575,7 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
     return {"id": plan_id, "name": plan_name, "semesters": semesters}
 
 
-def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def save_plan(pooler_url: str, user_id: str, payload: dict) -> Optional[PlanRow]:
     semesters_payload = payload.get("semesters") or []
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
@@ -432,7 +600,7 @@ def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[st
                 "select id from plan_semesters where plan_id = %s;", (plan_id,)
             )
             existing_semester_ids = {str(row[0]) for row in cur.fetchall()}
-            incoming_semester_ids: set = set()
+            incoming_semester_ids: set[str] = set()
 
             for semester in semesters_payload:
                 incoming_id = str(semester.get("id") or "")
@@ -506,7 +674,7 @@ def save_plan(pooler_url: str, user_id: str, payload: Dict[str, Any]) -> Dict[st
 
             conn.commit()
 
-    return fetch_plan(pooler_url, user_id) or {"id": plan_id, "name": payload.get("name"), "semesters": []}
+    return fetch_plan(pooler_url, user_id)
 
 
 def search_courses(
@@ -515,7 +683,7 @@ def search_courses(
     subject_code: Optional[str] = None,
     page: int = 1,
     limit: int = 25,
-) -> tuple[List[Dict[str, Any]], int]:
+) -> tuple[List[SearchCourseRow], int]:
     # Guard against excessively long queries that produce slow ILIKE scans
     if len(query) > 200:
         query = query[:200]
@@ -567,7 +735,7 @@ def search_courses(
     course_ids = [row[0] for row in rows]
     sections_by_course = _fetch_sections_by_course(pooler_url, course_ids)
 
-    results: List[Dict[str, Any]] = []
+    results: List[SearchCourseRow] = []
     for row in rows:
         course_id = row[0]
         results.append(
@@ -591,7 +759,7 @@ def search_courses(
     return results, total
 
 
-def fetch_profile(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
+def fetch_profile(pooler_url: str, user_id: str) -> Optional[ProfileRow]:
     sql = """
         select
           user_id,
@@ -631,7 +799,7 @@ def fetch_profile(pooler_url: str, user_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def upsert_profile(pooler_url: str, payload: dict) -> dict:
     sql = """
         insert into profiles (
           user_id,
@@ -686,7 +854,7 @@ def upsert_profile(pooler_url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     return payload
 
 
-def fetch_course_labels(pooler_url: str, major_code: str) -> Dict[str, Dict[str, Any]]:
+def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
     """
     Fetch course labels for a specific major.
     Returns a dictionary mapping course_code to label information.
@@ -721,7 +889,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> Dict[str, Dict[str,
             )
 
             rows = cur.fetchall()
-            labels = {}
+            labels: dict[str, CourseLabelEntry] = {}
 
             for row in rows:
                 course_code, course_name, credits, is_required, group_id, group_name, group_type, description = row
@@ -773,7 +941,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> Dict[str, Dict[str,
             rules = cur.fetchall()
 
             # Store rules for later application
-            elective_rules = []
+            elective_rules: List[ElectiveRule] = []
             for rule_row in rules:
                 subject_code, min_level, max_level, exclude_courses, group_name = rule_row
                 elective_rules.append({
@@ -787,7 +955,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> Dict[str, Dict[str,
     return {'labels': labels, 'rules': elective_rules}
 
 
-def get_course_label(course_code: str, labels_data: Dict[str, Any]) -> Dict[str, Any]:
+def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseLabelEntry:
     """
     Determine the label for a single course based on labels data.
     This applies the labeling logic including pattern-matching rules.

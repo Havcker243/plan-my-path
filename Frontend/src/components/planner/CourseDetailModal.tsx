@@ -15,7 +15,7 @@ import {
   Meh,
   ThumbsDown
 } from 'lucide-react';
-import { PlannedCourse } from '@/types/planner';
+import { PlannedCourse, CourseSection, MeetingTime } from '@/types/planner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,7 +40,7 @@ export function CourseDetailModal({
 }: CourseDetailModalProps) {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
-  const [sections, setSections] = useState<any[]>([]);
+  const [sections, setSections] = useState<CourseSection[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [termFilter, setTermFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -56,7 +56,7 @@ export function CourseDetailModal({
         // Use the dedicated /api/sections endpoint (returns all terms for this course)
         const result = await fetchSections([course.code]);
         if (mounted) {
-          setSections((result[course.code] as unknown[]) ?? []);
+          setSections(result[course.code] ?? []);
         }
       } catch {
         if (mounted) {
@@ -319,7 +319,7 @@ export function CourseDetailModal({
                             Section {section.section_code}
                           </span>
                           <p className="text-sm text-muted-foreground">
-                            {section.instructors?.map((inst: any) => inst.name).join(', ') || 'Instructor TBA'}
+                            {section.instructors?.map((inst) => inst.name).join(', ') || 'Instructor TBA'}
                           </p>
                         </div>
                         <Badge 
@@ -331,7 +331,7 @@ export function CourseDetailModal({
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="w-4 h-4" />
-                        {section.meeting_times?.map((mt: any) => {
+                        {section.meeting_times?.map((mt: MeetingTime) => {
                           const time = mt.start_time && mt.end_time ? `${mt.start_time} - ${mt.end_time}` : 'Time TBA';
                           const place = [mt.building, mt.room].filter(Boolean).join(' ');
                           return `${mt.days ?? ''} ${time} ${place}`.trim();

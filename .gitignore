@@ -21,6 +21,7 @@ Frontend/.env
 
 # Python
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 .venv/
@@ -39,3 +40,11 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local settings
+.claude/
+
+# Local data artifacts (PDFs, Word docs, test payloads)
+data/*.pdf
+data/*.docx
+Backend/payload.json

@@ -1,3 +1,5 @@
+import type { CourseSection } from '@/types/planner';
+
 const defaultBaseUrl = 'http://localhost:8000';
 
 const apiBaseUrl =
@@ -43,10 +45,10 @@ export type SearchCourse = {
     max_credits?: number | null;
     credit_type?: string | null;
   };
-  requisites?: unknown;
+  requisites?: string | string[] | null;
   locations?: string | null;
-  attributes?: unknown;
-  sections?: unknown[];
+  attributes?: string[] | null;
+  sections?: CourseSection[];
 };
 
 export type SearchResponse = {
@@ -116,7 +118,7 @@ export async function updateProfile(
   return payload.data;
 }
 
-export type SectionResult = Record<string, unknown[]>;
+export type SectionResult = Record<string, CourseSection[]>;
 
 export async function fetchSections(courseCodes: string[]): Promise<SectionResult> {
   if (courseCodes.length === 0) return {};
@@ -189,9 +191,26 @@ export async function fetchPlan(token: string): Promise<PlanResponse | null> {
   return payload.data ?? null;
 }
 
+export type PlanSemesterPayload = {
+  id?: string;
+  type?: string;
+  year?: number;
+  label?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  courses?: Array<{
+    id?: string;
+    code: string;
+    credits?: number;
+    status?: string;
+    grade?: string | null;
+    selectedSectionId?: string | null;
+  }>;
+};
+
 export async function updatePlan(
   token: string,
-  plan: { name?: string; semesters: unknown[] }
+  plan: { name?: string; semesters: PlanSemesterPayload[] }
 ): Promise<PlanResponse | null> {
   const payload = await request<{ data: PlanResponse | null }>(
     '/api/plan',

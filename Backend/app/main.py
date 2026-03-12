@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import resolve_jwt_secret, verify_token
 from app.db import (
+    CourseLabelsData,
+    CourseLabelEntry,
     fetch_courses_by_subject,
     fetch_profile,
     fetch_sections_by_course_codes,
@@ -77,7 +79,7 @@ def _derive_offered_terms(terms: List[Optional[str]]) -> List[str]:
     return found or ["fall", "spring", "summer", "winter"]
 
 
-def _normalize_requisites(value: Any) -> List[str]:
+def _normalize_requisites(value: object) -> List[str]:
     if value in (None, "", "None"):
         return []
     if isinstance(value, list):
@@ -91,13 +93,13 @@ def health() -> Dict[str, str]:
 
 
 @app.get("/api/subjects")
-def list_subjects() -> Dict[str, Any]:
+def list_subjects() -> Dict[str, object]:
     subjects = fetch_subjects(POOLER_URL)
     return {"data": subjects}
 
 
 @app.get("/api/majors")
-def list_majors() -> Dict[str, Any]:
+def list_majors() -> Dict[str, object]:
     subjects = fetch_subjects(POOLER_URL)
     majors = [{"code": "UNDECLARED", "name": "Undeclared"}] + [
         {"code": item["code"], "name": item["name"] or item["code"]} for item in subjects
@@ -106,7 +108,7 @@ def list_majors() -> Dict[str, Any]:
 
 
 @app.get("/api/courses")
-def list_courses(subject: str) -> Dict[str, Any]:
+def list_courses(subject: str) -> Dict[str, object]:
     if not subject:
         raise HTTPException(status_code=400, detail="subject is required")
     rows = fetch_courses_by_subject(POOLER_URL, subject.upper())
@@ -137,7 +139,7 @@ def search_courses_endpoint(
     subject: Optional[str] = None,
     page: int = 1,
     limit: int = 25,
-) -> Dict[str, Any]:
+) -> Dict[str, object]:
     if not query:
         raise HTTPException(status_code=400, detail="query is required")
     rows, total = search_courses(
@@ -151,7 +153,7 @@ def search_courses_endpoint(
 
 
 @app.get("/api/sections")
-def list_sections(course_codes: str, term: Optional[str] = None) -> Dict[str, Any]:
+def list_sections(course_codes: str, term: Optional[str] = None) -> Dict[str, object]:
     codes = [code.strip().upper() for code in course_codes.split(",") if code.strip()]
     if not codes:
         raise HTTPException(status_code=400, detail="course_codes is required")
@@ -163,7 +165,7 @@ def list_sections(course_codes: str, term: Optional[str] = None) -> Dict[str, An
 def get_course_labels_endpoint(
     major_code: str,
     course_codes: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> Dict[str, object]:
     """
     Get requirement labels for courses based on a major.
 
@@ -180,12 +182,12 @@ def get_course_labels_endpoint(
         raise HTTPException(status_code=400, detail="major_code is required")
 
     # Fetch all labels and rules for this major
-    labels_data = fetch_course_labels(POOLER_URL, major_code.upper())
+    labels_data: CourseLabelsData = fetch_course_labels(POOLER_URL, major_code.upper())
 
     # If specific courses requested, filter and apply labeling logic
     if course_codes:
         codes = [code.strip().upper() for code in course_codes.split(",") if code.strip()]
-        result = {}
+        result: Dict[str, CourseLabelEntry] = {}
         for code in codes:
             result[code] = get_course_label(code, labels_data)
         return {"data": result}
@@ -196,43 +198,43 @@ def get_course_labels_endpoint(
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
-) -> Dict[str, Any]:
+) -> Dict[str, object]:
     token = credentials.credentials
     payload = verify_token(token, JWT_SECRET)
     return payload
 
 
 @app.get("/api/profile")
-def get_profile(user=Depends(get_current_user)) -> Dict[str, Any]:
+def get_profile(user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
-    profile = fetch_profile(POOLER_URL, user_id)
+    profile = fetch_profile(POOLER_URL, str(user_id))
     return {"data": profile}
 
 
 @app.put("/api/profile")
-def put_profile(payload: Dict[str, Any], user=Depends(get_current_user)) -> Dict[str, Any]:
+def put_profile(payload: dict, user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
-    payload["user_id"] = user_id
+    payload["user_id"] = str(user_id)
     saved = upsert_profile(POOLER_URL, payload)
     return {"data": saved}
 
 
 @app.get("/api/terms")
-def list_terms() -> Dict[str, Any]:
+def list_terms() -> Dict[str, object]:
     terms = fetch_term_calendar(POOLER_URL)
     return {"data": terms}
 
 
 @app.get("/api/plan")
-def get_plan(user=Depends(get_current_user)) -> Dict[str, Any]:
+def get_plan(user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
-    plan = fetch_plan(POOLER_URL, user_id)
+    plan = fetch_plan(POOLER_URL, str(user_id))
     if not plan:
         return {"data": None}
 
@@ -248,11 +250,11 @@ def get_plan(user=Depends(get_current_user)) -> Dict[str, Any]:
 
 
 @app.put("/api/plan")
-def put_plan(payload: Dict[str, Any], user=Depends(get_current_user)) -> Dict[str, Any]:
+def put_plan(payload: dict, user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
-    saved = save_plan(POOLER_URL, user_id, payload)
+    saved = save_plan(POOLER_URL, str(user_id), payload)
     if not saved:
         return {"data": None}
     for semester in saved.get("semesters", []):

@@ -33,7 +33,7 @@ def resolve_jwt_secret(env_path: Optional[Path] = None) -> str:
     raise RuntimeError("SUPABASE_JWT_SECRET not found in environment or .env")
 
 
-def verify_token(token: str, jwt_secret: str) -> dict:
+def verify_token(token: str, jwt_secret: str) -> dict[str, object]:
     try:
         return jwt.decode(token, jwt_secret, algorithms=["HS256"], options={"verify_aud": False})
     except JWTError as exc:

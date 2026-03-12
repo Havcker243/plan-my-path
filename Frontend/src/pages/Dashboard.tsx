@@ -34,6 +34,7 @@ export function Dashboard() {
     studentProfile,
     earnedCredits,
     currentGPA,
+    isOnboarded,
   } = usePlanner();
   const [majorName, setMajorName] = useState<string | null>(null);
 

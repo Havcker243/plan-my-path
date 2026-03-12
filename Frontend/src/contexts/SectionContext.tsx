@@ -103,14 +103,9 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
           const term = `${semester.type} ${semester.year}`.toLowerCase();
           const sectionsData = await fetchSectionsForTerm(courseCodes, term);
 
-          const typedData: Record<string, CourseSection[]> = {};
-          Object.entries(sectionsData).forEach(([courseCode, sections]) => {
-            typedData[courseCode] = sections as CourseSection[];
-          });
-
           setCache((prev) => ({
             ...prev,
-            [semester.id]: { data: typedData, timestamp: Date.now(), loading: false },
+            [semester.id]: { data: sectionsData, timestamp: Date.now(), loading: false },
           }));
         } catch (error) {
           console.error('Failed to fetch sections for semester:', semester.id, error);

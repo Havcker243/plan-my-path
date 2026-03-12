@@ -260,29 +260,35 @@ export const sampleSections: CourseSection[] = [
   {
     id: 'cs201-001',
     courseId: 'cs-201',
-    sectionNumber: '001',
-    professor: 'Dr. Sarah Chen',
-    seatsTotal: 35,
-    seatsOpen: 8,
-    meetingTimes: 'MWF 9:00-9:50 AM',
+    section_code: '001',
+    section_id: 'cs201-001',
+    term: 'Fall 2024',
+    status: 'Open',
+    seats: { available: 8, capacity: 35 },
+    instructors: [{ name: 'Dr. Sarah Chen' }],
+    meeting_times: [{ days: 'MWF', start_time: '09:00', end_time: '09:50' }],
   },
   {
     id: 'cs201-002',
     courseId: 'cs-201',
-    sectionNumber: '002',
-    professor: 'Dr. Michael Park',
-    seatsTotal: 35,
-    seatsOpen: 2,
-    meetingTimes: 'TR 10:30 AM-11:45 AM',
+    section_code: '002',
+    section_id: 'cs201-002',
+    term: 'Fall 2024',
+    status: 'Open',
+    seats: { available: 2, capacity: 35 },
+    instructors: [{ name: 'Dr. Michael Park' }],
+    meeting_times: [{ days: 'TR', start_time: '10:30', end_time: '11:45' }],
   },
   {
     id: 'cs201-003',
     courseId: 'cs-201',
-    sectionNumber: '003',
-    professor: 'Dr. Sarah Chen',
-    seatsTotal: 30,
-    seatsOpen: 15,
-    meetingTimes: 'MWF 2:00-2:50 PM',
+    section_code: '003',
+    section_id: 'cs201-003',
+    term: 'Fall 2024',
+    status: 'Open',
+    seats: { available: 15, capacity: 30 },
+    instructors: [{ name: 'Dr. Sarah Chen' }],
+    meeting_times: [{ days: 'MWF', start_time: '14:00', end_time: '14:50' }],
   },
 ];
 
@@ -302,9 +308,8 @@ export function generateSamplePlan(admittedYear: number = 2024): Semester[] {
       year,
       label: `Fall ${yearLabel}`,
       courses: [],
-      maxCredits: 18,
     });
-    
+
     // Spring semester
     semesters.push({
       id: `spring-${year + 1}`,
@@ -312,7 +317,6 @@ export function generateSamplePlan(admittedYear: number = 2024): Semester[] {
       year: year + 1,
       label: `Spring ${yearLabel}`,
       courses: [],
-      maxCredits: 18,
     });
   }
   

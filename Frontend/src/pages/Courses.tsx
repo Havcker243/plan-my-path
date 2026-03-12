@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { usePlanner } from '@/contexts/PlannerContext';
 import { CourseDetailModal } from '@/components/planner/CourseDetailModal';
-import { PlannedCourse, Semester } from '@/types/planner';
+import { PlannedCourse, Semester, CourseSection } from '@/types/planner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +23,7 @@ export function Courses() {
   const [selectedSemesterId, setSelectedSemesterId] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [sectionStep, setSectionStep] = useState<'semester' | 'section'>('semester');
-  const [sectionsForCourse, setSectionsForCourse] = useState<any[]>([]);
+  const [sectionsForCourse, setSectionsForCourse] = useState<CourseSection[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [searchResults, setSearchResults] = useState<PlannedCourse[]>([]);

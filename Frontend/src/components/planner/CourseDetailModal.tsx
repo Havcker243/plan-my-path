@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  X, 
-  BookOpen, 
-  Clock, 
-  Users, 
-  Star, 
+import {
+  X,
+  BookOpen,
+  Clock,
+  Users,
   CheckCircle2,
   AlertTriangle,
   Calendar,
@@ -13,7 +12,8 @@ import {
   MessageSquare,
   ThumbsUp,
   Meh,
-  ThumbsDown
+  ThumbsDown,
+  MapPin,
 } from 'lucide-react';
 import { PlannedCourse, CourseSection, MeetingTime } from '@/types/planner';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,10 @@ interface CourseDetailModalProps {
   course: PlannedCourse;
   onClose: () => void;
   onMarkCompleted?: (grade: string) => void;
-  onAddToPlanner?: () => void;
+  /** Called with the chosen sectionId and its term once the user picks one and clicks Add to Planner (Courses page) */
+  onAddToPlanner?: (sectionId: string, sectionTerm: string) => void;
+  /** Called when user picks/changes a section from within the Planner (no semester picker needed) */
+  onSelectSection?: (sectionId: string) => void;
 }
 
 export function CourseDetailModal({
@@ -37,9 +40,13 @@ export function CourseDetailModal({
   onClose,
   onMarkCompleted,
   onAddToPlanner,
+  onSelectSection,
 }: CourseDetailModalProps) {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [pickedSectionId, setPickedSectionId] = useState<string | null>(
+    course.selectedSectionId ?? null
+  );
   const [sections, setSections] = useState<CourseSection[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [termFilter, setTermFilter] = useState<string>('all');
@@ -254,6 +261,14 @@ export function CourseDetailModal({
             </TabsContent>
 
             <TabsContent value="sections" className="mt-0">
+              {(onAddToPlanner || onSelectSection) && (
+                <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-accent shrink-0" />
+                  {onAddToPlanner
+                    ? <>Select a section below to enable <strong>Add to Planner</strong>.</>
+                    : 'Click a section to select it for this course.'}
+                </p>
+              )}
               {sectionsLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -308,40 +323,82 @@ export function CourseDetailModal({
                       <Users className="w-10 h-10 mx-auto mb-2 opacity-50" />
                       <p>No sections match these filters.</p>
                     </div>
-                  ) : filteredSections.map((section) => (
-                    <div
-                      key={`${section.section_code}-${section.term_code}`}
-                      className="p-4 bg-muted/50 rounded-lg border border-border hover:border-accent/50 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <span className="font-medium text-foreground">
-                            Section {section.section_code}
-                          </span>
-                          <p className="text-sm text-muted-foreground">
-                            {section.instructors?.map((inst) => inst.name).join(', ') || 'Instructor TBA'}
-                          </p>
+                  ) : filteredSections.map((section) => {
+                    const isSelectable = !!onAddToPlanner || !!onSelectSection;
+                    const isPicked = isSelectable && pickedSectionId === section.id;
+                    const sectionBody = (
+                      <>
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-foreground">
+                                Section {section.section_code}
+                              </span>
+                              {isPicked && (
+                                <Badge className="bg-accent/20 text-accent border-0 text-xs">
+                                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {section.instructors?.map((inst) => inst.name).join(', ') || 'Instructor TBA'}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={section.seats?.available < 5 ? 'destructive' : 'secondary'}
+                            className={section.seats?.available < 5 ? '' : 'bg-success/20 text-success border-0'}
+                          >
+                            {section.seats?.available ?? 0}/{section.seats?.capacity ?? 0} seats
+                          </Badge>
                         </div>
-                        <Badge 
-                          variant={section.seats?.available < 5 ? 'destructive' : 'secondary'}
-                          className={section.seats?.available < 5 ? '' : 'bg-success/20 text-success border-0'}
-                        >
-                          {section.seats?.available ?? 0}/{section.seats?.capacity ?? 0} seats
-                        </Badge>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4 shrink-0" />
+                          <span>
+                            {section.meeting_times?.map((mt: MeetingTime) => {
+                              const time = mt.start_time && mt.end_time ? `${mt.start_time} – ${mt.end_time}` : 'Time TBA';
+                              return `${mt.days ?? ''} ${time}`.trim();
+                            }).join(' | ') || 'Meeting time TBA'}
+                          </span>
+                        </div>
+                        {section.meeting_times?.some((mt: MeetingTime) => mt.building || mt.room) && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <MapPin className="w-4 h-4 shrink-0" />
+                            <span>
+                              {section.meeting_times.map((mt: MeetingTime) =>
+                                [mt.building, mt.room].filter(Boolean).join(' ')
+                              ).filter(Boolean).join(' | ')}
+                            </span>
+                          </div>
+                        )}
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          {section.term || section.term_code || 'Term TBA'} • {section.status || 'Status TBA'}
+                        </div>
+                      </>
+                    );
+
+                    const sharedClass = `w-full text-left p-4 rounded-lg border transition-colors ${
+                      isPicked ? 'border-accent bg-accent/10' : 'bg-muted/50 border-border'
+                    }`;
+
+                    return isSelectable ? (
+                      <button
+                        key={`${section.section_code}-${section.term_code}`}
+                        type="button"
+                        className={`${sharedClass} hover:border-accent/50 cursor-pointer`}
+                        onClick={() => setPickedSectionId(isPicked ? null : section.id)}
+                      >
+                        {sectionBody}
+                      </button>
+                    ) : (
+                      <div
+                        key={`${section.section_code}-${section.term_code}`}
+                        className={sharedClass}
+                      >
+                        {sectionBody}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
-                        {section.meeting_times?.map((mt: MeetingTime) => {
-                          const time = mt.start_time && mt.end_time ? `${mt.start_time} - ${mt.end_time}` : 'Time TBA';
-                          const place = [mt.building, mt.room].filter(Boolean).join(' ');
-                          return `${mt.days ?? ''} ${time} ${place}`.trim();
-                        }).join(' | ') || 'Meeting time TBA'}
-                      </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        {section.term || section.term_code || 'Term TBA'} • {section.status || 'Status TBA'}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -421,8 +478,34 @@ export function CourseDetailModal({
                 Close
               </Button>
               {course.status === 'planned' && onAddToPlanner && (
-                <Button onClick={onAddToPlanner} className="bg-accent hover:bg-accent/90">
-                  Add to Planner
+                <Button
+                  onClick={() => {
+                    if (!pickedSectionId) return;
+                    const picked = sections.find((s) => s.id === pickedSectionId);
+                    onAddToPlanner(pickedSectionId, picked?.term ?? '');
+                  }}
+                  disabled={!pickedSectionId}
+                  className="bg-accent hover:bg-accent/90 disabled:opacity-50"
+                  title={!pickedSectionId ? 'Select a section first' : undefined}
+                >
+                  {pickedSectionId ? 'Add to Planner' : 'Pick a Section First'}
+                </Button>
+              )}
+              {onSelectSection && (
+                <Button
+                  onClick={() => {
+                    if (!pickedSectionId) return;
+                    onSelectSection(pickedSectionId);
+                    onClose();
+                  }}
+                  disabled={!pickedSectionId || pickedSectionId === course.selectedSectionId}
+                  className="bg-accent hover:bg-accent/90 disabled:opacity-50"
+                >
+                  {pickedSectionId && pickedSectionId !== course.selectedSectionId
+                    ? 'Save Section'
+                    : pickedSectionId
+                    ? 'Section Saved'
+                    : 'Pick a Section'}
                 </Button>
               )}
             </div>

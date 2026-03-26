@@ -30,6 +30,18 @@ import {
 import { cn } from '@/lib/utils';
 import type { CourseLabel } from '@/lib/api';
 
+interface SectionInfo {
+  sectionCode: string;
+  instructors: string[];
+  meetingTimes: Array<{
+    days: string;
+    start_time: string;
+    end_time: string;
+    building?: string | null;
+    room?: string | null;
+  }>;
+}
+
 interface CourseCardProps {
   course: PlannedCourse;
   onOpenDetail?: () => void;
@@ -38,6 +50,7 @@ interface CourseCardProps {
   isDragging?: boolean;
   conflicts?: string[]; // Array of conflicting course codes
   requirementLabel?: CourseLabel | null; // Requirement label (Required, Group Choice, etc.)
+  sectionInfo?: SectionInfo | null;
 }
 
 export function CourseCard({
@@ -47,7 +60,8 @@ export function CourseCard({
   onMarkCompleted,
   isDragging,
   conflicts = [],
-  requirementLabel = null
+  requirementLabel = null,
+  sectionInfo = null,
 }: CourseCardProps) {
   const {
     attributes,
@@ -137,6 +151,29 @@ export function CourseCard({
             <p className="text-xs text-muted-foreground line-clamp-1">
               {course.title}
             </p>
+            {sectionInfo && (
+              <div className="mt-1.5 rounded-md bg-muted/60 border border-border/60 px-2 py-1.5 text-[11px] space-y-0.5">
+                <p className="font-medium text-foreground/80">
+                  §{sectionInfo.sectionCode}
+                  {sectionInfo.instructors.length > 0 && (
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      — {sectionInfo.instructors[0]}
+                    </span>
+                  )}
+                </p>
+                {sectionInfo.meetingTimes.map((mt, i) => {
+                  const time = mt.start_time && mt.end_time
+                    ? `${mt.start_time}–${mt.end_time}`
+                    : 'Time TBA';
+                  const place = [mt.building, mt.room].filter(Boolean).join(' ');
+                  return (
+                    <p key={i} className="text-muted-foreground">
+                      {[mt.days || 'Days TBA', time, place].filter(Boolean).join(' · ')}
+                    </p>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Actions menu */}

@@ -53,8 +53,10 @@ const quickActions = [
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { resetPlan, generatePlan, savePlan } = usePlanner();
-  const { signOut } = useAuth();
+  const { resetPlan, savePlan, studentProfile, semesters } = usePlanner();
+  const { signOut, user } = useAuth();
+  const { resetProfile } = useProfile();
+  const notifications: Array<{ type: 'warning' | 'info'; message: string }> = [];
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 

@@ -188,9 +188,9 @@ export function Onboarding() {
         phone: metadata?.phone ?? undefined,
         major_code: formData.majorId,
         graduation_year: formData.graduationYear,
-        graduation_term: formData.graduationTerm,
+        graduation_term: formData.graduationTerm.toLowerCase(),
         start_year: formData.startYear,
-        start_term: formData.startTerm,
+        start_term: formData.startTerm.toLowerCase(),
         completed_courses: formData.completedCourses,
         gpa: formData.gpa ? Number(formData.gpa) : undefined,
       };

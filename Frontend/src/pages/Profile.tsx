@@ -58,9 +58,13 @@ export function Profile() {
           phone: profile.phone ?? '',
           major_code: profile.major_code ?? 'UNDECLARED',
           graduation_year: profile.graduation_year ?? prev.graduation_year,
-          graduation_term: profile.graduation_term ?? prev.graduation_term,
+          graduation_term: profile.graduation_term
+            ? profile.graduation_term.charAt(0).toUpperCase() + profile.graduation_term.slice(1).toLowerCase()
+            : prev.graduation_term,
           start_year: profile.start_year ?? prev.start_year,
-          start_term: profile.start_term ?? prev.start_term,
+          start_term: profile.start_term
+            ? profile.start_term.charAt(0).toUpperCase() + profile.start_term.slice(1).toLowerCase()
+            : prev.start_term,
           gpa: profile.gpa ? String(profile.gpa) : '',
           completed_courses: profile.completed_courses ?? [],
         }));
@@ -108,9 +112,9 @@ export function Profile() {
         phone: form.phone,
         major_code: form.major_code,
         graduation_year: form.graduation_year,
-        graduation_term: form.graduation_term,
+        graduation_term: form.graduation_term.toLowerCase(),
         start_year: form.start_year,
-        start_term: form.start_term,
+        start_term: form.start_term.toLowerCase(),
         gpa: gpaValue,
         completed_courses: form.completed_courses,
       };

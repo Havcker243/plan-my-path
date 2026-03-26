@@ -59,6 +59,7 @@ function PlannerContent() {
     createSemester,
     replaceSemesters,
     markCourseCompleted,
+    selectSection,
     selectedCourse,
     setSelectedCourse,
     totalCredits,
@@ -70,7 +71,7 @@ function PlannerContent() {
   } = usePlanner();
 
   const { validateDrop } = usePlannerValidation();
-  const { fetchSectionsForSemester, getSectionForCourse, isSemesterCached } = useSections();
+  const { fetchSectionsForSemester, getSectionForCourse, isSemesterCached, clearSemesterCache } = useSections();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<UndoState[]>([]);
@@ -533,6 +534,10 @@ function PlannerContent() {
             course={selectedCourse}
             onClose={() => setSelectedCourse(null)}
             onMarkCompleted={(grade) => handleMarkCompleted(selectedCourse.id, grade)}
+            onSelectSection={(sectionId) => {
+              selectSection(selectedCourse.id, selectedCourse.semesterId, sectionId);
+              clearSemesterCache(selectedCourse.semesterId);
+            }}
           />
         )}
       </AnimatePresence>

@@ -2,10 +2,11 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { motion } from 'framer-motion';
 import { BookOpen, Hash, AlertTriangle, Trash2 } from 'lucide-react';
-import { Semester, PlannedCourse } from '@/types/planner';
+import { Semester, PlannedCourse, CourseSection } from '@/types/planner';
 import { CourseCard } from './CourseCard';
 import { cn } from '@/lib/utils';
 import type { CourseLabelsResponse } from '@/lib/api';
+import { useSections } from '@/contexts/SectionContext';
 
 interface SemesterCardProps {
   semester: Semester;
@@ -30,7 +31,9 @@ export function SemesterCard({
     id: semester.id,
   });
 
-  const totalCredits = semester.courses.reduce((sum, c) => sum + c.credits, 0);
+  const { getSectionsForCourse } = useSections();
+
+  const totalCredits = semester.courses.reduce((sum, c) => sum + Number(c.credits), 0);
   const courseCount = semester.courses.length;
 
   // Count courses with time conflicts
@@ -95,17 +98,39 @@ export function SemesterCard({
           strategy={verticalListSortingStrategy}
         >
           {semester.courses.length > 0 ? (
-            semester.courses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onOpenDetail={() => onCourseClick?.(course)}
-                onRemove={() => onRemoveCourse?.(course.id)}
-                onMarkCompleted={() => onMarkCourseCompleted?.(course.id)}
-                conflicts={courseConflicts[course.id] || []}
-                requirementLabel={courseLabels[course.code] ?? null}
-              />
-            ))
+            semester.courses.map((course) => {
+              const sections = getSectionsForCourse(course.code, semester.id);
+              const section: CourseSection | undefined = course.selectedSectionId
+                ? sections.find((s) => s.id === course.selectedSectionId)
+                : sections[0];
+
+              const sectionInfo = section
+                ? {
+                    sectionCode: section.section_code,
+                    instructors: (section.instructors ?? []).map((inst) => inst.name),
+                    meetingTimes: (section.meeting_times ?? []).map((mt) => ({
+                      days: mt.days,
+                      start_time: mt.start_time,
+                      end_time: mt.end_time,
+                      building: mt.building,
+                      room: mt.room,
+                    })),
+                  }
+                : null;
+
+              return (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onOpenDetail={() => onCourseClick?.(course)}
+                  onRemove={() => onRemoveCourse?.(course.id)}
+                  onMarkCompleted={() => onMarkCourseCompleted?.(course.id)}
+                  conflicts={courseConflicts[course.id] || []}
+                  requirementLabel={courseLabels[course.code] ?? null}
+                  sectionInfo={sectionInfo}
+                />
+              );
+            })
           ) : (
             <div className="text-center text-muted-foreground">
               <p className="text-sm">No courses</p>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { Semester, CourseSection } from '@/types/planner';
-import { fetchSectionsForTerm } from '@/lib/api';
+import { fetchSections } from '@/lib/api';
 
 /**
  * Cache entry for a single semester
@@ -99,9 +99,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
 
       const fetchPromise = (async () => {
         try {
-          // Format: "fall 2024" — matches DB terms like "Fall 2024" via ILIKE
-          const term = `${semester.type} ${semester.year}`.toLowerCase();
-          const sectionsData = await fetchSectionsForTerm(courseCodes, term);
+          const sectionsData = await fetchSections(courseCodes);
 
           setCache((prev) => ({
             ...prev,

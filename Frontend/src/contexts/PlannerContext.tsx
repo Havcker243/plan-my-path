@@ -24,6 +24,7 @@ interface PlannerContextType {
   moveCourse: (courseId: string, fromSemesterId: string, toSemesterId: string) => void;
   removeCourse: (courseId: string, semesterId: string) => void;
   addCourse: (course: PlannedCourse, semesterId: string) => void;
+  selectSection: (courseId: string, semesterId: string, sectionId: string) => void;
   markCourseCompleted: (courseId: string, grade: string) => void;
   setSelectedCourse: (course: PlannedCourse | null) => void;
   generatePlan: () => void;
@@ -330,6 +331,20 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const selectSection = useCallback((courseId: string, semesterId: string, sectionId: string) => {
+    setSemesters((prev) =>
+      prev.map((semester) => {
+        if (semester.id !== semesterId) return semester;
+        return {
+          ...semester,
+          courses: semester.courses.map((course) =>
+            course.id === courseId ? { ...course, selectedSectionId: sectionId } : course
+          ),
+        };
+      })
+    );
+  }, []);
+
   const markCourseCompleted = useCallback((courseId: string, grade: string) => {
     setSemesters(prev => {
       return prev.map(semester => ({
@@ -365,16 +380,16 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
   const completedCourses = allCourses.filter(c => c.status === 'completed');
   
   const plannedCredits = semesters.reduce(
-    (sum, semester) => sum + semester.courses.reduce((inner, course) => inner + course.credits, 0),
+    (sum, semester) => sum + semester.courses.reduce((inner, course) => inner + Number(course.credits), 0),
     0
   );
   const totalCredits = plannedCredits;
-  const earnedCredits = completedCourses.reduce((sum, c) => sum + c.credits, 0);
+  const earnedCredits = completedCourses.reduce((sum, c) => sum + Number(c.credits), 0);
   const totalCourses = semesters.reduce((sum, semester) => sum + semester.courses.length, 0);
-  
+
   const currentGPA = completedCourses.length > 0
-    ? completedCourses.reduce((sum, c) => sum + (c.gradePoints || 0) * c.credits, 0) / 
-      completedCourses.reduce((sum, c) => sum + c.credits, 0)
+    ? completedCourses.reduce((sum, c) => sum + (c.gradePoints || 0) * Number(c.credits), 0) /
+      completedCourses.reduce((sum, c) => sum + Number(c.credits), 0)
     : 0;
 
   const savePlan = useCallback(async () => {
@@ -410,6 +425,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     moveCourse,
     removeCourse,
     addCourse,
+    selectSection,
     markCourseCompleted,
     setSelectedCourse,
     generatePlan,

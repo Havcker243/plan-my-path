@@ -299,7 +299,7 @@ def _fetch_sections_by_course(
           seats_enrolled,
           seats_waitlisted
         from sections
-        where course_id = any(%s)
+        where course_id = any(%s::uuid[])
     """
     params: List[str | int] = [course_ids]  # type: ignore[assignment]  # psycopg2 accepts lists directly
     if term_filter:
@@ -331,7 +331,7 @@ def _fetch_sections_by_course(
                       end_date,
                       modality
                     from meeting_times
-                    where section_id = any(%s);
+                    where section_id = any(%s::uuid[]);
                     """,
                     (section_ids,),
                 )
@@ -346,7 +346,7 @@ def _fetch_sections_by_course(
                       si.role
                     from section_instructors si
                     join instructors i on i.id = si.instructor_id
-                    where si.section_id = any(%s);
+                    where si.section_id = any(%s::uuid[]);
                     """,
                     (section_ids,),
                 )
@@ -523,7 +523,7 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[PlanRow]:
                     """
                     select id, semester_id, course_code, status, grade, credits, selected_section_id
                     from plan_courses
-                    where semester_id = any(%s);
+                    where semester_id = any(%s::uuid[]);
                     """,
                     (semester_ids,),
                 )
@@ -540,6 +540,7 @@ def fetch_plan(pooler_url: str, user_id: str) -> Optional[PlanRow]:
         credits_value = credits
         if credits_value is None:
             credits_value = detail.get("credits_min") or detail.get("credits_max") or 0
+        credits_value = int(credits_value) if credits_value is not None else 0
         courses_by_semester.setdefault(semester_id, []).append(
             {
                 "id": course_id,
@@ -668,7 +669,7 @@ def save_plan(pooler_url: str, user_id: str, payload: dict) -> Optional[PlanRow]
             removed_ids = existing_semester_ids - incoming_semester_ids
             if removed_ids:
                 cur.execute(
-                    "delete from plan_semesters where id = any(%s);",
+                    "delete from plan_semesters where id = any(%s::uuid[]);",
                     (list(removed_ids),),
                 )
 

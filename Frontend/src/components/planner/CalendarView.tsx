@@ -30,6 +30,25 @@ const toDateOnly = (value?: string | null) => {
   return date.toISOString().split('T')[0];
 };
 
+const getSemesterFallbackDates = (type: string, year: number) => {
+  const starts: Record<string, string> = {
+    spring: `${year}-01-13`,
+    summer: `${year}-05-19`,
+    fall: `${year}-08-25`,
+    winter: `${year}-12-16`,
+  };
+  const ends: Record<string, string> = {
+    spring: `${year}-05-09`,
+    summer: `${year}-08-08`,
+    fall: `${year}-12-13`,
+    winter: `${year + 1}-01-10`,
+  };
+  return {
+    start: starts[type] ?? `${year}-08-25`,
+    end: ends[type] ?? `${year}-12-13`,
+  };
+};
+
 export function CalendarView({ semesters }: CalendarViewProps) {
   const [currentSemesterIndex, setCurrentSemesterIndex] = useState(0);
   const [enabledCourses, setEnabledCourses] = useState<Set<string>>(
@@ -86,7 +105,9 @@ export function CalendarView({ semesters }: CalendarViewProps) {
 
   const calendarEvents = useMemo(() => {
     if (!currentSemester) return [];
-    const events = [];
+    const events: object[] = [];
+
+    const fallback = getSemesterFallbackDates(currentSemester.type, currentSemester.year);
 
     for (const course of currentSemester.courses) {
       if (!enabledCourses.has(course.id)) continue;
@@ -97,31 +118,37 @@ export function CalendarView({ semesters }: CalendarViewProps) {
         : sections[0];
       if (!section) continue;
 
-      const meeting = section.meeting_times?.[0];
-      if (!meeting || !meeting.days) continue;
+      const meetingTimes = section.meeting_times ?? [];
+      if (meetingTimes.length === 0) continue;
 
-      const daysOfWeek = parseMeetingDays(meeting.days);
-      if (!daysOfWeek.length) continue;
-
-      const startRecur = toDateOnly(meeting.start_date ?? currentSemester.startDate);
-      const endRecur = toDateOnly(meeting.end_date ?? currentSemester.endDate);
       const title = `${course.code} ${course.title ?? ''}`.trim();
+      const color = semesterColors[currentSemester.type] ?? '#2563EB';
 
-      events.push({
-        id: `${course.id}-${section.section_code}`,
-        title,
-        daysOfWeek,
-        startTime: meeting.start_time ?? '09:00',
-        endTime: meeting.end_time ?? '10:00',
-        startRecur,
-        endRecur,
-        backgroundColor: semesterColors[currentSemester.type] ?? '#2563EB',
-        borderColor: semesterColors[currentSemester.type] ?? '#2563EB',
-        extendedProps: {
-          location: meeting.location ?? meeting.building ?? 'TBA',
-          instructor: section.instructors?.[0]?.name ?? 'TBA',
-        },
-      });
+      for (const meeting of meetingTimes) {
+        if (!meeting.days) continue;
+
+        const daysOfWeek = parseMeetingDays(meeting.days);
+        if (!daysOfWeek.length) continue;
+
+        const startRecur = toDateOnly(meeting.start_date ?? currentSemester.startDate) ?? fallback.start;
+        const endRecur = toDateOnly(meeting.end_date ?? currentSemester.endDate) ?? fallback.end;
+
+        events.push({
+          id: `${course.id}-${section.section_code}-${meeting.days}`,
+          title,
+          daysOfWeek,
+          startTime: meeting.start_time ?? '09:00',
+          endTime: meeting.end_time ?? '10:00',
+          startRecur,
+          endRecur,
+          backgroundColor: color,
+          borderColor: color,
+          extendedProps: {
+            location: meeting.location ?? meeting.building ?? 'TBA',
+            instructor: section.instructors?.[0]?.name ?? 'TBA',
+          },
+        });
+      }
     }
 
     return events;
@@ -164,7 +191,7 @@ export function CalendarView({ semesters }: CalendarViewProps) {
             <h2 className="text-xl font-bold text-foreground">{currentSemester.label}</h2>
             <p className="text-sm text-muted-foreground">
               {currentSemester.courses.length} courses |{' '}
-              {currentSemester.courses.reduce((sum, course) => sum + course.credits, 0)} credits
+              {currentSemester.courses.reduce((sum, course) => sum + Number(course.credits), 0)} credits
             </p>
           </div>
 

@@ -16,6 +16,7 @@ import {
   type BackendSemester,
   type BackendCourse,
   type CourseLabelEntry,
+  type ElectiveRule,
   type Major,
 } from "@/lib/api";
 import type { Course, Semester, RequirementLabel, SemesterTerm } from "@/lib/data";
@@ -40,6 +41,37 @@ function mapBackendLabel(entry: CourseLabelEntry | undefined): RequirementLabel 
     "General Elective": "general",
   };
   return map[entry.label] ?? "general";
+}
+
+/**
+ * Mirrors the backend get_course_label logic.
+ * First checks the explicit labels dict; if not found, walks the elective rules
+ * to determine if the course qualifies as a Major Elective by subject+level.
+ */
+function resolveLabel(
+  code: string,
+  labels: Record<string, CourseLabelEntry>,
+  rules: ElectiveRule[]
+): RequirementLabel {
+  if (labels[code]) return mapBackendLabel(labels[code]);
+
+  for (const rule of rules) {
+    const prefix = rule.subject_code + "-";
+    if (!code.startsWith(prefix)) continue;
+    const afterPrefix = code.slice(prefix.length);
+    const digits = afterPrefix.replace(/\D/g, "");
+    if (!digits) continue;
+    const level = parseInt(digits, 10);
+    if (
+      level >= rule.min_level &&
+      (rule.max_level == null || level <= rule.max_level) &&
+      !rule.exclude_courses.includes(code)
+    ) {
+      return "elective";
+    }
+  }
+
+  return "general";
 }
 
 function capitalizeTerm(t: string): SemesterTerm {
@@ -71,7 +103,8 @@ function normalizePrereqs(requisites: unknown): string[] {
 
 function planCourseToCourse(
   bc: BackendPlanCourse,
-  labels: Record<string, CourseLabelEntry>
+  labels: Record<string, CourseLabelEntry>,
+  rules: ElectiveRule[] = []
 ): Course {
   const { subject, level } = parseCodeParts(bc.code);
   return {
@@ -79,7 +112,7 @@ function planCourseToCourse(
     code: bc.code,
     title: bc.title,
     credits: bc.credits,
-    label: mapBackendLabel(labels[bc.code]),
+    label: resolveLabel(bc.code, labels, rules),
     status: bc.status,
     grade: bc.grade,
     selectedSectionId: bc.selectedSectionId,
@@ -93,7 +126,8 @@ function planCourseToCourse(
 
 function searchCourseToCourse(
   bc: BackendCourse,
-  labels: Record<string, CourseLabelEntry>
+  labels: Record<string, CourseLabelEntry>,
+  rules: ElectiveRule[] = []
 ): Course {
   const { subject, level } = parseCodeParts(bc.course_code);
   const termSet = new Set<SemesterTerm>();
@@ -108,7 +142,7 @@ function searchCourseToCourse(
     code: bc.course_code,
     title: bc.title ?? bc.course_code,
     credits: bc.credits.min_credits ?? 3,
-    label: mapBackendLabel(labels[bc.course_code]),
+    label: resolveLabel(bc.course_code, labels, rules),
     status: "planned",
     grade: null,
     selectedSectionId: null,
@@ -122,7 +156,8 @@ function searchCourseToCourse(
 
 function buildSemesters(
   backendSemesters: BackendSemester[],
-  labels: Record<string, CourseLabelEntry>
+  labels: Record<string, CourseLabelEntry>,
+  rules: ElectiveRule[] = []
 ): { semesters: Semester[]; catalog: Record<string, Course> } {
   const catalog: Record<string, Course> = {};
   const today = new Date();
@@ -140,7 +175,7 @@ function buildSemesters(
         })();
 
     bs.courses.forEach((bc) => {
-      catalog[bc.code] = planCourseToCourse(bc, labels);
+      catalog[bc.code] = planCourseToCourse(bc, labels, rules);
     });
 
     return {
@@ -287,6 +322,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [planCatalog, setPlanCatalog] = useState<Record<string, Course>>({});
   const [labels, setLabels] = useState<Record<string, CourseLabelEntry>>({});
+  const [electiveRules, setElectiveRules] = useState<ElectiveRule[]>([]);
   const [majors, setMajors] = useState<Major[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -314,17 +350,21 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         setProfile(prof);
 
         let labelsData: Record<string, CourseLabelEntry> = {};
+        let rulesData: ElectiveRule[] = [];
         if (prof?.major_code) {
           try {
-            labelsData = await fetchCourseLabels(prof.major_code);
+            const res = await fetchCourseLabels(prof.major_code);
+            labelsData = res.labels;
+            rulesData = res.rules;
             setLabels(labelsData);
+            setElectiveRules(rulesData);
           } catch {
             // labels are optional
           }
         }
 
         if (plan?.semesters?.length) {
-          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData);
+          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData, rulesData);
           setSemesters(sems);
           setPlanCatalog(catalog);
         } else {
@@ -453,8 +493,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setProfile(updated);
       if (data.major_code) {
         try {
-          const labelsData = await fetchCourseLabels(data.major_code);
-          setLabels(labelsData);
+          const res = await fetchCourseLabels(data.major_code);
+          setLabels(res.labels);
+          setElectiveRules(res.rules);
         } catch {}
       }
     },
@@ -464,11 +505,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const searchCoursesCatalog = useCallback(
     async (q: string, subject?: string): Promise<Course[]> => {
       const { data } = await apiSearchCourses(q, subject, 1, 30);
-      const courses = data.map((bc) => searchCourseToCourse(bc, labels));
+      const courses = data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
       addCoursesToCatalog(courses);
       return courses;
     },
-    [labels, addCoursesToCatalog]
+    [labels, electiveRules, addCoursesToCatalog]
   );
 
   const completeOnboarding = useCallback(
@@ -485,10 +526,14 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setProfile(updated);
 
       let labelsData: Record<string, CourseLabelEntry> = {};
+      let rulesData: ElectiveRule[] = [];
       if (updated.major_code) {
         try {
-          labelsData = await fetchCourseLabels(updated.major_code);
+          const res = await fetchCourseLabels(updated.major_code);
+          labelsData = res.labels;
+          rulesData = res.rules;
           setLabels(labelsData);
+          setElectiveRules(rulesData);
         } catch {
           // labels are optional
         }
@@ -503,7 +548,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
               const bc = r.data[0];
               if (!bc) return null;
               return {
-                ...searchCourseToCourse(bc, labelsData),
+                ...searchCourseToCourse(bc, labelsData, rulesData),
                 status: "completed" as const,
               };
             })

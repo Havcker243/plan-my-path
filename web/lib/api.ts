@@ -119,6 +119,19 @@ export interface CourseLabelEntry {
   credits: number | null;
 }
 
+export interface ElectiveRule {
+  subject_code: string;
+  min_level: number;
+  max_level: number | null;
+  exclude_courses: string[];
+  group_name: string;
+}
+
+export interface CourseLabelsResponse {
+  labels: Record<string, CourseLabelEntry>;
+  rules: ElectiveRule[];
+}
+
 export interface TermCalendarEntry {
   term: string;
   year: number;
@@ -172,11 +185,11 @@ export async function fetchTermCalendar(): Promise<TermCalendarEntry[]> {
 
 export async function fetchCourseLabels(
   majorCode: string
-): Promise<Record<string, CourseLabelEntry>> {
-  const res = await get<{ data: Record<string, CourseLabelEntry> }>(
+): Promise<CourseLabelsResponse> {
+  const res = await get<{ data: Record<string, CourseLabelEntry>; rules: ElectiveRule[] }>(
     `/api/course-labels?major_code=${encodeURIComponent(majorCode)}`
   );
-  return res.data;
+  return { labels: res.data ?? {}, rules: res.rules ?? [] };
 }
 
 // ─── Authenticated endpoints ──────────────────────────────────────────────────

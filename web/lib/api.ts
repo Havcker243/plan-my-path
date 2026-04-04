@@ -36,7 +36,7 @@ export interface BackendCourse {
   course_code: string;
   title: string | null;
   description: string | null;
-  credits: { min_credits: number | null; max_credits: number | null };
+  credits: { min_credits: number | null; max_credits: number | null; credit_type: string | null };
   requisites: unknown;
   sections: BackendSection[];
 }
@@ -61,6 +61,8 @@ export interface BackendSection {
     building: string | null;
     room: string | null;
     modality: string | null;
+    start_date: string | null;
+    end_date: string | null;
   }[];
 }
 
@@ -148,11 +150,6 @@ export async function fetchMajors(): Promise<Major[]> {
 
 export async function fetchSubjects(): Promise<Major[]> {
   const res = await get<{ data: Major[] }>("/api/subjects");
-  return res.data;
-}
-
-export async function fetchCoursesBySubject(subject: string): Promise<BackendCourse[]> {
-  const res = await get<{ data: BackendCourse[] }>(`/api/courses?subject=${encodeURIComponent(subject)}`);
   return res.data;
 }
 

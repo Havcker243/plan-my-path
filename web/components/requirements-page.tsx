@@ -34,14 +34,16 @@ export default function RequirementsPage() {
     general: false,
   });
 
+  // Derive membership from semesters; completion from course.status
+  const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
   const completedIds = new Set(
-    semesters.filter((s) => s.isPast).flatMap((s) => s.courseIds)
+    [...planCodes].filter((id) => planCatalog[id]?.status === "completed")
   );
   const plannedIds = new Set(
-    semesters.filter((s) => !s.isPast).flatMap((s) => s.courseIds)
+    [...planCodes].filter((id) => planCatalog[id]?.status !== "completed")
   );
 
-  // Build groups from planCatalog
+  // Build groups from courses actually in the plan
   const groups: Record<RequirementLabel, {
     courses: Array<{ code: string; title: string; credits: number; status: "completed" | "planned" | "missing" }>;
     completed: number;
@@ -53,12 +55,10 @@ export default function RequirementsPage() {
     general: { courses: [], completed: 0, total: 0 },
   };
 
-  Object.values(planCatalog).forEach((course) => {
-    const status = completedIds.has(course.code)
-      ? "completed"
-      : plannedIds.has(course.code)
-      ? "planned"
-      : "missing";
+  planCodes.forEach((code) => {
+    const course = planCatalog[code];
+    if (!course) return;
+    const status = completedIds.has(code) ? "completed" : "planned";
     groups[course.label].courses.push({
       code: course.code,
       title: course.title,
@@ -76,9 +76,9 @@ export default function RequirementsPage() {
     return "general";
   };
 
-  // Also include labeled courses that are not yet in planCatalog
+  // Also include labeled courses not yet in any semester
   Object.entries(labels).forEach(([code, entry]) => {
-    if (planCatalog[code]) return; // already counted
+    if (planCodes.has(code)) return; // already counted
     const groupLabel = mapLabel(entry.label);
     groups[groupLabel].courses.push({
       code,
@@ -93,10 +93,10 @@ export default function RequirementsPage() {
     groups[label].courses.sort((a, b) => a.code.localeCompare(b.code));
   });
 
-  const totalCreditsEarned = semesters
-    .filter((s) => s.isPast)
-    .flatMap((s) => s.courseIds)
-    .reduce((acc, id) => acc + (planCatalog[id]?.credits ?? 0), 0);
+  const totalCreditsEarned = [...planCodes].reduce((acc, id) => {
+    const course = planCatalog[id];
+    return course?.status === "completed" ? acc + course.credits : acc;
+  }, 0);
 
   const majorName = majors.find((m) => m.code === profile?.major_code)?.name
     ?? profile?.major_code

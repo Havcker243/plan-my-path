@@ -46,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, majors, loading: planLoading, initialized } = usePlan();
+  const { profile, majors, loading: planLoading, initialized, initError } = usePlan();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -63,12 +63,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/login");
       return;
     }
-    // Redirect to onboarding only after we've confirmed the profile exists
-    // with no major set. An empty string major_code also counts as unset.
-    if (!profile?.major_code?.trim()) {
+    // Only redirect to onboarding when backend confirmed no profile exists.
+    // Never redirect if the fetch itself failed — that would be a false onboarding.
+    if (!initError && !profile?.major_code?.trim()) {
       router.push("/onboarding");
     }
-  }, [isLoading, user, profile, router]);
+  }, [isLoading, user, profile, router, initError]);
 
   if (isLoading || !user) {
     return (
@@ -76,6 +76,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-3">
           <GraduationCap className="w-8 h-8 text-primary animate-pulse" />
           <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (initError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-center max-w-xs px-4">
+          <GraduationCap className="w-8 h-8 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">Couldn&apos;t load your plan</p>
+          <p className="text-xs text-muted-foreground">Check your connection and try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs text-primary hover:underline mt-1"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

@@ -98,9 +98,10 @@ export default function CoursesPage() {
     return () => clearTimeout(timer);
   }, [search, subjectFilter, searchCoursesCatalog]);
 
-  const completedIds = useMemo(() => new Set(
-    semesters.filter((s) => s.isPast).flatMap((s) => s.courseIds)
-  ), [semesters]);
+  const completedIds = useMemo(() => {
+    const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
+    return new Set([...planCodes].filter((id) => planCatalog[id]?.status === "completed"));
+  }, [semesters, planCatalog]);
 
   const plannedSemesters = useMemo(() => {
     const map: Record<string, string> = {};

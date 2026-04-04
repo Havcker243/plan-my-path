@@ -50,10 +50,13 @@ export default function DashboardPage() {
   const firstName = (profile?.name ?? user?.email ?? "there").split(" ")[0];
 
   const completedCredits = getCompletedCredits(semesters, planCatalog);
+  // Planned = courses explicitly in "planned" status (not completed, not failed)
   const plannedCredits = semesters
-    .filter((s) => !s.isPast)
     .flatMap((s) => s.courseIds)
-    .reduce((acc, id) => acc + (planCatalog[id]?.credits ?? 0), 0);
+    .reduce((acc, id) => {
+      const course = planCatalog[id];
+      return course?.status === "planned" ? acc + course.credits : acc;
+    }, 0);
   const remainingCredits = Math.max(0, DEGREE_CREDITS - completedCredits - plannedCredits);
   const creditPct = Math.round((completedCredits / DEGREE_CREDITS) * 100);
 
@@ -62,7 +65,11 @@ export default function DashboardPage() {
     ? Math.ceil((DEGREE_CREDITS - completedCredits) / semestersRemaining)
     : 0;
 
-  const requiredCourses = Object.values(planCatalog).filter((c) => c.label === "required");
+  // Derive required courses from semester membership, not Object.values(planCatalog)
+  const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
+  const requiredCourses = [...planCodes]
+    .map((id) => planCatalog[id])
+    .filter((c): c is NonNullable<typeof c> => !!c && c.label === "required");
   const completedRequired = requiredCourses.filter((c) => c.status === "completed").length;
 
   const gpa = profile?.gpa ?? null;

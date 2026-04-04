@@ -297,9 +297,20 @@ export default function PlannerPage() {
 
   // ── Add/remove semesters ───────────────────────────────────────────────────
   const addSemester = () => {
+    const termCycle: import("@/lib/data").SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
     const last = semesters[semesters.length - 1];
-    const newTerm = last ? (last.term === "Fall" ? "Spring" : "Fall") : "Fall";
-    const newYear = last ? (last.term === "Fall" ? last.year + 1 : last.year) : new Date().getFullYear();
+    let newTerm: import("@/lib/data").SemesterTerm;
+    let newYear: number;
+    if (!last) {
+      newTerm = "Fall";
+      newYear = new Date().getFullYear();
+    } else {
+      const lastIdx = termCycle.indexOf(last.term);
+      const nextIdx = (lastIdx + 1) % termCycle.length;
+      newTerm = termCycle[nextIdx];
+      // Wrap from Winter(3) to Spring(0) → increment year
+      newYear = nextIdx === 0 ? last.year + 1 : last.year;
+    }
     setSemesters((prev) => [
       ...prev,
       { id: `sem-${Date.now()}`, term: newTerm, year: newYear, courseIds: [], isPast: false, isCurrent: false },
@@ -324,9 +335,11 @@ export default function PlannerPage() {
   };
 
   const totalCompleted = semesters
-    .filter((s) => s.isPast)
     .flatMap((s) => s.courseIds)
-    .reduce((acc, id) => acc + (planCatalog[id]?.credits ?? 0), 0);
+    .reduce((acc, id) => {
+      const course = planCatalog[id];
+      return course?.status === "completed" ? acc + course.credits : acc;
+    }, 0);
 
   const majorName = majors.find((m) => m.code === profile?.major_code)?.name
     ?? profile?.major_code

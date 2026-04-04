@@ -59,9 +59,52 @@ export function getCompletedCredits(
   catalog: Record<string, Course>
 ): number {
   return semesters
-    .filter((s) => s.isPast)
     .flatMap((s) => s.courseIds)
-    .reduce((acc, id) => acc + (catalog[id]?.credits ?? 0), 0);
+    .reduce((acc, id) => {
+      const course = catalog[id];
+      return course?.status === "completed" ? acc + course.credits : acc;
+    }, 0);
+}
+
+/** Codes of every course in the plan with status === "completed". */
+export function getCompletedCourseCodes(
+  semesters: Semester[],
+  catalog: Record<string, Course>
+): Set<string> {
+  const codes = new Set<string>();
+  for (const sem of semesters) {
+    for (const id of sem.courseIds) {
+      if (catalog[id]?.status === "completed") codes.add(id);
+    }
+  }
+  return codes;
+}
+
+export function isCompletedCourse(course: Course | undefined): boolean {
+  return course?.status === "completed";
+}
+
+/**
+ * Returns deduplicated Course objects for every code that appears in at least
+ * one semester.  Pages that need "courses in the plan" should use this instead
+ * of Object.values(planCatalog), which can include search-result noise.
+ */
+export function getPlanCourses(
+  semesters: Semester[],
+  catalog: Record<string, Course>
+): Course[] {
+  const seen = new Set<string>();
+  const courses: Course[] = [];
+  for (const sem of semesters) {
+    for (const id of sem.courseIds) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        const course = catalog[id];
+        if (course) courses.push(course);
+      }
+    }
+  }
+  return courses;
 }
 
 export function getSemesterCreditLoad(

@@ -10,6 +10,7 @@ import {
   savePlan as apiSavePlan,
   fetchCourseLabels,
   fetchMajors,
+  fetchTermCalendar,
   searchCourses as apiSearchCourses,
   type BackendProfile,
   type BackendPlanCourse,
@@ -18,6 +19,7 @@ import {
   type CourseLabelEntry,
   type ElectiveRule,
   type Major,
+  type TermCalendarEntry,
 } from "@/lib/api";
 import type { Course, Semester, RequirementLabel, SemesterTerm } from "@/lib/data";
 
@@ -157,7 +159,8 @@ function searchCourseToCourse(
 function buildSemesters(
   backendSemesters: BackendSemester[],
   labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
+  rules: ElectiveRule[] = [],
+  termCalendar: TermCalendarEntry[] = []
 ): { semesters: Semester[]; catalog: Record<string, Course> } {
   const catalog: Record<string, Course> = {};
   const today = new Date();
@@ -166,8 +169,13 @@ function buildSemesters(
     const isPast = bs.end_date
       ? new Date(bs.end_date) < today
       : (() => {
-          // No end_date stored — estimate from term + year
           const termLower = (bs.term ?? "fall").toLowerCase().split(/[\s_-]/)[0];
+          // Try real term calendar before estimating
+          const calEntry = termCalendar.find(
+            (t) => t.term.toLowerCase() === termLower && t.year === bs.year
+          );
+          if (calEntry?.end_date) return new Date(calEntry.end_date) < today;
+          // Fall back to estimate
           const endMonth: Record<string, number> = { spring: 5, summer: 8, fall: 12, winter: 1 };
           const m = endMonth[termLower] ?? 12;
           const endYear = termLower === "winter" ? bs.year + 1 : bs.year;
@@ -211,49 +219,50 @@ function buildInitialSemesters(
   startTerm: string,
   startYear: number,
   gradTerm: string,
-  gradYear: number
+  gradYear: number,
+  termCalendar: TermCalendarEntry[] = []
 ): Semester[] {
   const today = new Date();
-  // Only scaffold Fall + Spring (most common US schedule)
-  const termCycle: SemesterTerm[] = ["Spring", "Fall"];
-  // Approximate end month for each term (used for isPast calculation)
+  const termCycle: SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
   const termEndMonth: Record<string, number> = { spring: 5, summer: 8, fall: 12, winter: 2 };
 
-  // Normalize start to nearest Fall or Spring
-  const startNorm: SemesterTerm =
-    startTerm.toLowerCase() === "spring" || startTerm.toLowerCase() === "winter"
-      ? "Spring"
-      : "Fall";
-  const startYearNorm =
-    startTerm.toLowerCase() === "winter" ? startYear + 1 : startYear;
+  const normalizeTerm = (t: string): SemesterTerm => {
+    const first = (t ?? "").toLowerCase().split(/[\s_-]/)[0];
+    const map: Record<string, SemesterTerm> = {
+      spring: "Spring", summer: "Summer", fall: "Fall", winter: "Winter",
+    };
+    return map[first] ?? "Fall";
+  };
 
-  // Normalize grad to nearest Fall or Spring
-  const gradNorm: SemesterTerm =
-    gradTerm.toLowerCase() === "spring" || gradTerm.toLowerCase() === "winter"
-      ? "Spring"
-      : "Fall";
-  const gradYearNorm =
-    gradTerm.toLowerCase() === "winter" ? gradYear + 1 : gradYear;
+  const startTermNorm = normalizeTerm(startTerm);
+  const gradTermNorm = normalizeTerm(gradTerm);
+  const gradTermIdx = termCycle.indexOf(gradTermNorm);
 
+  let termIdx = termCycle.indexOf(startTermNorm);
+  let year = startYear;
   const semesters: Semester[] = [];
-  // Spring=0, Fall=1
-  let termIdx = startNorm === "Spring" ? 0 : 1;
-  let year = startYearNorm;
 
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 24; i++) {
     const term = termCycle[termIdx];
     const termLower = term.toLowerCase();
 
-    // Stop if we've gone past graduation
-    if (
-      year > gradYearNorm ||
-      (year === gradYearNorm &&
-        termEndMonth[termLower] > termEndMonth[gradNorm.toLowerCase()])
-    )
-      break;
+    // Stop once we've passed the graduation term
+    const afterGrad =
+      year > gradYear ||
+      (year === gradYear && termIdx > gradTermIdx);
+    if (afterGrad) break;
 
-    const semEndDate = new Date(year, termEndMonth[termLower] - 1, 30);
-    const isPast = semEndDate < today;
+    // isPast: use real calendar data when available, otherwise estimate
+    const calEntry = termCalendar.find(
+      (t) => t.term.toLowerCase() === termLower && t.year === year
+    );
+    const isPast = calEntry?.end_date
+      ? new Date(calEntry.end_date) < today
+      : (() => {
+          const endMonth = termEndMonth[termLower] ?? 12;
+          const endYear = termLower === "winter" ? year + 1 : year;
+          return new Date(endYear, endMonth - 1, 28) < today;
+        })();
 
     semesters.push({
       id: `new-${termLower}-${year}`,
@@ -264,12 +273,12 @@ function buildInitialSemesters(
       isCurrent: false,
     });
 
-    // Advance: Spring(0)→Fall(1) same year, Fall(1)→Spring(0) next year
-    if (termIdx === 0) {
-      termIdx = 1;
-    } else {
+    // Advance: Winter(3) → Spring(0) of next year; otherwise stay in same year
+    if (termIdx === termCycle.length - 1) {
       termIdx = 0;
       year += 1;
+    } else {
+      termIdx += 1;
     }
   }
 
@@ -299,9 +308,14 @@ interface PlanContextValue {
   planCatalog: Record<string, Course>;
   labels: Record<string, CourseLabelEntry>;
   majors: Major[];
+  termCalendar: TermCalendarEntry[];
   loading: boolean;
   /** True once the first profile+plan fetch cycle has completed (even if profile is null). */
   initialized: boolean;
+  /** True if the profile/plan fetch failed (network error, server error, etc.). */
+  initError: boolean;
+  /** True when the backend confirmed a profile was loaded successfully. */
+  profileLoaded: boolean;
   setSemesters: React.Dispatch<React.SetStateAction<Semester[]>>;
   addCoursesToCatalog: (courses: Course[]) => void;
   addCourseToSemester: (course: Course, semesterId: string) => Promise<boolean>;
@@ -324,12 +338,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [labels, setLabels] = useState<Record<string, CourseLabelEntry>>({});
   const [electiveRules, setElectiveRules] = useState<ElectiveRule[]>([]);
   const [majors, setMajors] = useState<Major[]>([]);
+  const [termCalendar, setTermCalendar] = useState<TermCalendarEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [initError, setInitError] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Fetch majors once (public endpoint)
+  // Fetch public data once on mount
   useEffect(() => {
     fetchMajors().then(setMajors).catch(() => {});
+    fetchTermCalendar().then(setTermCalendar).catch(() => {});
   }, []);
 
   // Fetch plan data whenever auth token changes
@@ -340,14 +358,20 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setPlanCatalog({});
       setLabels({});
       setInitialized(false);
+      setInitError(false);
+      setProfileLoaded(false);
       return;
     }
 
     setLoading(true);
+    setInitError(false);
+    setProfileLoaded(false);
 
-    Promise.all([fetchProfile(accessToken), fetchPlan(accessToken)])
-      .then(async ([prof, plan]) => {
+    Promise.all([fetchProfile(accessToken), fetchPlan(accessToken), fetchTermCalendar()])
+      .then(async ([prof, plan, terms]) => {
+        setTermCalendar(terms);
         setProfile(prof);
+        setProfileLoaded(true);
 
         let labelsData: Record<string, CourseLabelEntry> = {};
         let rulesData: ElectiveRule[] = [];
@@ -364,7 +388,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (plan?.semesters?.length) {
-          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData, rulesData);
+          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData, rulesData, terms);
           setSemesters(sems);
           setPlanCatalog(catalog);
         } else {
@@ -372,7 +396,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           setPlanCatalog({});
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setInitError(true);
+      })
       .finally(() => {
         setLoading(false);
         setInitialized(true);
@@ -505,11 +531,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const searchCoursesCatalog = useCallback(
     async (q: string, subject?: string): Promise<Course[]> => {
       const { data } = await apiSearchCourses(q, subject, 1, 30);
-      const courses = data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
-      addCoursesToCatalog(courses);
-      return courses;
+      return data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
     },
-    [labels, electiveRules, addCoursesToCatalog]
+    [labels, electiveRules]
   );
 
   const completeOnboarding = useCallback(
@@ -564,7 +588,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         data.startTerm,
         data.startYear,
         data.gradTerm,
-        data.gradYear
+        data.gradYear,
+        termCalendar
       );
 
       // If we have completed courses, put them in a past "Previous Credits" semester
@@ -576,12 +601,14 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         completedCourseObjects.forEach((c) => { completedCatalog[c.code] = c; });
         setPlanCatalog((prev) => ({ ...completedCatalog, ...prev }));
 
-        // Semester just before the student's start: if they start Fall → use Spring of same year
-        // if they start Spring → use Fall of prior year
-        const prevTerm: SemesterTerm =
-          data.startTerm.toLowerCase() === "fall" ? "Spring" : "Fall";
-        const prevYear =
-          data.startTerm.toLowerCase() === "fall" ? data.startYear : data.startYear - 1;
+        // Semester just before the student's start (works for all 4 terms)
+        const allTerms: SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
+        const startNorm = capitalizeTerm(data.startTerm);
+        const startIdx = allTerms.indexOf(startNorm);
+        const prevIdx = (startIdx - 1 + allTerms.length) % allTerms.length;
+        const prevTerm = allTerms[prevIdx];
+        // If we wrapped backwards (Spring → Winter), decrement year
+        const prevYear = prevIdx === allTerms.length - 1 ? data.startYear - 1 : data.startYear;
 
         const prevSem: Semester = {
           id: `prev-credits-${prevTerm.toLowerCase()}-${prevYear}`,
@@ -628,7 +655,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         // Plan save is best-effort; semesters are already set in local state
       }
     },
-    [accessToken]
+    [accessToken, termCalendar]
   );
 
   return (
@@ -639,8 +666,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         planCatalog,
         labels,
         majors,
+        termCalendar,
         loading,
         initialized,
+        initError,
+        profileLoaded,
         setSemesters,
         addCoursesToCatalog,
         addCourseToSemester,

@@ -31,6 +31,8 @@ app = FastAPI(title="PlanMyPath API")
 # Build allowed origins: always include localhost dev ports, plus any
 # production frontend URL set via ALLOWED_ORIGINS env var (comma-separated).
 _default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8080",

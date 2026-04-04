@@ -15,6 +15,12 @@ const YEARS = Array.from({ length: 8 }, (_, index) => CURRENT_YEAR - 4 + index);
 const TERMS = ["Fall", "Spring", "Summer", "Winter"] as const;
 const STEPS = ["Major", "Timeline", "Courses", "Confirm"];
 
+// Calendar-year ordering for timeline validation
+const TERM_ORDER: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
+function semesterIndex(term: string, year: number) {
+  return year * 4 + (TERM_ORDER[term] ?? 0);
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -80,6 +86,8 @@ export default function OnboardingPage() {
       (gradTerm === "Spring" ? 1 : gradTerm === "Summer" ? 1 : 0) -
       (startTerm === "Spring" ? 1 : startTerm === "Summer" ? 1 : 0)
   );
+
+  const timelineValid = semesterIndex(gradTerm, gradYear) > semesterIndex(startTerm, startYear);
 
   const toggleCourse = (code: string) => {
     setCompletedCodes((prev) =>
@@ -246,6 +254,11 @@ export default function OnboardingPage() {
                 </select>
               </div>
             </div>
+            {!timelineValid && (
+              <p className="text-sm text-destructive font-medium text-center -mt-1">
+                Graduation must be after your start date.
+              </p>
+            )}
             <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4 text-center">
               <p className="text-sm text-muted-foreground">Your graduation target</p>
               <p className="text-xl font-bold text-foreground mt-1">{gradTerm} {gradYear}</p>
@@ -253,7 +266,7 @@ export default function OnboardingPage() {
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={back} className="gap-1"><ChevronLeft className="w-4 h-4" /> Back</Button>
-              <Button onClick={next} className="flex-1 gap-2">Continue <ChevronRight className="w-4 h-4" /></Button>
+              <Button onClick={next} disabled={!timelineValid} className="flex-1 gap-2">Continue <ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
         )}

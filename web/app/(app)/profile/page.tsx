@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getCompletedCredits } from "@/lib/data";
+import { getSupabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const DEGREE_CREDITS = 120;
@@ -19,6 +20,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -27,12 +29,39 @@ export default function ProfilePage() {
     setPhone(profile?.phone ?? "");
   }, [profile?.avatar_url, profile?.name, profile?.phone]);
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => setAvatar(event.target?.result as string);
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatar(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload to Supabase Storage
+    setUploading(true);
+    try {
+      const supabase = getSupabase();
+      const userId = user?.id;
+      if (!userId) throw new Error("Not authenticated");
+
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${userId}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ProfilePictures")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from("ProfilePictures")
+        .getPublicUrl(path);
+
+      setAvatar(data.publicUrl);
+    } catch {
+      toast.error("Failed to upload avatar");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -85,10 +114,11 @@ export default function ProfilePage() {
           )}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors shadow-md"
+            disabled={uploading}
+            className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors shadow-md disabled:opacity-60"
             title="Upload avatar"
           >
-            <Camera className="w-3 h-3" />
+            {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
         </div>

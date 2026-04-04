@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useAuth } from "./auth-context";
 import {
   fetchProfile,

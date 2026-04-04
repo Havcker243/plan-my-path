@@ -6,6 +6,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import { fetchSections, type BackendSection } from "@/lib/api";
+import { toast } from "sonner";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8am–5pm
@@ -103,7 +104,7 @@ export default function CalendarPage() {
     const term = `${currentSem.term.toLowerCase()} ${currentSem.year}`;
     fetchSections(currentSem.courseIds, term)
       .then(setSectionsMap)
-      .catch(() => {})
+      .catch(() => toast.error("Failed to load section schedule"))
       .finally(() => setLoadingSections(false));
   }, [currentSem?.id]);
 

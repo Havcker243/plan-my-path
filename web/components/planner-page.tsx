@@ -137,6 +137,8 @@ export default function PlannerPage() {
         // the latest semesters/planCatalog state at call time.
         await savePlanRef.current();
         setLastSaved(new Date());
+      } catch {
+        toast.error("Your plan couldn't be saved. Check your connection and try again.");
       } finally {
         setSaving(false);
       }

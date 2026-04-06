@@ -1,0 +1,292 @@
+"use client";
+
+import { useState, useRef, useCallback } from "react";
+import { Upload, FileText, CheckCircle2, Circle, Loader2, AlertCircle, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { parseTranscriptPDF, type ParsedTranscriptCourse } from "@/lib/api";
+
+export interface TranscriptResult {
+  courses: ParsedTranscriptCourse[];
+  gpa: number | null;
+  studentName: string | null;
+}
+
+interface Props {
+  onResult: (result: TranscriptResult) => void;
+  onCancel: () => void;
+}
+
+type State =
+  | { phase: "idle" }
+  | { phase: "parsing" }
+  | { phase: "review"; raw: TranscriptResult; selected: Set<string> }
+  | { phase: "error"; message: string };
+
+const GRADE_COLOR: Record<string, string> = {
+  "A+": "text-green-600", A: "text-green-600", "A-": "text-green-600",
+  "B+": "text-blue-600",  B: "text-blue-600",  "B-": "text-blue-600",
+  "C+": "text-yellow-600", C: "text-yellow-600", "C-": "text-yellow-600",
+  "D+": "text-orange-500", D: "text-orange-500", "D-": "text-orange-500",
+  F: "text-red-600",
+};
+
+function termKey(c: ParsedTranscriptCourse) {
+  return `${c.year}-${c.term}`;
+}
+
+export default function TranscriptUpload({ onResult, onCancel }: Props) {
+  const [state, setState] = useState<State>({ phase: "idle" });
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setState({ phase: "error", message: "Please upload a PDF file." });
+      return;
+    }
+    setState({ phase: "parsing" });
+    try {
+      const parsed = await parseTranscriptPDF(file);
+      if (parsed.courses.length === 0) {
+        setState({
+          phase: "error",
+          message: "No completed courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.",
+        });
+        return;
+      }
+      setState({
+        phase: "review",
+        raw: { courses: parsed.courses, gpa: parsed.gpa, studentName: parsed.student_name },
+        selected: new Set(parsed.courses.map((c) => c.code)),
+      });
+    } catch (err) {
+      setState({
+        phase: "error",
+        message: err instanceof Error ? err.message : "Could not parse transcript.",
+      });
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const toggleCourse = (code: string) => {
+    if (state.phase !== "review") return;
+    setState((prev) => {
+      if (prev.phase !== "review") return prev;
+      const next = new Set(prev.selected);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return { ...prev, selected: next };
+    });
+  };
+
+  const toggleAll = (select: boolean) => {
+    if (state.phase !== "review") return;
+    setState((prev) => {
+      if (prev.phase !== "review") return prev;
+      return {
+        ...prev,
+        selected: select ? new Set(prev.raw.courses.map((c) => c.code)) : new Set(),
+      };
+    });
+  };
+
+  const confirm = () => {
+    if (state.phase !== "review") return;
+    const selectedCourses = state.raw.courses.filter((c) => state.selected.has(c.code));
+    onResult({ courses: selectedCourses, gpa: state.raw.gpa, studentName: state.raw.studentName });
+  };
+
+  // ── Group courses by term for display ──────────────────────────────────────
+  const groupedCourses =
+    state.phase === "review"
+      ? state.raw.courses.reduce<Record<string, ParsedTranscriptCourse[]>>((acc, c) => {
+          const key = termKey(c);
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(c);
+          return acc;
+        }, {})
+      : {};
+
+  const termKeys = Object.keys(groupedCourses);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (state.phase === "idle" || state.phase === "error") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div
+          className={cn(
+            "relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors",
+            dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"
+          )}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Upload className="w-5 h-5 text-primary" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">
+              Drop your transcript PDF here
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              or click to browse — unofficial transcripts work fine
+            </p>
+          </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          />
+        </div>
+
+        {state.phase === "error" && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <p>{state.message}</p>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          Your transcript is processed securely and never stored — it&apos;s only used to pre-fill your completed courses.
+        </p>
+
+        <button
+          onClick={onCancel}
+          className="text-xs text-muted-foreground hover:text-foreground text-center transition-colors"
+        >
+          I&apos;ll add courses manually instead
+        </button>
+      </div>
+    );
+  }
+
+  if (state.phase === "parsing") {
+    return (
+      <div className="flex flex-col items-center gap-4 py-10">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">Reading your transcript…</p>
+          <p className="text-xs text-muted-foreground mt-1">Extracting courses and grades</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Review phase
+  const { raw, selected } = state;
+  const allSelected = selected.size === raw.courses.length;
+  const totalCredits = raw.courses
+    .filter((c) => selected.has(c.code))
+    .reduce((sum, c) => sum + c.credits, 0);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Summary bar */}
+      <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {raw.courses.length} completed courses found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {selected.size} selected · {totalCredits} credits
+              {raw.gpa !== null && <> · GPA <span className="font-semibold text-foreground">{raw.gpa.toFixed(3)}</span></>}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => toggleAll(!allSelected)}
+          className="text-xs text-primary hover:underline font-medium flex-shrink-0"
+        >
+          {allSelected ? "Deselect all" : "Select all"}
+        </button>
+      </div>
+
+      {/* Course list grouped by term */}
+      <div className="max-h-80 overflow-y-auto rounded-xl border border-border divide-y divide-border">
+        {termKeys.map((key) => {
+          const [year, term] = key.split("-");
+          return (
+            <div key={key}>
+              <div className="px-4 py-2 bg-muted/40 sticky top-0">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  {term} {year}
+                </p>
+              </div>
+              {groupedCourses[key].map((course) => {
+                const isSelected = selected.has(course.code);
+                return (
+                  <button
+                    key={course.code}
+                    onClick={() => toggleCourse(course.code)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors",
+                      isSelected && "bg-green-50/60"
+                    )}
+                  >
+                    {isSelected
+                      ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      : <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold text-foreground">{course.code}</span>
+                        <span className="text-xs text-muted-foreground truncate">{course.title}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-xs text-muted-foreground font-mono">{course.credits}cr</span>
+                      <span className={cn("text-sm font-bold", GRADE_COLOR[course.grade] ?? "text-foreground")}>
+                        {course.grade}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center">
+        Uncheck any courses you&apos;d like to remove. You can always edit them later.
+      </p>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setState({ phase: "idle" })}
+        >
+          <X className="w-3.5 h-3.5" /> Start over
+        </Button>
+        <Button
+          onClick={confirm}
+          disabled={selected.size === 0}
+          className="flex-1 gap-2"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          Use {selected.size} course{selected.size !== 1 ? "s" : ""}
+          {raw.gpa !== null && <> + GPA {raw.gpa.toFixed(2)}</>}
+        </Button>
+      </div>
+    </div>
+  );
+}

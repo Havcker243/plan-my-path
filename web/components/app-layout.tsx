@@ -18,7 +18,7 @@ import {
   ClipboardList,
   LogOut,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
@@ -46,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, majors, loading: planLoading, initialized, initError } = usePlan();
+  const { profile, majors, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -63,12 +63,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/login");
       return;
     }
-    // Only redirect to onboarding when backend confirmed no profile exists.
-    // Never redirect if the fetch itself failed — that would be a false onboarding.
-    if (!initError && !profile?.major_code?.trim()) {
+    // Only redirect to onboarding when the backend successfully confirmed
+    // the user has no major set. Never redirect on a fetch failure.
+    if (profileLoaded && !profile?.major_code?.trim()) {
       router.push("/onboarding");
     }
-  }, [isLoading, user, profile, router, initError]);
+  }, [isLoading, user, profile, router, profileLoaded]);
 
   if (isLoading || !user) {
     return (
@@ -102,8 +102,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const userName = profile?.name ?? user.email ?? "";
   const initials = getInitials(profile?.name ?? user.email);
 
-  const majorName = majors.find((m) => m.code === profile?.major_code)?.name
-    ?? profile?.major_code ?? null;
+  const majorName = formatDisplayName(
+    majors.find((m) => m.code === profile?.major_code)?.name
+    ?? profile?.major_code
+    ?? null
+  );
 
   const gradText =
     profile?.graduation_term && profile?.graduation_year

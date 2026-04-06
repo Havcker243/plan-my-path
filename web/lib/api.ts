@@ -189,6 +189,35 @@ export async function fetchCourseLabels(
   return { labels: res.data ?? {}, rules: res.rules ?? [] };
 }
 
+// ─── Transcript parsing ───────────────────────────────────────────────────────
+
+export interface ParsedTranscriptCourse {
+  code: string;       // e.g. "CSCI 110"
+  title: string;      // e.g. "Intro to Computer Science I"
+  grade: string;      // e.g. "A-"
+  credits: number;
+  term: string;       // "Fall" | "Spring" | "Summer" | "Winter"
+  year: number;
+}
+
+export interface ParsedTranscript {
+  student_name: string | null;
+  gpa: number | null;
+  courses: ParsedTranscriptCourse[];
+}
+
+export async function parseTranscriptPDF(file: File): Promise<ParsedTranscript> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}/api/transcript`, { method: "POST", body: form });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? `Parse failed (${res.status})`);
+  }
+  const json = await res.json() as { data: ParsedTranscript };
+  return json.data;
+}
+
 // ─── Authenticated endpoints ──────────────────────────────────────────────────
 
 export async function fetchProfile(token: string): Promise<BackendProfile | null> {

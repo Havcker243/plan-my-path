@@ -5,10 +5,11 @@ import Link from "next/link";
 import {
   CheckCircle2, Circle, AlertCircle, ChevronDown, ChevronRight, Info, ArrowRight,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LABEL_META, type RequirementLabel } from "@/lib/data";
 import { usePlan } from "@/contexts/plan-context";
+import { motion, AnimatePresence } from "framer-motion";
 
 const DEGREE_CREDITS = 120;
 
@@ -34,7 +35,6 @@ export default function RequirementsPage() {
     general: false,
   });
 
-  // Derive membership from semesters; completion from course.status
   const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
   const completedIds = new Set(
     [...planCodes].filter((id) => planCatalog[id]?.status === "completed")
@@ -43,7 +43,6 @@ export default function RequirementsPage() {
     [...planCodes].filter((id) => planCatalog[id]?.status !== "completed")
   );
 
-  // Build groups from courses actually in the plan
   const groups: Record<RequirementLabel, {
     courses: Array<{ code: string; title: string; credits: number; status: "completed" | "planned" | "missing" }>;
     completed: number;
@@ -76,9 +75,8 @@ export default function RequirementsPage() {
     return "general";
   };
 
-  // Also include labeled courses not yet in any semester
   Object.entries(labels).forEach(([code, entry]) => {
-    if (planCodes.has(code)) return; // already counted
+    if (planCodes.has(code)) return;
     const groupLabel = mapLabel(entry.label);
     groups[groupLabel].courses.push({
       code,
@@ -98,9 +96,11 @@ export default function RequirementsPage() {
     return course?.status === "completed" ? acc + course.credits : acc;
   }, 0);
 
-  const majorName = majors.find((m) => m.code === profile?.major_code)?.name
+  const majorName = formatDisplayName(
+    majors.find((m) => m.code === profile?.major_code)?.name
     ?? profile?.major_code
-    ?? "your degree";
+    ?? "your degree"
+  );
 
   const toggleSection = (key: string) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -124,26 +124,24 @@ export default function RequirementsPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground mb-1">Credits Earned</p>
-          <p className="text-2xl font-bold text-foreground">{totalCreditsEarned}</p>
-          <p className="text-xs text-muted-foreground">of {DEGREE_CREDITS}</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground mb-1">Core Courses</p>
-          <p className="text-2xl font-bold text-foreground">{groups.required.completed}</p>
-          <p className="text-xs text-muted-foreground">of {groups.required.total} done</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground mb-1">Group Choice</p>
-          <p className="text-2xl font-bold text-foreground">{groups.group.completed}</p>
-          <p className="text-xs text-muted-foreground">of {groups.group.total} done</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground mb-1">Electives</p>
-          <p className="text-2xl font-bold text-foreground">{groups.elective.completed + groups.general.completed}</p>
-          <p className="text-xs text-muted-foreground">of {groups.elective.total + groups.general.total} done</p>
-        </div>
+        {[
+          { label: "Credits Earned", value: totalCreditsEarned, sub: `of ${DEGREE_CREDITS}` },
+          { label: "Core Courses", value: groups.required.completed, sub: `of ${groups.required.total} done` },
+          { label: "Group Choice", value: groups.group.completed, sub: `of ${groups.group.total} done` },
+          { label: "Electives", value: groups.elective.completed + groups.general.completed, sub: `of ${groups.elective.total + groups.general.total} done` },
+        ].map((card, index) => (
+          <motion.div
+            key={card.label}
+            className="bg-card border border-border rounded-xl p-4"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
+          >
+            <p className="text-xs text-muted-foreground mb-1">{card.label}</p>
+            <p className="text-2xl font-bold text-foreground">{card.value}</p>
+            <p className="text-xs text-muted-foreground">{card.sub}</p>
+          </motion.div>
+        ))}
       </div>
 
       {/* Progress bar */}
@@ -201,40 +199,50 @@ export default function RequirementsPage() {
                 </div>
               </button>
 
-              {isExpanded && (
-                <div className="border-t border-border divide-y divide-border">
-                  {group.courses.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-muted-foreground">No courses in this category yet.</p>
-                  ) : (
-                    group.courses.map(({ code, title, credits, status }) => (
-                      <div
-                        key={code}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors",
-                          status === "completed" && "bg-green-50/50"
-                        )}
-                      >
-                        {STATUS_ICON[status]}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-medium text-foreground">{code}</span>
-                            <span className="text-sm text-muted-foreground truncate">{title !== code ? title : ""}</span>
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className="border-t border-border divide-y divide-border">
+                      {group.courses.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-muted-foreground">No courses in this category yet.</p>
+                      ) : (
+                        group.courses.map(({ code, title, credits, status }) => (
+                          <div
+                            key={code}
+                            className={cn(
+                              "flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors",
+                              status === "completed" && "bg-green-50/50"
+                            )}
+                          >
+                            {STATUS_ICON[status]}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm font-medium text-foreground">{code}</span>
+                                <span className="text-sm text-muted-foreground truncate">{title !== code ? title : ""}</span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-mono text-muted-foreground">{credits} cr</span>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full",
+                              status === "completed" && "bg-green-100 text-green-700",
+                              status === "planned" && "bg-primary/10 text-primary",
+                              status === "missing" && "bg-destructive/10 text-destructive"
+                            )}>
+                              {STATUS_LABEL[status]}
+                            </span>
                           </div>
-                        </div>
-                        <span className="text-xs font-mono text-muted-foreground">{credits} cr</span>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full",
-                          status === "completed" && "bg-green-100 text-green-700",
-                          status === "planned" && "bg-primary/10 text-primary",
-                          status === "missing" && "bg-destructive/10 text-destructive"
-                        )}>
-                          {STATUS_LABEL[status]}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}

@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle, GraduationCap, Map, BookOpen, CalendarDays, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, ease: "easeOut" },
+};
 
 export default function LandingPage() {
   return (
@@ -34,31 +41,58 @@ export default function LandingPage() {
         <div className="flex flex-col lg:flex-row items-center gap-12">
           {/* Copy */}
           <div className="flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-6">
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-6"
+            >
               <Star className="w-3 h-3" />
               Used by students at 40+ universities
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight text-balance mb-5">
+            </motion.div>
+            <motion.h1
+              {...fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+              className="text-4xl md:text-5xl font-bold text-foreground leading-tight text-balance mb-5"
+            >
               Not sure if you&apos;re on track to graduate?
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
+            </motion.h1>
+            <motion.p
+              {...fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }}
+              className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0"
+            >
               Build your 4-year plan in minutes. See exactly which courses you need, when to take them, and know before your advisor meeting.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
+            </motion.p>
+            <motion.div
+              {...fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
+              className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start"
+            >
               <Link href="/onboarding">
                 <Button size="lg" className="w-full sm:w-auto gap-2">
                   Start Planning Free
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">No credit card. No signup required to preview.</p>
+            </motion.div>
+            <motion.p
+              {...fadeUp}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.4 }}
+              className="text-xs text-muted-foreground mt-4"
+            >
+              No credit card. No signup required to preview.
+            </motion.p>
           </div>
 
           {/* Planner preview mockup */}
-          <div className="flex-1 w-full max-w-xl">
+          <motion.div
+            className="flex-1 w-full max-w-xl"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+          >
             <PlannerPreview />
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -86,8 +120,15 @@ export default function LandingPage() {
                 desc: "See exactly how many credits you've completed and when you'll graduate — always up to date.",
                 icon: CheckCircle,
               },
-            ].map(({ step, title, desc, icon: Icon }) => (
-              <div key={step} className="flex flex-col gap-4">
+            ].map(({ step, title, desc, icon: Icon }, index) => (
+              <motion.div
+                key={step}
+                className="flex flex-col gap-4"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
+              >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs font-semibold text-primary">{step}</span>
                   <div className="h-px flex-1 bg-border" />
@@ -97,7 +138,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-semibold text-foreground text-base">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -130,8 +171,15 @@ export default function LandingPage() {
               desc: "Check for time conflicts between your section choices before registering.",
               icon: CalendarDays,
             },
-          ].map(({ title, desc, icon: Icon }) => (
-            <div key={title} className="flex gap-4 p-5 rounded-xl border border-border hover:border-primary/30 transition-colors">
+          ].map(({ title, desc, icon: Icon }, index) => (
+            <motion.div
+              key={title}
+              className="flex gap-4 p-5 rounded-xl border border-border hover:border-primary/30 transition-colors"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
+            >
               <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Icon className="w-4.5 h-4.5 text-primary" />
               </div>
@@ -139,7 +187,7 @@ export default function LandingPage() {
                 <h3 className="font-semibold text-foreground text-sm mb-1">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -151,8 +199,15 @@ export default function LandingPage() {
             { quote: "I finally understand what I need to take next semester. Brought this printout to my advisor and she loved it.", name: "Maya R.", major: "Biology, Junior" },
             { quote: "The prerequisite warnings saved me from registering for a class I wasn't ready for. It caught something my advisor missed.", name: "Tomás C.", major: "CS, Sophomore" },
             { quote: "I switched my major and GradPath rebuilt my whole plan in seconds. Would have been hours on a spreadsheet.", name: "Priya S.", major: "Economics → Data Science" },
-          ].map(({ quote, name, major }) => (
-            <div key={name} className="flex flex-col gap-4 p-5 bg-card rounded-xl border border-border">
+          ].map(({ quote, name, major }, index) => (
+            <motion.div
+              key={name}
+              className="flex flex-col gap-4 p-5 bg-card rounded-xl border border-border"
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
+            >
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
@@ -163,7 +218,7 @@ export default function LandingPage() {
                 <p className="text-sm font-semibold text-foreground">{name}</p>
                 <p className="text-xs text-muted-foreground">{major}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -188,8 +243,8 @@ export default function LandingPage() {
           <span>GradPath &copy; 2026</span>
         </div>
         <div className="flex gap-4">
-          <a href="#" className="hover:text-foreground">Privacy</a>
-          <a href="#" className="hover:text-foreground">Terms</a>
+          <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
         </div>
       </footer>
     </div>

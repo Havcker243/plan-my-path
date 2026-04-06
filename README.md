@@ -4,8 +4,7 @@ Plan My Path is an academic planning app for students who want to map degree pro
 
 The repo currently contains:
 - a FastAPI backend
-- an older Vite/React frontend in `Frontend/` (kept as feature reference)
-- a newer Next.js frontend in `web/` that is actively connected to the backend and replacing the old UI
+- a Next.js frontend in `web/`
 
 ## Current Product Scope
 
@@ -35,9 +34,9 @@ Main backend entrypoints:
 - `Backend/app/main.py`
 - `Backend/app/db.py`
 
-### Frontends
+### Frontend
 
-#### Active frontend (`web/`)
+#### Web app (`web/`)
 
 Location:
 - `web/`
@@ -52,30 +51,12 @@ Stack:
 
 Status:
 - active development target
-- fully connected to the backend for profile, plan, labels, courses, sections, and calendar data
-- replacing `Frontend/` once parity is confirmed
-
-#### Legacy frontend (`Frontend/`)
-
-Location:
-- `Frontend/`
-
-Stack:
-- Vite
-- React
-- TypeScript
-- Tailwind
-- shadcn-ui
-
-Status:
-- kept as behavioral reference during migration
-- no longer the target UI
+- connected to the backend for profile, plan, labels, courses, sections, and calendar data
 
 ## Repo Layout
 
 - `Backend/` FastAPI backend and SQL/scripts
-- `web/` new Next.js frontend (active)
-- `Frontend/` old Vite frontend (reference only)
+- `web/` Next.js frontend
 - `data/` local requirement and course artifacts
 - `future plans.md` product roadmap and future implementation notes
 
@@ -114,14 +95,6 @@ npm install
 npm run dev
 ```
 
-### 3. Optional: run the old frontend (for comparison only)
-
-```powershell
-cd Frontend
-npm install
-npm run dev
-```
-
 ## Environment Variables
 
 ### Backend (`Backend/.env`)
@@ -139,14 +112,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-### Old frontend (`Frontend/.env`)
-
-```
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...
-VITE_API_BASE_URL=...
-```
-
 ## Migration Status
 
 `web/` is wired for:
@@ -160,8 +125,7 @@ VITE_API_BASE_URL=...
 - selected section persistence per course
 - calendar rendering from section meeting times with conflict detection
 
-Remaining migration work:
-- parity audit between `Frontend/` and `web/` for edge cases
+Remaining frontend work:
 - requirements correctness validation against actual degree data
 - avatar upload pipeline (currently local preview only)
 
@@ -170,4 +134,3 @@ Remaining migration work:
 - Supabase is used for auth and Postgres storage.
 - The backend is the source of truth for profile and plan data.
 - `web/` keeps all state backend-backed rather than local-only.
-- `Frontend/` will be removed once `web/` parity is confirmed.

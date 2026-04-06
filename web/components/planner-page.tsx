@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, X, Check, AlertTriangle, Info, GripVertical,
   CheckCircle, Clock, Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayName } from "@/lib/utils";
 import {
   getTotalCredits,
   getPrereqWarnings,
@@ -73,7 +74,8 @@ export default function PlannerPage() {
     semesters,
     setSemesters,
     planCatalog,
-    addCoursesToCatalog,
+    majors,
+    addCourseToSemester,
     savePlan,
     searchCoursesCatalog,
     profile,
@@ -206,48 +208,35 @@ export default function PlannerPage() {
 
     const termFilter = `${semester.term.toLowerCase()} ${semester.year}`;
     fetchSections([course.code], termFilter)
-      .then((data) => {
+      .then(async (data) => {
         const sections = data[course.code] ?? [];
         setPendingSections(sections);
         if (sections.length === 0) {
-          addCoursesToCatalog([course]);
-          setSemesters((prev) =>
-            prev.map((sem) =>
-              sem.id === semId && !sem.courseIds.includes(course.code)
-                ? { ...sem, courseIds: [...sem.courseIds, course.code] }
-                : sem
-            )
-          );
+          // No section to pick — add directly via context (writes planCatalog + saves)
+          await addCourseToSemester(course, semId);
           setAddingTo(null);
           setSearchTerm("");
           setSearchResults([]);
           setPendingCourse(null);
           setPendingSemesterId(null);
-          triggerSave();
           toast.success(`${course.code} added to ${semester.term} ${semester.year}`);
         }
+        // If sections exist, the pending-section dialog opens (state already set above)
       })
-      .catch(() => {
-        addCoursesToCatalog([course]);
-        setSemesters((prev) =>
-          prev.map((sem) =>
-            sem.id === semId && !sem.courseIds.includes(course.code)
-              ? { ...sem, courseIds: [...sem.courseIds, course.code] }
-              : sem
-          )
-        );
+      .catch(async () => {
+        // Section fetch failed — add without a section
+        await addCourseToSemester(course, semId);
         setAddingTo(null);
         setSearchTerm("");
         setSearchResults([]);
         setPendingCourse(null);
         setPendingSemesterId(null);
-        triggerSave();
         toast.success(`${course.code} added to planner`);
       })
       .finally(() => setPendingSectionsLoading(false));
   };
 
-  const confirmPendingCourseAdd = () => {
+  const confirmPendingCourseAdd = async () => {
     if (!pendingCourse || !pendingSemesterId) return;
     const semester = semesters.find((sem) => sem.id === pendingSemesterId);
     if (!semester) return;
@@ -256,14 +245,9 @@ export default function PlannerPage() {
       ...pendingCourse,
       selectedSectionId: pendingSectionId === "__none__" ? null : pendingSectionId,
     };
-    addCoursesToCatalog([courseToAdd]);
-    setSemesters((prev) =>
-      prev.map((sem) =>
-        sem.id === pendingSemesterId && !sem.courseIds.includes(courseToAdd.code)
-          ? { ...sem, courseIds: [...sem.courseIds, courseToAdd.code] }
-          : sem
-      )
-    );
+
+    // addCourseToSemester atomically: writes planCatalog + semester + persists
+    await addCourseToSemester(courseToAdd, pendingSemesterId);
     setAddingTo(null);
     setSearchTerm("");
     setSearchResults([]);
@@ -271,7 +255,6 @@ export default function PlannerPage() {
     setPendingSemesterId(null);
     setPendingSections([]);
     setPendingSectionId("__none__");
-    triggerSave();
     toast.success(`${courseToAdd.code} added to ${semester.term} ${semester.year}`);
   };
 
@@ -341,9 +324,11 @@ export default function PlannerPage() {
       return course?.status === "completed" ? acc + course.credits : acc;
     }, 0);
 
-  const majorName = majors.find((m) => m.code === profile?.major_code)?.name
+  const majorName = formatDisplayName(
+    majors.find((m) => m.code === profile?.major_code)?.name
     ?? profile?.major_code
-    ?? "Your Major";
+    ?? "Your Major"
+  );
   const gradText = profile?.graduation_term && profile?.graduation_year
     ? `${profile.graduation_term.charAt(0).toUpperCase() + profile.graduation_term.slice(1)} ${profile.graduation_year}`
     : null;
@@ -462,12 +447,18 @@ export default function PlannerPage() {
                       </p>
                     </div>
                   )}
+                  <AnimatePresence>
                   {sem.courseIds.map((cid) => {
                     const course = planCatalog[cid];
                     const hasWarn = warnSet.has(cid);
                     return (
-                      <div
+                      <motion.div
                         key={cid}
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.2 }}
                         draggable={!sem.isPast}
                         onDragStart={() => handleDragStart(cid, sem.id)}
                         className={cn(
@@ -537,9 +528,10 @@ export default function PlannerPage() {
                             </div>
                           </>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
+                  </AnimatePresence>
                 </div>
 
                 {/* Add Course button */}

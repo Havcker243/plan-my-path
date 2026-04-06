@@ -205,8 +205,18 @@ function buildSemesters(
   return { semesters, catalog };
 }
 
-// Returns "YYYY-MM-15" end date string for a given term + year
-function semesterEndDateStr(term: SemesterTerm, year: number): string {
+// Returns the end date string for a given term + year.
+// Uses real backend calendar data when available; falls back to a fixed estimate.
+function semesterEndDateStr(
+  term: SemesterTerm,
+  year: number,
+  termCalendar: TermCalendarEntry[] = []
+): string {
+  const termLower = term.toLowerCase();
+  const calEntry = termCalendar.find(
+    (t) => t.term.toLowerCase() === termLower && t.year === year
+  );
+  if (calEntry?.end_date) return calEntry.end_date;
   const endMonth: Record<string, number> = { Spring: 5, Summer: 8, Fall: 12, Winter: 1 };
   const month = endMonth[term] ?? 12;
   const endYear = term === "Winter" ? year + 1 : year;
@@ -293,21 +303,36 @@ function buildInitialSemesters(
 
 // ─── Context types ─────────────────────────────────────────────────────────────
 
+export interface OnboardingCourse {
+  code: string;
+  grade: string | null;
+  /** null means "unknown" (manual entry — will be grouped into one pre-start semester) */
+  term: string | null;
+  year: number | null;
+}
+
 export interface OnboardingData {
   majorCode: string;
   startYear: number;
   startTerm: string;
   gradYear: number;
   gradTerm: string;
-  completedCourseCodes: string[];
+  /** Full completed-course info. grade/term/year may be null for manually-entered courses. */
+  completedCourses: OnboardingCourse[];
+  gpa?: number | null;
 }
 
 interface PlanContextValue {
   profile: BackendProfile | null;
   semesters: Semester[];
+  /** Only courses whose code appears in at least one semester. */
   planCatalog: Record<string, Course>;
+  /** Search/browse results — not in the plan unless also in planCatalog. */
+  courseCache: Record<string, Course>;
   labels: Record<string, CourseLabelEntry>;
   majors: Major[];
+  majorsLoading: boolean;
+  majorsError: boolean;
   termCalendar: TermCalendarEntry[];
   loading: boolean;
   /** True once the first profile+plan fetch cycle has completed (even if profile is null). */
@@ -317,6 +342,7 @@ interface PlanContextValue {
   /** True when the backend confirmed a profile was loaded successfully. */
   profileLoaded: boolean;
   setSemesters: React.Dispatch<React.SetStateAction<Semester[]>>;
+  /** Adds courses to the search/browse cache only — does NOT add them to the plan. */
   addCoursesToCatalog: (courses: Course[]) => void;
   addCourseToSemester: (course: Course, semesterId: string) => Promise<boolean>;
   updateCourse: (courseCode: string, updates: Partial<Pick<Course, "status" | "grade" | "selectedSectionId">>) => void;
@@ -324,6 +350,7 @@ interface PlanContextValue {
   doUpdateProfile: (data: Partial<BackendProfile>) => Promise<void>;
   searchCoursesCatalog: (q: string, subject?: string) => Promise<Course[]>;
   completeOnboarding: (data: OnboardingData) => Promise<void>;
+  importTranscript: (courses: OnboardingCourse[], gpa: number | null) => Promise<{ added: number; skipped: number }>;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
@@ -335,9 +362,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<BackendProfile | null>(null);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [planCatalog, setPlanCatalog] = useState<Record<string, Course>>({});
+  const [courseCache, setCourseCache] = useState<Record<string, Course>>({});
   const [labels, setLabels] = useState<Record<string, CourseLabelEntry>>({});
   const [electiveRules, setElectiveRules] = useState<ElectiveRule[]>([]);
   const [majors, setMajors] = useState<Major[]>([]);
+  const [majorsLoading, setMajorsLoading] = useState(true);
+  const [majorsError, setMajorsError] = useState(false);
   const [termCalendar, setTermCalendar] = useState<TermCalendarEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -346,7 +376,15 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch public data once on mount
   useEffect(() => {
-    fetchMajors().then(setMajors).catch(() => {});
+    setMajorsLoading(true);
+    setMajorsError(false);
+    fetchMajors()
+      .then(setMajors)
+      .catch(() => {
+        setMajors([]);
+        setMajorsError(true);
+      })
+      .finally(() => setMajorsLoading(false));
     fetchTermCalendar().then(setTermCalendar).catch(() => {});
   }, []);
 
@@ -405,12 +443,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       });
   }, [accessToken]);
 
+  // Writes to the search/browse cache — not to planCatalog.
+  // planCatalog is only written when a course is added to a semester.
   const addCoursesToCatalog = useCallback((courses: Course[]) => {
-    setPlanCatalog((prev) => {
+    setCourseCache((prev) => {
       const next = { ...prev };
-      courses.forEach((c) => {
-        if (!next[c.code]) next[c.code] = c;
-      });
+      courses.forEach((c) => { next[c.code] = c; });
       return next;
     });
   }, []);
@@ -445,7 +483,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         year: sem.year,
         label: `${sem.term} ${sem.year}`,
         startDate: null,
-        endDate: semesterEndDateStr(sem.term, sem.year),
+        endDate: semesterEndDateStr(sem.term, sem.year, termCalendar),
         courses: sem.courseIds.map((code) => ({
           code,
           credits: nextPlanCatalog[code]?.credits ?? 3,
@@ -457,7 +495,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       });
       return result;
     },
-    [accessToken, planCatalog]
+    [accessToken, planCatalog, termCalendar]
   );
 
   const savePlan = useCallback(async () => {
@@ -514,10 +552,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
   const doUpdateProfile = useCallback(
     async (data: Partial<BackendProfile>) => {
-      if (!accessToken) return;
-      const updated = await apiUpdateProfile(accessToken, data);
+      if (!accessToken || !profile) return;
+      // Merge with the full existing profile so fields we're not updating are preserved
+      const merged: BackendProfile = { ...profile, ...data };
+      const updated = await apiUpdateProfile(accessToken, merged);
       setProfile(updated);
-      if (data.major_code) {
+      if (data.major_code && data.major_code !== profile.major_code) {
         try {
           const res = await fetchCourseLabels(data.major_code);
           setLabels(res.labels);
@@ -525,27 +565,161 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         } catch {}
       }
     },
-    [accessToken]
+    [accessToken, profile]
   );
 
   const searchCoursesCatalog = useCallback(
     async (q: string, subject?: string): Promise<Course[]> => {
       const { data } = await apiSearchCourses(q, subject, 1, 30);
-      return data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
+      const courses = data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
+      // Populate the browse cache so consumers can look up metadata by code
+      setCourseCache((prev) => {
+        const next = { ...prev };
+        courses.forEach((c) => { next[c.code] = c; });
+        return next;
+      });
+      return courses;
     },
     [labels, electiveRules]
+  );
+
+  /**
+   * Import a parsed transcript into an existing plan.
+   * Creates past semesters for each term found, preserving existing plan structure.
+   * Skips courses already present in the plan.
+   */
+  const importTranscript = useCallback(
+    async (courses: OnboardingCourse[], gpa: number | null): Promise<{ added: number; skipped: number }> => {
+      if (!accessToken) throw new Error("Not authenticated");
+
+      // Fetch metadata for all incoming codes
+      const metaByCode: Record<string, Course> = {};
+      await Promise.allSettled(
+        courses.map((oc) =>
+          apiSearchCourses(oc.code, undefined, 1, 1).then((r) => {
+            const bc = r.data[0];
+            if (bc) metaByCode[bc.course_code] = {
+              ...searchCourseToCourse(bc, labels, electiveRules),
+              status: "completed" as const,
+            };
+          })
+        )
+      );
+
+      // Current plan state (read-only snapshots for closure safety)
+      const prevSemesters = semesters;
+      const prevCatalog = planCatalog;
+      let nextSemesters = [...semesters];
+      const nextCatalog = { ...planCatalog };
+      let added = 0;
+      let skipped = 0;
+
+      // Group incoming courses by term/year
+      const TERM_ORDER_MAP: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
+      const groups = new Map<string, { term: SemesterTerm; year: number; courses: OnboardingCourse[] }>();
+
+      for (const oc of courses) {
+        if (!oc.term || !oc.year) continue; // skip courses without term info
+        const normTerm = capitalizeTerm(oc.term) as SemesterTerm;
+        const key = `${oc.year}-${TERM_ORDER_MAP[normTerm] ?? 9}-${normTerm}`;
+        if (!groups.has(key)) groups.set(key, { term: normTerm, year: oc.year, courses: [] });
+        groups.get(key)!.courses.push(oc);
+      }
+
+      for (const { term, year, courses: groupCourses } of groups.values()) {
+        // Find existing semester for this term/year or create one
+        let sem = nextSemesters.find((s) => s.term === term && s.year === year);
+        if (!sem) {
+          sem = {
+            id: `import-${term.toLowerCase()}-${year}-${Math.random().toString(36).slice(2, 6)}`,
+            term,
+            year,
+            courseIds: [],
+            isPast: true,
+            isCurrent: false,
+          };
+          nextSemesters = [...nextSemesters, sem];
+        }
+
+        for (const oc of groupCourses) {
+          if (sem.courseIds.includes(oc.code)) { skipped++; continue; }
+          const meta = metaByCode[oc.code];
+          if (!meta) { skipped++; continue; }
+
+          nextCatalog[oc.code] = { ...meta, status: "completed", grade: oc.grade ?? null };
+          sem = { ...sem, courseIds: [...sem.courseIds, oc.code] };
+          // Reflect updated sem back into nextSemesters
+          nextSemesters = nextSemesters.map((s) => (s.id === sem!.id ? sem! : s));
+          added++;
+        }
+      }
+
+      // Sort semesters chronologically
+      nextSemesters.sort((a, b) =>
+        a.year !== b.year
+          ? a.year - b.year
+          : (TERM_ORDER_MAP[a.term] ?? 9) - (TERM_ORDER_MAP[b.term] ?? 9)
+      );
+
+      if (added === 0) {
+        return { added: 0, skipped };
+      }
+
+      setPlanCatalog(nextCatalog);
+      setSemesters(nextSemesters);
+
+      try {
+        if (profile) {
+          const existingCompleted = new Set(profile.completed_courses ?? []);
+          courses.forEach((course) => existingCompleted.add(course.code));
+          const updatedProfile = await apiUpdateProfile(accessToken, {
+            ...profile,
+            completed_courses: Array.from(existingCompleted),
+            ...(gpa !== null ? { gpa } : {}),
+          });
+          setProfile(updatedProfile);
+        }
+
+        const result = await persistPlan(nextSemesters, nextCatalog);
+        if (!result) {
+          throw new Error("Plan save returned no data");
+        }
+
+        if (result.semesters?.length) {
+          const { semesters: savedSemesters, catalog: savedCatalog } = buildSemesters(
+            result.semesters,
+            labels,
+            electiveRules,
+            termCalendar
+          );
+          setSemesters(savedSemesters);
+          setPlanCatalog((prev) => ({ ...prev, ...savedCatalog }));
+        }
+      } catch (error) {
+        setPlanCatalog(prevCatalog);
+        setSemesters(prevSemesters);
+        throw error;
+      }
+
+      return { added, skipped };
+    },
+    [accessToken, semesters, planCatalog, labels, electiveRules, persistPlan, profile, termCalendar]
   );
 
   const completeOnboarding = useCallback(
     async (data: OnboardingData) => {
       if (!accessToken) return;
+
+      const allCodes = data.completedCourses.map((c) => c.code);
+
       const updated = await apiUpdateProfile(accessToken, {
         major_code: data.majorCode,
         start_year: data.startYear,
         start_term: data.startTerm.toLowerCase(),
         graduation_year: data.gradYear,
         graduation_term: data.gradTerm.toLowerCase(),
-        completed_courses: data.completedCourseCodes,
+        completed_courses: allCodes,
+        ...(data.gpa != null ? { gpa: data.gpa } : {}),
       });
       setProfile(updated);
 
@@ -563,67 +737,94 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Fetch full metadata for each completed course in parallel
-      const completedCourseObjects: Course[] = [];
-      if (data.completedCourseCodes.length > 0) {
+      // Fetch full catalog metadata for each completed course
+      const metaByCode: Record<string, Course> = {};
+      if (allCodes.length > 0) {
         const settled = await Promise.allSettled(
-          data.completedCourseCodes.map((code) =>
+          allCodes.map((code) =>
             apiSearchCourses(code, undefined, 1, 1).then((r) => {
               const bc = r.data[0];
               if (!bc) return null;
-              return {
-                ...searchCourseToCourse(bc, labelsData, rulesData),
-                status: "completed" as const,
-              };
+              return { ...searchCourseToCourse(bc, labelsData, rulesData), status: "completed" as const };
             })
           )
         );
         settled.forEach((r) => {
-          if (r.status === "fulfilled" && r.value) completedCourseObjects.push(r.value);
+          if (r.status === "fulfilled" && r.value) metaByCode[r.value.code] = r.value;
         });
       }
 
-      // Build an initial semester scaffold from the student's timeline
-      const futureSemesters = buildInitialSemesters(
-        data.startTerm,
-        data.startYear,
-        data.gradTerm,
-        data.gradYear,
-        termCalendar
-      );
+      // ── Group completed courses by their actual term/year ──────────────────
+      // Courses with known term (from transcript) go into their real semester.
+      // Courses with no term (manual entry) go into a single "prev credits" bucket.
+      const TERM_ORDER_MAP: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
+      const termGroups = new Map<string, { term: string; year: number; courses: OnboardingCourse[] }>();
 
-      // If we have completed courses, put them in a past "Previous Credits" semester
-      // placed just before the student's start term
-      let allSemesters: Semester[] = futureSemesters;
-      if (completedCourseObjects.length > 0) {
-        // Completed catalog entries (status=completed, isPast)
-        const completedCatalog: Record<string, Course> = {};
-        completedCourseObjects.forEach((c) => { completedCatalog[c.code] = c; });
-        setPlanCatalog((prev) => ({ ...completedCatalog, ...prev }));
+      for (const oc of data.completedCourses) {
+        let key: string;
+        let term: string;
+        let year: number;
 
-        // Semester just before the student's start (works for all 4 terms)
-        const allTerms: SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
-        const startNorm = capitalizeTerm(data.startTerm);
-        const startIdx = allTerms.indexOf(startNorm);
-        const prevIdx = (startIdx - 1 + allTerms.length) % allTerms.length;
-        const prevTerm = allTerms[prevIdx];
-        // If we wrapped backwards (Spring → Winter), decrement year
-        const prevYear = prevIdx === allTerms.length - 1 ? data.startYear - 1 : data.startYear;
+        if (oc.term && oc.year) {
+          // Known term from transcript
+          const normTerm = capitalizeTerm(oc.term);
+          key = `${oc.year}-${TERM_ORDER_MAP[normTerm] ?? 9}-${normTerm}`;
+          term = normTerm;
+          year = oc.year;
+        } else {
+          // Manual entry — place just before start term
+          const allTerms: SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
+          const startNorm = capitalizeTerm(data.startTerm);
+          const startIdx = allTerms.indexOf(startNorm);
+          const prevIdx = (startIdx - 1 + allTerms.length) % allTerms.length;
+          term = allTerms[prevIdx];
+          year = prevIdx === allTerms.length - 1 ? data.startYear - 1 : data.startYear;
+          key = `manual-prev`;
+        }
 
-        const prevSem: Semester = {
-          id: `prev-credits-${prevTerm.toLowerCase()}-${prevYear}`,
-          term: prevTerm,
-          year: prevYear,
-          courseIds: completedCourseObjects.map((c) => c.code),
-          isPast: true,
-          isCurrent: false,
-        };
-        allSemesters = [prevSem, ...futureSemesters];
+        if (!termGroups.has(key)) termGroups.set(key, { term, year, courses: [] });
+        termGroups.get(key)!.courses.push(oc);
       }
 
+      // Sort term groups chronologically
+      const sortedGroups = [...termGroups.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, g]) => g);
+
+      // Build past semesters — one per term group
+      const pastSemesters: Semester[] = sortedGroups.map(({ term, year, courses }) => ({
+        id: `past-${term.toLowerCase()}-${year}-${Math.random().toString(36).slice(2, 6)}`,
+        term: term as SemesterTerm,
+        year,
+        courseIds: courses.map((c) => c.code),
+        isPast: true,
+        isCurrent: false,
+      }));
+
+      // Populate planCatalog with completed entries (preserving grade from transcript)
+      const completedCatalog: Record<string, Course> = {};
+      for (const oc of data.completedCourses) {
+        const meta = metaByCode[oc.code];
+        if (meta) {
+          completedCatalog[oc.code] = { ...meta, status: "completed", grade: oc.grade ?? meta.grade };
+        }
+      }
+      if (Object.keys(completedCatalog).length > 0) {
+        setPlanCatalog((prev) => ({ ...completedCatalog, ...prev }));
+      }
+
+      // ── Build scaffold for future semesters ────────────────────────────────
+      const futureSemesters = buildInitialSemesters(
+        data.startTerm, data.startYear, data.gradTerm, data.gradYear, termCalendar
+      );
+
+      const allSemesters: Semester[] = [...pastSemesters, ...futureSemesters];
       setSemesters(allSemesters);
 
-      // Persist the full scaffold (including completed semester) to the backend
+      // ── Persist to backend ─────────────────────────────────────────────────
+      // Build a lookup: course code → OnboardingCourse (for grade/credits)
+      const ocByCode = new Map(data.completedCourses.map((c) => [c.code, c]));
+
       try {
         const result = await apiSavePlan(accessToken, {
           semesters: allSemesters.map((sem) => ({
@@ -632,17 +833,19 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             year: sem.year,
             label: `${sem.term} ${sem.year}`,
             startDate: null,
-            endDate: semesterEndDateStr(sem.term, sem.year),
-            courses: sem.courseIds.map((code) => ({
-              code,
-              credits: completedCourseObjects.find((c) => c.code === code)?.credits ?? 3,
-              status: "completed" as const,
-              grade: null,
-              selectedSectionId: null,
-            })),
+            endDate: semesterEndDateStr(sem.term, sem.year, termCalendar),
+            courses: sem.courseIds.map((code) => {
+              const oc = ocByCode.get(code);
+              return {
+                code,
+                credits: metaByCode[code]?.credits ?? 3,
+                status: "completed" as const,
+                grade: oc?.grade ?? null,
+                selectedSectionId: null,
+              };
+            }),
           })),
         });
-        // Sync backend-assigned IDs
         if (result?.semesters?.length) {
           setSemesters(
             allSemesters.map((sem, i) => {
@@ -652,7 +855,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           );
         }
       } catch {
-        // Plan save is best-effort; semesters are already set in local state
+        // Plan save is best-effort
       }
     },
     [accessToken, termCalendar]
@@ -664,8 +867,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         profile,
         semesters,
         planCatalog,
+        courseCache,
         labels,
         majors,
+        majorsLoading,
+        majorsError,
         termCalendar,
         loading,
         initialized,
@@ -679,6 +885,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         doUpdateProfile,
         searchCoursesCatalog,
         completeOnboarding,
+        importTranscript,
       }}
     >
       {children}

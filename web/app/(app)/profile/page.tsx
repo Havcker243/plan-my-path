@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getCompletedCredits } from "@/lib/data";
 import { getSupabase } from "@/lib/supabase";
+import { formatDisplayName } from "@/lib/utils";
 import { toast } from "sonner";
 
 const DEGREE_CREDITS = 120;
@@ -16,7 +17,8 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { profile, semesters, planCatalog, majors, doUpdateProfile } = usePlan();
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
-  const [name, setName] = useState(profile?.name ?? "");
+  const [firstName, setFirstName] = useState(() => profile?.name?.split(" ")[0] ?? "");
+  const [lastName, setLastName] = useState(() => profile?.name?.split(" ").slice(1).join(" ") ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -25,7 +27,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setAvatar(profile?.avatar_url ?? null);
-    setName(profile?.name ?? "");
+    setFirstName(profile?.name?.split(" ")[0] ?? "");
+    setLastName(profile?.name?.split(" ").slice(1).join(" ") ?? "");
     setPhone(profile?.phone ?? "");
   }, [profile?.avatar_url, profile?.name, profile?.phone]);
 
@@ -69,7 +72,8 @@ export default function ProfilePage() {
     setSaving(true);
     setSaved(false);
     try {
-      await doUpdateProfile({ name: name || null, phone: phone || null, avatar_url: avatar || null });
+      const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+      await doUpdateProfile({ name: fullName || null, phone: phone || null, avatar_url: avatar || null });
       setSaved(true);
       toast.success("Profile updated");
       setTimeout(() => setSaved(false), 3000);
@@ -85,7 +89,7 @@ export default function ProfilePage() {
   const gpa = profile?.gpa ?? null;
 
   const majorCode = profile?.major_code;
-  const majorName = majors.find((m) => m.code === majorCode)?.name ?? majorCode;
+  const majorName = formatDisplayName(majors.find((m) => m.code === majorCode)?.name ?? majorCode);
   const gradTerm = profile?.graduation_term;
   const gradYear = profile?.graduation_year;
   const startTerm = profile?.start_term;
@@ -153,14 +157,25 @@ export default function ProfilePage() {
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-4">Edit Profile</h2>
         <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Full Name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your full name"
-              className="h-9"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">First Name</label>
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                className="h-9"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Last Name</label>
+              <Input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                className="h-9"
+              />
+            </div>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>

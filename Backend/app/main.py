@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -229,6 +229,33 @@ def put_profile(payload: dict, user: Dict[str, object] = Depends(get_current_use
 def list_terms() -> Dict[str, object]:
     terms = fetch_term_calendar(POOLER_URL)
     return {"data": terms}
+
+
+@app.post("/api/transcript")
+async def parse_transcript_endpoint(file: UploadFile = File(...)) -> Dict[str, object]:
+    """
+    Parse an uploaded transcript PDF and return extracted courses + GPA.
+    No auth required — the transcript is processed in memory and never stored.
+    """
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:  # 10 MB guard
+        raise HTTPException(status_code=400, detail="File too large (max 10 MB).")
+
+    try:
+        from app.transcript import parse_transcript
+        result = parse_transcript(contents)
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="PDF parsing library not installed. Run: pip install pypdf python-multipart",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not parse transcript: {exc}")
+
+    return {"data": result}
 
 
 @app.get("/api/plan")

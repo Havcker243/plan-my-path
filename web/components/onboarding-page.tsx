@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, ChevronRight, ChevronLeft, Check, Search, Loader2 } from "lucide-react";
+import { GraduationCap, ChevronRight, ChevronLeft, Check, Search, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayName } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import { useAuth } from "@/contexts/auth-context";
 import type { Course } from "@/lib/data";
+import type { OnboardingCourse } from "@/contexts/plan-context";
 import { toast } from "sonner";
+import TranscriptUpload, { type TranscriptResult } from "@/components/transcript-upload";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 8 }, (_, index) => CURRENT_YEAR - 4 + index);
@@ -21,10 +23,39 @@ function semesterIndex(term: string, year: number) {
   return year * 4 + (TERM_ORDER[term] ?? 0);
 }
 
+function getTimelineSemesterCount(
+  startTerm: string,
+  startYear: number,
+  gradTerm: string,
+  gradYear: number
+) {
+  const diff = semesterIndex(gradTerm, gradYear) - semesterIndex(startTerm, startYear);
+  return diff >= 0 ? diff + 1 : 0;
+}
+
+function currentSemesterIndex(): number {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  let term: string;
+  if (month >= 1 && month <= 5) term = "Spring";
+  else if (month >= 6 && month <= 8) term = "Summer";
+  else if (month >= 9 && month <= 11) term = "Fall";
+  else term = "Winter";
+  return semesterIndex(term, year);
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { majors, searchCoursesCatalog, completeOnboarding, profile } = usePlan();
+  const {
+    majors,
+    majorsLoading,
+    majorsError,
+    searchCoursesCatalog,
+    completeOnboarding,
+    profile,
+  } = usePlan();
   const [step, setStep] = useState(0);
 
   // Step 0
@@ -39,10 +70,16 @@ export default function OnboardingPage() {
   const [gradTerm, setGradTerm] = useState<string>("Spring");
 
   // Step 2
+  const [courseInputMode, setCourseInputMode] = useState<"transcript" | "manual">("transcript");
   const [courseSearch, setCourseSearch] = useState("");
   const [courseResults, setCourseResults] = useState<Course[]>([]);
   const [courseSearching, setCourseSearching] = useState(false);
-  const [completedCodes, setCompletedCodes] = useState<string[]>([]);
+  // Full completed-course objects (with grade + term/year when from transcript)
+  const [completedCourses, setCompletedCourses] = useState<OnboardingCourse[]>([]);
+  // Convenience: just the codes (for the manual search checked-state UI)
+  const completedCodes = completedCourses.map((c) => c.code);
+  const [transcriptGpa, setTranscriptGpa] = useState<number | null>(null);
+  const [transcriptApplied, setTranscriptApplied] = useState(false);
 
   // Step 3
   const [submitting, setSubmitting] = useState(false);
@@ -77,26 +114,46 @@ export default function OnboardingPage() {
   }, [courseSearch, searchCoursesCatalog]);
 
   const filteredMajors = majors.filter((m) =>
-    m.name.toLowerCase().includes(majorSearch.toLowerCase())
-  );
-
-  const semestersAway = Math.max(
-    0,
-    (gradYear - startYear) * 2 +
-      (gradTerm === "Spring" ? 1 : gradTerm === "Summer" ? 1 : 0) -
-      (startTerm === "Spring" ? 1 : startTerm === "Summer" ? 1 : 0)
+    formatDisplayName(m.name)?.toLowerCase().includes(majorSearch.toLowerCase())
   );
 
   const timelineValid = semesterIndex(gradTerm, gradYear) > semesterIndex(startTerm, startYear);
+  const totalSemesters = timelineValid
+    ? getTimelineSemesterCount(startTerm, startYear, gradTerm, gradYear)
+    : 0;
+  // Distance from today's semester to graduation (0 = this semester, negative = already past)
+  const semestersFromNow = semesterIndex(gradTerm, gradYear) - currentSemesterIndex();
+  const semestersAwayLabel =
+    semestersFromNow < 0
+      ? "already passed"
+      : semestersFromNow === 0
+      ? "this semester"
+      : `${semestersFromNow} ${semestersFromNow === 1 ? "semester" : "semesters"} away`;
 
-  const toggleCourse = (code: string) => {
-    setCompletedCodes((prev) =>
-      prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code]
-    );
+  const toggleCourse = (code: string, course?: Course) => {
+    setCompletedCourses((prev) => {
+      if (prev.some((c) => c.code === code)) return prev.filter((c) => c.code !== code);
+      return [...prev, { code, grade: null, term: null, year: null }];
+    });
   };
 
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const back = () => setStep((s) => Math.max(s - 1, 0));
+
+  const handleTranscriptResult = (result: TranscriptResult) => {
+    // Map transcript courses to OnboardingCourse, preserving grade + term/year
+    setCompletedCourses(
+      result.courses.map((c) => ({
+        code: c.code,
+        grade: c.grade,
+        term: c.term,
+        year: c.year,
+      }))
+    );
+    if (result.gpa !== null) setTranscriptGpa(result.gpa);
+    setTranscriptApplied(true);
+    next();
+  };
 
   const handleComplete = async () => {
     setSubmitting(true);
@@ -107,7 +164,8 @@ export default function OnboardingPage() {
         startTerm,
         gradYear,
         gradTerm,
-        completedCourseCodes: completedCodes,
+        completedCourses,
+        gpa: transcriptGpa,
       });
       toast.success("Onboarding saved");
       router.push("/dashboard");
@@ -188,19 +246,23 @@ export default function OnboardingPage() {
             <div className="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
               {filteredMajors.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-6">
-                  {majors.length === 0 ? "Loading majors…" : "No majors found"}
+                  {majorsLoading
+                    ? "Loading majors…"
+                    : majorsError
+                    ? "Couldn't load majors. Check your backend/API settings."
+                    : "No majors found"}
                 </p>
               )}
               {filteredMajors.map((m) => (
                 <button
                   key={m.code}
-                  onClick={() => { setSelectedMajorCode(m.code); setSelectedMajorName(m.name); }}
+                  onClick={() => { setSelectedMajorCode(m.code); setSelectedMajorName(formatDisplayName(m.name) ?? m.name); }}
                   className={cn(
                     "flex items-center justify-between px-4 py-3 text-sm text-left transition-colors hover:bg-muted/60",
                     selectedMajorCode === m.code && "bg-primary/5 text-primary font-medium"
                   )}
                 >
-                  {m.name}
+                  {formatDisplayName(m.name)}
                   {selectedMajorCode === m.code && <Check className="w-4 h-4 text-primary" />}
                 </button>
               ))}
@@ -262,7 +324,9 @@ export default function OnboardingPage() {
             <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4 text-center">
               <p className="text-sm text-muted-foreground">Your graduation target</p>
               <p className="text-xl font-bold text-foreground mt-1">{gradTerm} {gradYear}</p>
-              <p className="text-sm text-primary font-medium mt-1">{semestersAway} semesters away</p>
+              <p className="text-sm text-primary font-medium mt-1">
+                {semestersAwayLabel}
+              </p>
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={back} className="gap-1"><ChevronLeft className="w-4 h-4" /> Back</Button>
@@ -276,64 +340,130 @@ export default function OnboardingPage() {
           <div className="w-full flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-3 duration-200">
             <div>
               <h1 className="text-xl font-bold text-foreground mb-1">Courses you&apos;ve passed</h1>
-              <p className="text-sm text-muted-foreground">Search and mark courses you&apos;ve already completed.</p>
+              <p className="text-sm text-muted-foreground">Upload your transcript for instant pre-fill, or search manually.</p>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              {courseSearching && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-              )}
-              <input
-                type="text"
-                placeholder="Search by course code or title…"
-                value={courseSearch}
-                onChange={(e) => setCourseSearch(e.target.value)}
-                className="w-full pl-9 pr-9 py-2.5 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+
+            {/* Tab switcher */}
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setCourseInputMode("transcript")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors",
+                  courseInputMode === "transcript"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <Upload className="w-3.5 h-3.5" /> Upload Transcript
+              </button>
+              <button
+                onClick={() => setCourseInputMode("manual")}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors",
+                  courseInputMode === "manual"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <Search className="w-3.5 h-3.5" /> Add Manually
+              </button>
+            </div>
+
+            {/* Transcript upload */}
+            {courseInputMode === "transcript" && !transcriptApplied && (
+              <TranscriptUpload
+                onResult={handleTranscriptResult}
+                onCancel={() => setCourseInputMode("manual")}
               />
-            </div>
-            {courseResults.length > 0 && (
-              <div className="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
-                {courseResults.map((c) => {
-                  const checked = completedCodes.includes(c.code);
-                  return (
-                    <button
-                      key={c.code}
-                      onClick={() => toggleCourse(c.code)}
-                      className={cn(
-                        "flex items-center justify-between px-4 py-3 text-sm text-left hover:bg-muted/60 transition-colors",
-                        checked && "bg-green-50"
-                      )}
-                    >
-                      <div>
-                        <p className="font-medium text-foreground">{c.code}</p>
-                        <p className="text-xs text-muted-foreground">{c.title} · {c.credits}cr</p>
-                      </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center border transition-all",
-                        checked ? "bg-green-600 border-green-600" : "border-border"
-                      )}>
-                        {checked && <Check className="w-3 h-3 text-white" />}
-                      </div>
-                    </button>
-                  );
-                })}
+            )}
+
+            {/* Transcript applied confirmation */}
+            {courseInputMode === "transcript" && transcriptApplied && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+                  <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Transcript applied</p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      {completedCodes.length} courses pre-filled
+                      {transcriptGpa !== null && <> · GPA {transcriptGpa.toFixed(3)} imported</>}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setTranscriptApplied(false); setCompletedCourses([]); setTranscriptGpa(null); }}
+                    className="ml-auto text-xs text-green-700 hover:underline"
+                  >
+                    Redo
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={back} className="gap-1"><ChevronLeft className="w-4 h-4" /> Back</Button>
+                  <Button onClick={next} className="flex-1 gap-2">Continue <ChevronRight className="w-4 h-4" /></Button>
+                </div>
               </div>
             )}
-            {courseSearch.length < 2 && (
-              <p className="text-xs text-muted-foreground text-center">Type at least 2 characters to search courses</p>
+
+            {/* Manual search */}
+            {courseInputMode === "manual" && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  {courseSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Search by course code or title…"
+                    value={courseSearch}
+                    onChange={(e) => setCourseSearch(e.target.value)}
+                    className="w-full pl-9 pr-9 py-2.5 text-sm rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                {courseResults.length > 0 && (
+                  <div className="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                    {courseResults.map((c) => {
+                      const checked = completedCodes.includes(c.code);
+                      return (
+                        <button
+                          key={c.code}
+                          onClick={() => toggleCourse(c.code)}
+                          className={cn(
+                            "flex items-center justify-between px-4 py-3 text-sm text-left hover:bg-muted/60 transition-colors",
+                            checked && "bg-green-50"
+                          )}
+                        >
+                          <div>
+                            <p className="font-medium text-foreground">{c.code}</p>
+                            <p className="text-xs text-muted-foreground">{c.title} · {c.credits}cr</p>
+                          </div>
+                          <div className={cn(
+                            "w-5 h-5 rounded-full flex items-center justify-center border transition-all",
+                            checked ? "bg-green-600 border-green-600" : "border-border"
+                          )}>
+                            {checked && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {courseSearch.length < 2 && (
+                  <p className="text-xs text-muted-foreground text-center">Type at least 2 characters to search courses</p>
+                )}
+                {completedCodes.length > 0 && (
+                  <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-2.5">
+                    <span>{completedCodes.length} courses selected</span>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={back} className="gap-1"><ChevronLeft className="w-4 h-4" /> Back</Button>
+                  <Button onClick={next} className="flex-1 gap-2">Continue <ChevronRight className="w-4 h-4" /></Button>
+                </div>
+                <button onClick={next} className="text-xs text-muted-foreground hover:text-foreground text-center transition-colors">
+                  I&apos;ll add them later
+                </button>
+              </>
             )}
-            {completedCodes.length > 0 && (
-              <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-2.5">
-                <span>{completedCodes.length} courses selected</span>
-              </div>
-            )}
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={back} className="gap-1"><ChevronLeft className="w-4 h-4" /> Back</Button>
-              <Button onClick={next} className="flex-1 gap-2">Continue <ChevronRight className="w-4 h-4" /></Button>
-            </div>
-            <button onClick={next} className="text-xs text-muted-foreground hover:text-foreground text-center transition-colors">
-              I&apos;ll add them later
-            </button>
           </div>
         )}
 
@@ -347,17 +477,25 @@ export default function OnboardingPage() {
             <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
               <SummaryRow label="Major" value={selectedMajorName} onEdit={() => setStep(0)} />
               <SummaryRow label="Started" value={`${startTerm} ${startYear}`} onEdit={() => setStep(1)} />
-              <SummaryRow label="Graduating" value={`${gradTerm} ${gradYear} · ${semestersAway} semesters away`} onEdit={() => setStep(1)} />
+              <SummaryRow
+                label="Graduating"
+                value={`${gradTerm} ${gradYear} · ${semestersAwayLabel}`}
+                onEdit={() => setStep(1)}
+              />
               <SummaryRow
                 label="Completed courses"
-                value={`${completedCodes.length} courses marked`}
+                value={
+                  completedCodes.length === 0
+                    ? "None added"
+                    : `${completedCodes.length} courses${transcriptGpa !== null ? ` · GPA ${transcriptGpa.toFixed(2)} (from transcript)` : ""}`
+                }
                 onEdit={() => setStep(2)}
               />
             </div>
             <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4">
               <p className="text-xs text-muted-foreground mb-1">At your current pace</p>
               <p className="text-sm font-semibold text-foreground">
-                You&apos;ll graduate {gradTerm} {gradYear} — {semestersAway} semesters from now.
+                You&apos;ll graduate {gradTerm} {gradYear} — {semestersAwayLabel} ({totalSemesters} semesters total from {startTerm} {startYear}).
               </p>
             </div>
             <div className="flex gap-3">

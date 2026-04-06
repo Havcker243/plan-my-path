@@ -2,23 +2,28 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowRight,
   BookOpen,
   Calendar,
   Map,
-  ChevronRight,
+  Upload,
+  X,
+  CheckCircle2,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayName } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import { useAuth } from "@/contexts/auth-context";
 import {
   getCompletedCredits,
   getTotalCredits,
-  LABEL_META,
   type Semester,
 } from "@/lib/data";
+import { motion, AnimatePresence } from "framer-motion";
+import TranscriptUpload, { type TranscriptResult } from "@/components/transcript-upload";
+import { toast } from "sonner";
+import type { OnboardingCourse } from "@/contexts/plan-context";
 
 const DEGREE_CREDITS = 120;
 
@@ -45,12 +50,37 @@ function CircleProgress({ pct, size = 80, stroke = 7, color = "stroke-primary" }
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { profile, semesters, planCatalog, majors, loading } = usePlan();
+  const { profile, semesters, planCatalog, majors, loading, importTranscript } = usePlan();
+  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
 
-  const firstName = (profile?.name ?? user?.email ?? "there").split(" ")[0];
+  const handleTranscriptImport = async (result: TranscriptResult) => {
+    const courses: OnboardingCourse[] = result.courses.map((c) => ({
+      code: c.code,
+      grade: c.grade,
+      term: c.term,
+      year: c.year,
+    }));
+    try {
+      const { added, skipped } = await importTranscript(courses, result.gpa);
+      setShowTranscriptModal(false);
+      toast.success(
+        `Transcript imported — ${added} course${added !== 1 ? "s" : ""} added${skipped > 0 ? `, ${skipped} already in plan` : ""}${result.gpa !== null ? `, GPA updated to ${result.gpa.toFixed(2)}` : ""}`
+      );
+    } catch {
+      toast.error("Failed to import transcript");
+    }
+  };
+
+  const displayNameSource =
+    profile?.name?.trim() ||
+    (user?.user_metadata?.full_name as string | undefined)?.trim() ||
+    "";
+  const firstName = displayNameSource ? displayNameSource.split(/\s+/)[0] : "there";
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const completedCredits = getCompletedCredits(semesters, planCatalog);
-  // Planned = courses explicitly in "planned" status (not completed, not failed)
   const plannedCredits = semesters
     .flatMap((s) => s.courseIds)
     .reduce((acc, id) => {
@@ -60,12 +90,6 @@ export default function DashboardPage() {
   const remainingCredits = Math.max(0, DEGREE_CREDITS - completedCredits - plannedCredits);
   const creditPct = Math.round((completedCredits / DEGREE_CREDITS) * 100);
 
-  const semestersRemaining = semesters.filter((s) => !s.isPast).length;
-  const avgCreditsNeeded = semestersRemaining > 0
-    ? Math.ceil((DEGREE_CREDITS - completedCredits) / semestersRemaining)
-    : 0;
-
-  // Derive required courses from semester membership, not Object.values(planCatalog)
   const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
   const requiredCourses = [...planCodes]
     .map((id) => planCatalog[id])
@@ -74,8 +98,11 @@ export default function DashboardPage() {
 
   const gpa = profile?.gpa ?? null;
 
-  const majorName = majors.find((m) => m.code === profile?.major_code)?.name
-    ?? profile?.major_code ?? null;
+  const majorName = formatDisplayName(
+    majors.find((m) => m.code === profile?.major_code)?.name
+    ?? profile?.major_code
+    ?? null
+  );
 
   const gradText =
     profile?.graduation_term && profile?.graduation_year
@@ -84,6 +111,36 @@ export default function DashboardPage() {
 
   const currentSem = semesters.find((s) => s.isCurrent);
   const nextSem = semesters.find((s) => !s.isPast && !s.isCurrent);
+
+  // Distance from current semester to graduation semester (0 = this semester, negative = already passed)
+  const gradSemIdx = profile?.graduation_term && profile?.graduation_year
+    ? semesters.findIndex(
+        (s) =>
+          s.term.toLowerCase() === profile.graduation_term!.toLowerCase() &&
+          s.year === profile.graduation_year
+      )
+    : -1;
+  const currentSemIdx = semesters.findIndex((s) => s.isCurrent);
+  const semestersToGrad =
+    gradSemIdx !== -1 && currentSemIdx !== -1 ? gradSemIdx - currentSemIdx : null;
+
+  // For avg credits: count semesters from current through graduation (inclusive)
+  const semestersRemaining =
+    semestersToGrad !== null && semestersToGrad >= 0
+      ? semestersToGrad + 1
+      : semesters.filter((s) => !s.isPast).length;
+
+  const avgCreditsNeeded = semestersRemaining > 0
+    ? Math.ceil((DEGREE_CREDITS - completedCredits) / semestersRemaining)
+    : 0;
+
+  const gradSubtitle = (() => {
+    if (!gradText) return "Complete your profile to see graduation info.";
+    if (semestersToGrad === null) return `Graduating ${gradText}.`;
+    if (semestersToGrad < 0) return `You graduated ${gradText}.`;
+    if (semestersToGrad === 0) return <>You&apos;re graduating this semester — <span className="font-semibold text-foreground">{gradText}</span>.</>;
+    return <>On track to graduate <span className="font-semibold text-foreground">{gradText}</span> — {semestersToGrad} semester{semestersToGrad !== 1 ? "s" : ""} away.</>;
+  })();
 
   if (loading) {
     return (
@@ -104,12 +161,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Good afternoon, {firstName}</h1>
+          <h1 className="text-xl font-bold text-foreground">{greeting}, {firstName}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {gradText
-              ? <>At your current pace, you&apos;ll graduate <span className="font-semibold text-foreground">{gradText}</span> — {semestersRemaining} semesters away.</>
-              : "Complete your profile to see graduation info."
-            }
+            {gradSubtitle}
           </p>
         </div>
         <Link href="/planner">
@@ -120,7 +174,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Credits Breakdown */}
-      <div className="rounded-xl border border-border bg-card p-5 mb-6">
+      <motion.div
+        className="rounded-xl border border-border bg-card p-5 mb-6"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex items-center gap-5">
             <div className="relative flex-shrink-0">
@@ -163,47 +222,74 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground mb-1">Semesters Left</p>
-          <p className="text-2xl font-bold text-foreground">{semestersRemaining}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground mb-1">Avg Cr/Semester</p>
-          <p className="text-2xl font-bold text-foreground">{avgCreditsNeeded}</p>
-          <p className="text-[10px] text-muted-foreground">to graduate on time</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground mb-1">Required Courses</p>
-          <p className="text-2xl font-bold text-foreground">
-            {completedRequired}/{requiredCourses.length || "—"}
-          </p>
-          <p className="text-[10px] text-muted-foreground">completed</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground mb-1">GPA</p>
-          {gpa !== null ? (
-            <>
-              <p className="text-2xl font-bold text-green-600">{gpa.toFixed(2)}</p>
-              <p className="text-[10px] text-green-600">{gpa >= 3.0 ? "Above 3.0" : "Below 3.0"}</p>
-            </>
-          ) : (
-            <p className="text-2xl font-bold text-muted-foreground">—</p>
-          )}
-        </div>
+        {[
+          {
+            label: "Semesters Left",
+            value: semestersToGrad !== null && semestersToGrad >= 0 ? semestersToGrad : "—",
+            sub: semestersToGrad === 0 ? "Graduating this semester" : null,
+          },
+          {
+            label: "Avg Cr/Semester",
+            value: avgCreditsNeeded,
+            sub: "to graduate on time",
+          },
+          {
+            label: "Required Courses",
+            value: `${completedRequired}/${requiredCourses.length || "—"}`,
+            sub: "completed",
+          },
+          {
+            label: "GPA",
+            value: gpa !== null ? gpa.toFixed(2) : "—",
+            sub: gpa !== null ? (gpa >= 3.0 ? "Above 3.0" : "Below 3.0") : null,
+            valueColor: gpa !== null ? "text-green-600" : "text-muted-foreground",
+            subColor: gpa !== null ? "text-green-600" : undefined,
+          },
+        ].map((card, index) => (
+          <motion.div
+            key={card.label}
+            className="rounded-xl border border-border bg-card p-4"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.08 }}
+          >
+            <p className="text-xs text-muted-foreground mb-1">{card.label}</p>
+            <p className={cn("text-2xl font-bold", (card as { valueColor?: string }).valueColor ?? "text-foreground")}>
+              {card.value}
+            </p>
+            {card.sub && (
+              <p className={cn("text-[10px]", (card as { subColor?: string }).subColor ?? "text-muted-foreground")}>
+                {card.sub}
+              </p>
+            )}
+          </motion.div>
+        ))}
       </div>
 
       {/* Current + Next semester */}
       {(currentSem || nextSem) && (
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           {currentSem && (
-            <SemesterPreviewCard label="Current Semester" sem={currentSem} planCatalog={planCatalog} isCurrent />
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0 }}
+            >
+              <SemesterPreviewCard label="Current Semester" sem={currentSem} planCatalog={planCatalog} isCurrent />
+            </motion.div>
           )}
           {nextSem && (
-            <SemesterPreviewCard label="Next Semester" sem={nextSem} planCatalog={planCatalog} isCurrent={false} />
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+            >
+              <SemesterPreviewCard label="Next Semester" sem={nextSem} planCatalog={planCatalog} isCurrent={false} />
+            </motion.div>
           )}
         </div>
       )}
@@ -218,7 +304,7 @@ export default function DashboardPage() {
       )}
 
       {/* Quick nav */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { href: "/planner", label: "Open Planner", desc: "Drag & arrange courses", icon: Map, primary: true },
           { href: "/courses", label: "Browse Courses", desc: "Find your next class", icon: BookOpen, primary: false },
@@ -239,7 +325,57 @@ export default function DashboardPage() {
             </div>
           </Link>
         ))}
+        <button
+          onClick={() => setShowTranscriptModal(true)}
+          className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:border-primary/30 transition-colors text-left"
+        >
+          <Upload className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Import Transcript</p>
+            <p className="text-xs text-muted-foreground">Auto-fill completed courses</p>
+          </div>
+        </button>
       </div>
+
+      {/* Transcript import modal */}
+      <AnimatePresence>
+        {showTranscriptModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowTranscriptModal(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2 }}
+              className="bg-background border border-border rounded-2xl shadow-xl w-full max-w-lg p-6"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Import Transcript</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Upload your PDF — courses will be added to their exact semesters with grades
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowTranscriptModal(false)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+              <TranscriptUpload
+                onResult={handleTranscriptImport}
+                onCancel={() => setShowTranscriptModal(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

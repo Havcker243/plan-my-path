@@ -4,7 +4,11 @@ import { useState, useRef, useCallback } from "react";
 import { Upload, FileText, CheckCircle2, Circle, Loader2, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { parseTranscriptPDF, type ParsedTranscriptCourse } from "@/lib/api";
+import {
+  fetchCoursesBySubject,
+  parseTranscriptPDF,
+  type ParsedTranscriptCourse,
+} from "@/lib/api";
 
 export interface TranscriptResult {
   courses: ParsedTranscriptCourse[];
@@ -13,31 +17,49 @@ export interface TranscriptResult {
 }
 
 interface Props {
-  onResult: (result: TranscriptResult) => void;
+  onResult: (result: TranscriptResult) => void | Promise<void>;
   onCancel: () => void;
 }
 
 type State =
   | { phase: "idle" }
   | { phase: "parsing" }
-  | { phase: "review"; raw: TranscriptResult; selected: Set<string> }
+  | { phase: "review"; raw: TranscriptResult; selected: Set<string>; unmatchedRowIds: Set<string> }
   | { phase: "error"; message: string };
 
 const GRADE_COLOR: Record<string, string> = {
   "A+": "text-green-600", A: "text-green-600", "A-": "text-green-600",
-  "B+": "text-blue-600",  B: "text-blue-600",  "B-": "text-blue-600",
+  "B+": "text-blue-600", B: "text-blue-600", "B-": "text-blue-600",
   "C+": "text-yellow-600", C: "text-yellow-600", "C-": "text-yellow-600",
   "D+": "text-orange-500", D: "text-orange-500", "D-": "text-orange-500",
   F: "text-red-600",
 };
 
-function termKey(c: ParsedTranscriptCourse) {
-  return `${c.year}-${c.term}`;
+function termKey(course: ParsedTranscriptCourse) {
+  return course.sourceType === "transfer"
+    ? "transfer"
+    : `${course.year ?? "unknown"}-${course.term ?? "unknown"}`;
+}
+
+function groupLabel(course: ParsedTranscriptCourse) {
+  if (course.sourceType === "transfer") return "Transfer Credits";
+  if (course.term && course.year) return `${course.term} ${course.year}`;
+  return "Unsorted Courses";
+}
+
+function parseSubject(code: string) {
+  const match = code.match(/^([A-Za-z]{2,6})[- ]?/);
+  return match?.[1]?.toUpperCase() ?? null;
+}
+
+function normalizeCode(code: string) {
+  return code.replace(/-/g, " ").replace(/\s+/g, " ").trim().toUpperCase();
 }
 
 export default function TranscriptUpload({ onResult, onCancel }: Props) {
   const [state, setState] = useState<State>({ phase: "idle" });
   const [dragging, setDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(async (file: File) => {
@@ -45,20 +67,51 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
       setState({ phase: "error", message: "Please upload a PDF file." });
       return;
     }
+
     setState({ phase: "parsing" });
+
     try {
       const parsed = await parseTranscriptPDF(file);
       if (parsed.courses.length === 0) {
         setState({
           phase: "error",
-          message: "No completed courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.",
+          message: "No courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.",
         });
         return;
       }
+
+      const unmatchedRowIds = new Set<string>();
+      const subjectCache = new Map<string, Set<string>>();
+
+      await Promise.allSettled(
+        parsed.courses.map(async (course) => {
+          if (course.sourceType === "transfer") return;
+
+          const subject = parseSubject(course.code);
+          if (!subject) {
+            unmatchedRowIds.add(course.rowId);
+            return;
+          }
+
+          if (!subjectCache.has(subject)) {
+            const subjectCourses = await fetchCoursesBySubject(subject);
+            subjectCache.set(
+              subject,
+              new Set(subjectCourses.map((entry) => normalizeCode(entry.code)))
+            );
+          }
+
+          if (!subjectCache.get(subject)?.has(normalizeCode(course.code))) {
+            unmatchedRowIds.add(course.rowId);
+          }
+        })
+      );
+
       setState({
         phase: "review",
         raw: { courses: parsed.courses, gpa: parsed.gpa, studentName: parsed.student_name },
-        selected: new Set(parsed.courses.map((c) => c.code)),
+        selected: new Set(parsed.courses.map((course) => course.rowId)),
+        unmatchedRowIds,
       });
     } catch (err) {
       setState({
@@ -69,57 +122,64 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
   }, []);
 
   const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
+    (event: React.DragEvent) => {
+      event.preventDefault();
       setDragging(false);
-      const file = e.dataTransfer.files[0];
+      const file = event.dataTransfer.files[0];
       if (file) handleFile(file);
     },
     [handleFile]
   );
 
-  const toggleCourse = (code: string) => {
+  const toggleCourse = (rowId: string) => {
     if (state.phase !== "review") return;
+
     setState((prev) => {
       if (prev.phase !== "review") return prev;
       const next = new Set(prev.selected);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
       return { ...prev, selected: next };
     });
   };
 
   const toggleAll = (select: boolean) => {
     if (state.phase !== "review") return;
+
     setState((prev) => {
       if (prev.phase !== "review") return prev;
       return {
         ...prev,
-        selected: select ? new Set(prev.raw.courses.map((c) => c.code)) : new Set(),
+        selected: select ? new Set(prev.raw.courses.map((course) => course.rowId)) : new Set(),
       };
     });
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (state.phase !== "review") return;
-    const selectedCourses = state.raw.courses.filter((c) => state.selected.has(c.code));
-    onResult({ courses: selectedCourses, gpa: state.raw.gpa, studentName: state.raw.studentName });
+    const selectedCourses = state.raw.courses.filter((course) => state.selected.has(course.rowId));
+    setSubmitting(true);
+    try {
+      await Promise.resolve(
+        onResult({ courses: selectedCourses, gpa: state.raw.gpa, studentName: state.raw.studentName })
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // ── Group courses by term for display ──────────────────────────────────────
   const groupedCourses =
     state.phase === "review"
-      ? state.raw.courses.reduce<Record<string, ParsedTranscriptCourse[]>>((acc, c) => {
-          const key = termKey(c);
+      ? state.raw.courses.reduce<Record<string, ParsedTranscriptCourse[]>>((acc, course) => {
+          const key = termKey(course);
           if (!acc[key]) acc[key] = [];
-          acc[key].push(c);
+          acc[key].push(course);
           return acc;
         }, {})
       : {};
 
   const termKeys = Object.keys(groupedCourses);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   if (state.phase === "idle" || state.phase === "error") {
     return (
       <div className="flex flex-col gap-4">
@@ -129,7 +189,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
             dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"
           )}
           onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
         >
@@ -137,11 +197,9 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
             <Upload className="w-5 h-5 text-primary" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">
-              Drop your transcript PDF here
-            </p>
+            <p className="text-sm font-medium text-foreground">Drop your transcript PDF here</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              or click to browse — unofficial transcripts work fine
+              or click to browse. Unofficial transcripts work fine.
             </p>
           </div>
           <input
@@ -149,7 +207,10 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
             type="file"
             accept="application/pdf"
             className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) handleFile(file);
+            }}
           />
         </div>
 
@@ -161,7 +222,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         )}
 
         <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          Your transcript is processed securely and never stored — it&apos;s only used to pre-fill your completed courses.
+          Your transcript is processed securely and never stored. It is only used to pre-fill your completed and in-progress courses.
         </p>
 
         <button
@@ -180,29 +241,35 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <div className="text-center">
           <p className="text-sm font-medium text-foreground">Reading your transcript…</p>
-          <p className="text-xs text-muted-foreground mt-1">Extracting courses and grades</p>
+          <p className="text-xs text-muted-foreground mt-1">Extracting courses, terms, and grades</p>
         </div>
       </div>
     );
   }
 
-  // Review phase
-  const { raw, selected } = state;
+  const { raw, selected, unmatchedRowIds } = state;
   const allSelected = selected.size === raw.courses.length;
   const totalCredits = raw.courses
-    .filter((c) => selected.has(c.code))
-    .reduce((sum, c) => sum + c.credits, 0);
+    .filter((course) => selected.has(course.rowId))
+    .reduce((sum, course) => sum + (course.credits ?? 0), 0);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Summary bar */}
+      {submitting && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 flex items-center gap-3">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">Adding courses to your plan</p>
+            <p className="text-xs text-muted-foreground">Stay on this popup while the planner is being updated.</p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <FileText className="w-4 h-4 text-primary flex-shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-foreground">
-              {raw.courses.length} completed courses found
-            </p>
+            <p className="text-sm font-semibold text-foreground">{raw.courses.length} transcript rows found</p>
             <p className="text-xs text-muted-foreground">
               {selected.size} selected · {totalCredits} credits
               {raw.gpa !== null && <> · GPA <span className="font-semibold text-foreground">{raw.gpa.toFixed(3)}</span></>}
@@ -217,23 +284,33 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         </button>
       </div>
 
-      {/* Course list grouped by term */}
+      {unmatchedRowIds.size > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">
+            {unmatchedRowIds.size} course{unmatchedRowIds.size !== 1 ? "s" : ""} need verification
+          </p>
+          <p className="text-xs text-amber-800 mt-1">
+            Only rows that could not be matched to an exact catalog code are flagged. In-progress rows are not flagged just because they have no grade.
+          </p>
+        </div>
+      )}
+
       <div className="max-h-80 overflow-y-auto rounded-xl border border-border divide-y divide-border">
         {termKeys.map((key) => {
-          const [year, term] = key.split("-");
+          const firstCourse = groupedCourses[key][0];
           return (
             <div key={key}>
               <div className="px-4 py-2 bg-muted/40 sticky top-0">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {term} {year}
+                  {groupLabel(firstCourse)}
                 </p>
               </div>
               {groupedCourses[key].map((course) => {
-                const isSelected = selected.has(course.code);
+                const isSelected = selected.has(course.rowId);
                 return (
                   <button
-                    key={course.code}
-                    onClick={() => toggleCourse(course.code)}
+                    key={course.rowId}
+                    onClick={() => toggleCourse(course.rowId)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors",
                       isSelected && "bg-green-50/60"
@@ -247,12 +324,32 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm font-semibold text-foreground">{course.code}</span>
                         <span className="text-xs text-muted-foreground truncate">{course.title}</span>
+                        {course.status === "planned" && (
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                            In progress
+                          </span>
+                        )}
+                        {unmatchedRowIds.has(course.rowId) && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                            Verify
+                          </span>
+                        )}
                       </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        {course.sourceType === "transfer"
+                          ? "Transfer credit"
+                          : course.term && course.year
+                          ? `${course.term} ${course.year}`
+                          : "Unsorted course"}
+                        {course.status === "planned" && " · no final grade yet"}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-muted-foreground font-mono">{course.credits}cr</span>
-                      <span className={cn("text-sm font-bold", GRADE_COLOR[course.grade] ?? "text-foreground")}>
-                        {course.grade}
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {course.credits != null ? `${course.credits}cr` : "TBD"}
+                      </span>
+                      <span className={cn("text-sm font-bold", course.grade ? (GRADE_COLOR[course.grade] ?? "text-foreground") : "text-blue-700")}>
+                        {course.grade ?? (course.status === "planned" ? "IP" : "TR")}
                       </span>
                     </div>
                   </button>
@@ -264,10 +361,9 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
-        Uncheck any courses you&apos;d like to remove. You can always edit them later.
+        Review by row, not just by course code. Repeated transfer or elective rows stay separate.
       </p>
 
-      {/* Actions */}
       <div className="flex gap-3">
         <Button
           variant="outline"
@@ -279,12 +375,12 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         </Button>
         <Button
           onClick={confirm}
-          disabled={selected.size === 0}
+          disabled={selected.size === 0 || submitting}
           className="flex-1 gap-2"
         >
-          <CheckCircle2 className="w-4 h-4" />
-          Use {selected.size} course{selected.size !== 1 ? "s" : ""}
-          {raw.gpa !== null && <> + GPA {raw.gpa.toFixed(2)}</>}
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+          {submitting ? "Adding courses…" : `Use ${selected.size} row${selected.size !== 1 ? "s" : ""}`}
+          {!submitting && raw.gpa !== null && <> + GPA {raw.gpa.toFixed(2)}</>}
         </Button>
       </div>
     </div>

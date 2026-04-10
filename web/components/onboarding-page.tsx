@@ -133,7 +133,7 @@ export default function OnboardingPage() {
   const toggleCourse = (code: string, course?: Course) => {
     setCompletedCourses((prev) => {
       if (prev.some((c) => c.code === code)) return prev.filter((c) => c.code !== code);
-      return [...prev, { code, grade: null, term: null, year: null }];
+      return [...prev, { code, status: "completed", grade: null, term: null, year: null }];
     });
   };
 
@@ -145,9 +145,12 @@ export default function OnboardingPage() {
     setCompletedCourses(
       result.courses.map((c) => ({
         code: c.code,
+        status: c.status,
         grade: c.grade,
         term: c.term,
         year: c.year,
+        title: c.title,
+        credits: c.credits ?? undefined,
       }))
     );
     if (result.gpa !== null) setTranscriptGpa(result.gpa);
@@ -495,7 +498,7 @@ export default function OnboardingPage() {
             <div className="rounded-xl bg-primary/5 border border-primary/20 px-5 py-4">
               <p className="text-xs text-muted-foreground mb-1">At your current pace</p>
               <p className="text-sm font-semibold text-foreground">
-                You&apos;ll graduate {gradTerm} {gradYear} — {semestersAwayLabel} ({totalSemesters} semesters total from {startTerm} {startYear}).
+                You&apos;ll graduate {gradTerm} {gradYear} · {semestersAwayLabel} ({totalSemesters} semesters total from {startTerm} {startYear}).
               </p>
             </div>
             <div className="flex gap-3">

@@ -1,22 +1,26 @@
-# Course scraper schedule (Central Time - America/Chicago)
+# Course scraper + requirements seeder schedule (Central Time - America/Chicago)
 # Runs 4 times each registration window, every year.
 #
 # Spring window: Jan 9, 11, 13, 15 at 02:30
 # Fall window:   Aug 12, 15, 19, 23 at 02:30
 #
-# Example command assumes:
+# Assumes:
 # - repo located at /opt/plan-my-path
-# - Python available at /usr/bin/python3
-# - multiple subjects defined in scripts/courses.txt
+# - Python venv at /opt/plan-my-path/Backend/.venv
+# - .env at /opt/plan-my-path/Backend/.env
 #
-# Update paths as needed.
+# Each run: syncs courses from parse.bot, then re-seeds degree requirements.
 #
 # Minute Hour Day Month DayOfWeek Command
-30 2 9 1 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 11 1 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 13 1 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 15 1 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 12 8 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 15 8 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 19 8 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
-30 2 23 8 * /usr/bin/python3 /opt/plan-my-path/scripts/run_scrape.py --courses-file /opt/plan-my-path/scripts/courses.txt --payload /opt/plan-my-path/payload.json --out-dir /opt/plan-my-path/data --clean --format txt --with-sections
+
+# Spring registration window
+30 2 9  1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 11 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 13 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 15 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+
+# Fall registration window
+30 2 12 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 15 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 19 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 23 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py

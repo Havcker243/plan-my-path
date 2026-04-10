@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -17,11 +17,16 @@ import {
   CheckCircle,
   ClipboardList,
   LogOut,
+  AlertTriangle,
+  Zap,
+  BookMarked,
+  Flame,
 } from "lucide-react";
 import { cn, formatDisplayName } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
+import { getPrereqWarnings, getTotalCredits } from "@/lib/data";
+import CommandSearch from "@/components/command-search";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +34,7 @@ const NAV_ITEMS = [
   { href: "/requirements", label: "Requirements", icon: ClipboardList },
   { href: "/courses", label: "Courses", icon: BookOpen },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/hub", label: "Hub", icon: Flame },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -46,9 +52,53 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, majors, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
+  const { profile, semesters, planCatalog, labels, majors, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const notifPanelRef = useRef<HTMLDivElement>(null);
+
+  // ⌘K / Ctrl+K opens search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        !bellRef.current?.contains(e.target as Node) &&
+        !notifPanelRef.current?.contains(e.target as Node)
+      ) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [notifOpen]);
+
+  // ── Notifications ────────────────────────────────────────────────────────────
+  const prereqWarnings = getPrereqWarnings(semesters, planCatalog);
+
+  const overloadedSemesters = semesters.filter(
+    (s) => !s.isPast && getTotalCredits(s.courseIds, planCatalog) > 18
+  );
+
+  const scheduledCodes = new Set(semesters.flatMap((s) => s.courseIds));
+  const missingRequired = Object.entries(labels)
+    .filter(([code, entry]) => entry.label === "Required" && !scheduledCodes.has(code))
+    .map(([code]) => code);
+
+  const totalNotifs = prereqWarnings.length + overloadedSemesters.length + missingRequired.length;
 
   // Wait for auth AND for at least one full plan-fetch cycle to complete.
   // Without `initialized`, there's a window after auth resolves where planLoading
@@ -225,21 +275,103 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Global search */}
           <div className="flex-1 max-w-sm">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md border border-border text-sm text-muted-foreground cursor-pointer hover:border-primary/30 transition-colors">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md border border-border text-sm text-muted-foreground cursor-pointer hover:border-primary/30 transition-colors"
+            >
               <Search className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="text-xs">Search courses, requirements…</span>
               <span className="ml-auto text-xs font-mono bg-background border border-border px-1 rounded text-muted-foreground">⌘K</span>
-            </div>
+            </button>
           </div>
 
           {/* Right: Bell + Avatar */}
           <div className="flex items-center gap-2 ml-4">
-            <button
-              className="relative p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
-              onClick={() => setNotifOpen((v) => !v)}
-            >
-              <Bell className="w-4.5 h-4.5" />
-            </button>
+            <div className="relative">
+              <button
+                ref={bellRef}
+                className="relative p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
+                onClick={() => setNotifOpen((v) => !v)}
+              >
+                <Bell className="w-4 h-4" />
+                {totalNotifs > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                )}
+              </button>
+
+              {/* Notification panel */}
+              {notifOpen && (
+                <div
+                  ref={notifPanelRef}
+                  className="absolute right-0 top-full mt-2 w-80 bg-background border border-border rounded-xl shadow-xl z-50 overflow-hidden"
+                >
+                  <div className="px-4 py-3 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground">Notifications</p>
+                    {totalNotifs === 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">You&apos;re all clear.</p>
+                    )}
+                  </div>
+
+                  {totalNotifs > 0 ? (
+                    <div className="max-h-72 overflow-y-auto divide-y divide-border">
+                      {overloadedSemesters.map((s) => (
+                        <div key={s.id} className="flex gap-3 px-4 py-3 items-start">
+                          <Zap className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">
+                              {s.term} {s.year} is overloaded
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {getTotalCredits(s.courseIds, planCatalog)} credits — aim for 12–18
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {prereqWarnings.map((w, i) => (
+                        <div key={i} className="flex gap-3 px-4 py-3 items-start">
+                          <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">
+                              Prerequisite issue: {w.courseId}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {w.prereqId} must be taken before {w.courseId}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {missingRequired.slice(0, 5).map((code) => (
+                        <div key={code} className="flex gap-3 px-4 py-3 items-start">
+                          <BookMarked className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">
+                              {code} not in plan
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Required for your major
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {missingRequired.length > 5 && (
+                        <div className="px-4 py-2 text-[11px] text-muted-foreground">
+                          +{missingRequired.length - 5} more missing required courses
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-6 flex flex-col items-center gap-2">
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                      <p className="text-xs text-muted-foreground text-center">
+                        No warnings. Your plan looks good.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Avatar */}
             <Link href="/profile">
@@ -255,6 +387,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* ── Command search ── */}
+      <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* ── Mobile bottom nav ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden bg-sidebar border-t border-sidebar-border">

@@ -3,18 +3,24 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, X, Check, AlertTriangle, Info, GripVertical,
-  CheckCircle, Clock, Loader2,
+  Plus, X, Check, AlertTriangle, GripVertical,
+  CheckCircle, Clock, Loader2, GraduationCap, ArrowRight, ListChecks,
 } from "lucide-react";
+import Link from "next/link";
+import CourseReviews from "@/components/course-reviews";
 import { cn, formatDisplayName } from "@/lib/utils";
 import {
   getTotalCredits,
   getPrereqWarnings,
   getSemesterCreditLoad,
+  getSemesterGpa,
+  compareSemesters,
+  markCurrentSemester,
   LABEL_META,
   type Course,
   type Semester,
   type RequirementLabel,
+  type SemesterTerm,
 } from "@/lib/data";
 import {
   AlertDialog,
@@ -41,7 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePlan } from "@/contexts/plan-context";
-import { fetchSections, type BackendSection } from "@/lib/api";
+import type { BackendSection } from "@/lib/api";
 import { toast } from "sonner";
 
 const LABEL_DOT: Record<RequirementLabel, string> = {
@@ -64,10 +70,141 @@ const STATUS_COLORS = {
   failed: "bg-red-50 border-red-200",
 };
 
-const TERM_ABBR = (term: string) => term.substring(0, 2);
+function formatSectionDate(value: string | null): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatSectionTime(value: string | null): string | null {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return value;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return value;
+  const meridiem = match[3]?.toUpperCase();
+  if (meridiem) {
+    if (hours < 1 || hours > 12) return value;
+    if (meridiem === "AM") hours = hours === 12 ? 0 : hours;
+    if (meridiem === "PM") hours = hours === 12 ? 12 : hours + 12;
+  }
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function formatMeetingTime(days: string | null, start: string | null, end: string | null): string {
+  const dayText = days?.trim() || "Days TBA";
+  const startText = formatSectionTime(start);
+  const endText = formatSectionTime(end);
+  if (startText && endText) return `${dayText} • ${startText} - ${endText}`;
+  return dayText;
+}
+
+function formatSeatSummary(section: BackendSection): string | null {
+  const available = section.seats?.available;
+  const capacity = section.seats?.capacity;
+  if (!Number.isFinite(available) || !Number.isFinite(capacity)) return null;
+  return `${available}/${capacity} seats open`;
+}
+
+function getInstructorNames(section: BackendSection): string {
+  const names = (section.instructors ?? [])
+    .map((instructor) => instructor.name?.trim())
+    .filter(Boolean);
+  return names.length > 0 ? names.join(", ") : "Instructor TBA";
+}
+
+function SectionOptionCard({
+  section,
+  selected,
+  onClick,
+}: {
+  section: BackendSection;
+  selected: boolean;
+  onClick?: () => void;
+}) {
+  const meetingSummary =
+    section.meeting_times
+      ?.map((meeting) =>
+        formatMeetingTime(meeting.days, meeting.start_time, meeting.end_time)
+      )
+      .filter(Boolean) ?? [];
+  const locationSummary =
+    section.meeting_times
+      ?.map((meeting) => {
+        const parts = [meeting.location, meeting.building, meeting.room]
+          .map((value) => value?.trim())
+          .filter(Boolean);
+        return parts.length > 0 ? parts.join(" • ") : null;
+      })
+      .filter((value): value is string => Boolean(value)) ?? [];
+  const dateStart = formatSectionDate(section.start_date);
+  const dateEnd = formatSectionDate(section.end_date);
+  const dateSummary = dateStart && dateEnd ? `${dateStart} - ${dateEnd}` : dateStart ?? dateEnd;
+  const seatSummary = formatSeatSummary(section);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-lg border p-3 text-left transition-colors",
+        onClick && "hover:border-primary/40 hover:bg-muted/40",
+        selected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{section.section_code}</p>
+          <p className="text-xs text-muted-foreground">{getInstructorNames(section)}</p>
+        </div>
+        {selected && (
+          <span className="text-[10px] font-medium rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+            Selected
+          </span>
+        )}
+      </div>
+      <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+        {meetingSummary.length > 0 ? (
+          meetingSummary.map((line) => (
+            <p key={`${section.id}-${line}`}>{line}</p>
+          ))
+        ) : (
+          <p>Meeting time TBA</p>
+        )}
+        {locationSummary.slice(0, 2).map((line) => (
+          <p key={`${section.id}-loc-${line}`}>{line}</p>
+        ))}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {section.modality && (
+            <span className="rounded-full bg-muted px-2 py-0.5">{section.modality}</span>
+          )}
+          {section.campus && (
+            <span className="rounded-full bg-muted px-2 py-0.5">{section.campus}</span>
+          )}
+          {seatSummary && (
+            <span className="rounded-full bg-muted px-2 py-0.5">{seatSummary}</span>
+          )}
+        </div>
+        {dateSummary && <p className="pt-1">{dateSummary}</p>}
+      </div>
+    </button>
+  );
+}
 
 type DragState = { courseId: string; fromSemId: string } | null;
-type ConfirmAction = { type: "delete-semester" | "delete-course"; semId: string; courseId?: string } | null;
+type ConfirmAction =
+  | { type: "delete-semester"; semId: string }
+  | { type: "delete-course"; semId: string; courseId: string }
+  | { type: "clear-plan" }
+  | null;
 
 export default function PlannerPage() {
   const {
@@ -78,9 +215,13 @@ export default function PlannerPage() {
     addCourseToSemester,
     savePlan,
     searchCoursesCatalog,
+    loadSectionsForCourses,
     profile,
     loading,
     updateCourse,
+    clearPlan,
+    degreeCreditTotal,
+    labels,
   } = usePlan();
 
   const [drag, setDrag] = useState<DragState>(null);
@@ -95,18 +236,23 @@ export default function PlannerPage() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [selectedCourseSections, setSelectedCourseSections] = useState<BackendSection[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [sectionDraftId, setSectionDraftId] = useState<string>("__none__");
+  const [savingSectionSelection, setSavingSectionSelection] = useState(false);
   const [pendingCourse, setPendingCourse] = useState<Course | null>(null);
   const [pendingSemesterId, setPendingSemesterId] = useState<string | null>(null);
   const [pendingSections, setPendingSections] = useState<BackendSection[]>([]);
   const [pendingSectionId, setPendingSectionId] = useState<string>("__none__");
   const [pendingSectionsLoading, setPendingSectionsLoading] = useState(false);
+  const [semesterDialogOpen, setSemesterDialogOpen] = useState(false);
+  const [reqModalOpen, setReqModalOpen] = useState(false);
+  const [reqModalSemId, setReqModalSemId] = useState<string>("");
+  const [newSemesterTerm, setNewSemesterTerm] = useState<SemesterTerm>("Fall");
+  const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Always hold the latest savePlan reference so the debounced timer
   // never closes over a stale version of it.
   const savePlanRef = useRef(savePlan);
   useEffect(() => { savePlanRef.current = savePlan; }, [savePlan]);
-
-  const allUsed = new Set(semesters.flatMap((s) => s.courseIds));
 
   // Search for courses to add
   useEffect(() => {
@@ -149,28 +295,66 @@ export default function PlannerPage() {
 
   const warnings = getPrereqWarnings(semesters, planCatalog);
   const warnSet = new Set(warnings.map((w) => w.courseId));
+  const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
+  const LABEL_KEY: Record<string, RequirementLabel> = {
+    "Required": "required", "Group Choice": "group",
+    "Major Elective": "elective", "General Elective": "general",
+  };
+  const missingRequired = Object.entries(labels)
+    .filter(([code, entry]) =>
+      (entry.label === "Required" || entry.label === "Group Choice") && !planCodes.has(code)
+    )
+    .map(([code, entry]) => ({ code, entry }))
+    .sort((a, b) => a.code.localeCompare(b.code));
   const selectedCourseSemester = selectedCourse
     ? semesters.find((sem) => sem.courseIds.includes(selectedCourse.code))
     : null;
+  const applySemesters = useCallback((nextSemesters: Semester[]) => {
+    const normalized = markCurrentSemester([...nextSemesters].sort(compareSemesters));
+    setSemesters(normalized);
+    return normalized;
+  }, [setSemesters]);
 
   useEffect(() => {
     if (!selectedCourse) {
       setSelectedCourseSections([]);
+      setSectionDraftId("__none__");
       return;
     }
 
     setSectionsLoading(true);
+    setSectionDraftId(selectedCourse.selectedSectionId ?? "__none__");
     const termFilter = selectedCourseSemester
       ? `${selectedCourseSemester.term.toLowerCase()} ${selectedCourseSemester.year}`
       : undefined;
 
-    fetchSections([selectedCourse.code], termFilter)
+    loadSectionsForCourses([selectedCourse.code], termFilter)
       .then((data) => {
         setSelectedCourseSections(data[selectedCourse.code] ?? []);
       })
       .catch(() => setSelectedCourseSections([]))
       .finally(() => setSectionsLoading(false));
-  }, [selectedCourse, selectedCourseSemester]);
+  }, [selectedCourse, selectedCourseSemester, loadSectionsForCourses]);
+
+  const saveSelectedCourseSection = async () => {
+    if (!selectedCourse) return;
+    const nextValue = sectionDraftId === "__none__" ? null : sectionDraftId;
+    if ((selectedCourse.selectedSectionId ?? "__none__") === (nextValue ?? "__none__")) return;
+
+    setSavingSectionSelection(true);
+    try {
+      updateCourse(selectedCourse.code, { selectedSectionId: nextValue });
+      setSelectedCourse((prev) => (
+        prev ? { ...prev, selectedSectionId: nextValue } : prev
+      ));
+      await savePlan();
+      toast.success(nextValue ? "Section saved" : "Section cleared");
+    } catch {
+      toast.error("Failed to save section");
+    } finally {
+      setSavingSectionSelection(false);
+    }
+  };
 
   // ── Drag handlers ──────────────────────────────────────────────────────────
   const handleDragStart = (courseId: string, semId: string) => {
@@ -183,13 +367,13 @@ export default function PlannerPage() {
       return;
     }
     setSemesters((prev) =>
-      prev.map((sem) => {
+      markCurrentSemester(prev.map((sem) => {
         if (sem.id === drag.fromSemId)
           return { ...sem, courseIds: sem.courseIds.filter((id) => id !== drag.courseId) };
         if (sem.id === toSemId)
           return { ...sem, courseIds: [...sem.courseIds, drag.courseId] };
         return sem;
-      })
+      }))
     );
     setDrag(null); setDragOver(null);
     triggerSave();
@@ -207,7 +391,7 @@ export default function PlannerPage() {
     setPendingSectionsLoading(true);
 
     const termFilter = `${semester.term.toLowerCase()} ${semester.year}`;
-    fetchSections([course.code], termFilter)
+    loadSectionsForCourses([course.code], termFilter)
       .then(async (data) => {
         const sections = data[course.code] ?? [];
         setPendingSections(sections);
@@ -266,11 +450,11 @@ export default function PlannerPage() {
     if (confirmAction?.type === "delete-course" && confirmAction.courseId) {
       const removedCode = confirmAction.courseId;
       setSemesters((prev) =>
-        prev.map((sem) =>
+        markCurrentSemester(prev.map((sem) =>
           sem.id === confirmAction.semId
             ? { ...sem, courseIds: sem.courseIds.filter((id) => id !== confirmAction.courseId) }
             : sem
-        )
+        ))
       );
       setConfirmAction(null);
       triggerSave();
@@ -280,25 +464,25 @@ export default function PlannerPage() {
 
   // ── Add/remove semesters ───────────────────────────────────────────────────
   const addSemester = () => {
-    const termCycle: import("@/lib/data").SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
-    const last = semesters[semesters.length - 1];
-    let newTerm: import("@/lib/data").SemesterTerm;
-    let newYear: number;
-    if (!last) {
-      newTerm = "Fall";
-      newYear = new Date().getFullYear();
-    } else {
-      const lastIdx = termCycle.indexOf(last.term);
-      const nextIdx = (lastIdx + 1) % termCycle.length;
-      newTerm = termCycle[nextIdx];
-      // Wrap from Winter(3) to Spring(0) → increment year
-      newYear = nextIdx === 0 ? last.year + 1 : last.year;
+    if (semesters.some((semester) => semester.term === newSemesterTerm && semester.year === newSemesterYear)) {
+      toast.error(`${newSemesterTerm} ${newSemesterYear} already exists in your plan.`);
+      return;
     }
-    setSemesters((prev) => [
-      ...prev,
-      { id: `sem-${Date.now()}`, term: newTerm, year: newYear, courseIds: [], isPast: false, isCurrent: false },
+
+    applySemesters([
+      ...semesters,
+      {
+        id: `sem-${Date.now()}`,
+        term: newSemesterTerm,
+        year: newSemesterYear,
+        courseIds: [],
+        isPast: false,
+        isCurrent: false,
+      },
     ]);
+    setSemesterDialogOpen(false);
     triggerSave();
+    toast.success(`${newSemesterTerm} ${newSemesterYear} added`);
   };
 
   const removeSemester = (semId: string) => {
@@ -308,12 +492,22 @@ export default function PlannerPage() {
   const confirmRemoveSemester = () => {
     if (confirmAction?.type === "delete-semester") {
       const removedSemester = semesters.find((s) => s.id === confirmAction.semId);
-      setSemesters((prev) => prev.filter((s) => s.id !== confirmAction.semId));
+      setSemesters((prev) => markCurrentSemester(prev.filter((s) => s.id !== confirmAction.semId).sort(compareSemesters)));
       setConfirmAction(null);
       triggerSave();
       if (removedSemester) {
         toast.success(`${removedSemester.term} ${removedSemester.year} removed`);
       }
+    }
+  };
+
+  const confirmClearPlan = async () => {
+    try {
+      await clearPlan();
+      setConfirmAction(null);
+      toast.success("Planner cleared");
+    } catch {
+      toast.error("Failed to clear planner");
     }
   };
 
@@ -323,6 +517,14 @@ export default function PlannerPage() {
       const course = planCatalog[id];
       return course?.status === "completed" ? acc + course.credits : acc;
     }, 0);
+  const rawGpa = profile?.gpa;
+  const parsedGpa =
+    rawGpa == null
+      ? null
+      : typeof rawGpa === "number"
+      ? rawGpa
+      : Number(rawGpa);
+  const gpa = parsedGpa != null && Number.isFinite(parsedGpa) ? parsedGpa : null;
 
   const majorName = formatDisplayName(
     majors.find((m) => m.code === profile?.major_code)?.name
@@ -350,8 +552,32 @@ export default function PlannerPage() {
           <p className="text-xs text-muted-foreground">
             {majorName}{gradText ? ` · ${gradText} graduation` : ""}
           </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Duplicate adds are blocked. If a class is already in the planner, it will not be added again.
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          {missingRequired.length > 0 && (
+            <button
+              onClick={() => {
+                setReqModalSemId(semesters.find((s) => s.isCurrent)?.id ?? semesters.find((s) => !s.isPast)?.id ?? "");
+                setReqModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              <ListChecks className="w-3.5 h-3.5" />
+              Missing Reqs
+              <span className="bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                {missingRequired.length}
+              </span>
+            </button>
+          )}
+          <button
+            onClick={() => setConfirmAction({ type: "clear-plan" })}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Clear Everything
+          </button>
           <div className="text-right">
             <span className={cn(
               "text-xs flex items-center gap-1.5 transition-colors",
@@ -371,9 +597,9 @@ export default function PlannerPage() {
             )}
           </div>
           <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
-            <span><span className="font-semibold text-foreground">{totalCompleted}</span> / 120 cr</span>
-            {profile?.gpa && (
-              <span>GPA <span className="font-semibold text-foreground">{profile.gpa.toFixed(2)}</span></span>
+            <span><span className="font-semibold text-foreground">{totalCompleted}</span> / {degreeCreditTotal} cr</span>
+            {gpa !== null && (
+              <span>GPA <span className="font-semibold text-foreground">{gpa.toFixed(2)}</span></span>
             )}
             {warnings.length > 0 && (
               <span className="flex items-center gap-1 text-yellow-600 font-medium">
@@ -390,11 +616,15 @@ export default function PlannerPage() {
           {semesters.map((sem) => {
             const load = getSemesterCreditLoad(sem, planCatalog);
             const semCredits = getTotalCredits(sem.courseIds, planCatalog);
+            const semesterGpa = getSemesterGpa(sem, planCatalog);
+            const columnHeightClass =
+              sem.courseIds.length >= 6 ? "min-h-[420px]" : sem.courseIds.length >= 4 ? "min-h-[340px]" : "min-h-[260px]";
             return (
               <div
                 key={sem.id}
                 className={cn(
-                  "flex flex-col rounded-xl border w-52 flex-shrink-0 overflow-hidden transition-all duration-200 snap-center",
+                  "flex flex-col rounded-xl border w-60 flex-shrink-0 overflow-hidden transition-all duration-200 snap-center",
+                  columnHeightClass,
                   sem.isPast ? "opacity-60 bg-muted/30 border-border" : sem.isCurrent ? "bg-primary/5 border-primary/30" : "bg-background border-border",
                   dragOver === sem.id && "ring-2 ring-primary/60 bg-primary/10 border-primary/50"
                 )}
@@ -404,7 +634,7 @@ export default function PlannerPage() {
               >
                 {/* Column header */}
                 <div className={cn(
-                  "px-3 py-2.5 border-b flex items-center justify-between",
+                  "px-4 py-2 border-b flex items-center justify-between",
                   sem.isPast ? "border-border/50" : sem.isCurrent ? "border-primary/20" : "border-border"
                 )}>
                   <div>
@@ -427,19 +657,21 @@ export default function PlannerPage() {
                         <span className="text-[9px] text-muted-foreground">Completed</span>
                       )}
                     </div>
+                    <div className="mt-1 text-[9px] text-muted-foreground">
+                      {semesterGpa !== null ? `GPA ${semesterGpa.toFixed(2)}` : sem.isPast ? "No GPA yet" : "In progress"}
+                    </div>
                   </div>
-                  {!sem.isPast && (
-                    <button
-                      onClick={() => removeSemester(sem.id)}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => removeSemester(sem.id)}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
+                    aria-label={`Remove ${sem.term} ${sem.year}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
 
                 {/* Course cards */}
-                <div className="flex-1 p-2 flex flex-col gap-1.5 overflow-y-auto min-h-[180px]">
+                <div className="flex-1 p-2.5 flex flex-col gap-1.5 overflow-y-auto min-h-[120px]">
                   {sem.courseIds.length === 0 && (
                     <div className="flex-1 flex items-center justify-center text-center py-6">
                       <p className="text-[10px] text-muted-foreground leading-relaxed">
@@ -461,12 +693,14 @@ export default function PlannerPage() {
                         transition={{ duration: 0.2 }}
                         draggable={!sem.isPast}
                         onDragStart={() => handleDragStart(cid, sem.id)}
+                        onClick={() => course && setSelectedCourse(course)}
                         className={cn(
-                          "border rounded-lg px-2.5 py-2 flex flex-col gap-1 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow group",
+                          "border rounded-lg px-3 py-2 flex flex-col gap-1 cursor-pointer shadow-sm hover:shadow-md transition-shadow group",
                           hasWarn && "border-yellow-300 bg-yellow-50/50",
                           !hasWarn && course && STATUS_COLORS[course.status],
                           !hasWarn && !course && "bg-card border-border",
-                          sem.isPast && "cursor-default"
+                          !sem.isPast && "active:cursor-grabbing",
+                          sem.isPast && "cursor-pointer"
                         )}
                       >
                         <div className="flex items-start justify-between gap-1">
@@ -477,37 +711,44 @@ export default function PlannerPage() {
                           </div>
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             {hasWarn && (
-                              <button title="Prerequisite warning" onClick={() => course && setSelectedCourse(course)}>
+                              <button
+                                title="Prerequisite warning"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (course) setSelectedCourse(course);
+                                }}
+                              >
                                 <AlertTriangle className="w-3 h-3 text-yellow-500" />
                               </button>
                             )}
                             {sem.isPast && <Check className="w-3 h-3 text-green-500" />}
-                            {course && (
-                              <button
-                                onClick={() => setSelectedCourse(course)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Info className="w-3 h-3 text-muted-foreground hover:text-primary" />
-                              </button>
-                            )}
-                            {!sem.isPast && (
-                              <button onClick={() => removeCourse(sem.id, cid)}>
-                                <X className="w-3 h-3 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeCourse(sem.id, cid);
+                              }}
+                              aria-label={`Remove ${cid}`}
+                            >
+                              <X className="w-3 h-3 text-muted-foreground hover:text-destructive opacity-70 group-hover:opacity-100 transition-opacity" />
+                            </button>
                           </div>
                         </div>
                         {course && (
                           <>
-                            <p className="text-[9px] text-muted-foreground truncate pl-4">{course.title}</p>
-                            <div className="flex items-center justify-between pl-4 gap-1">
+                            <p className="text-[10px] text-muted-foreground leading-snug pl-4 line-clamp-2">{course.title}</p>
+                            {course.prereqs.length > 0 && (
+                              <p className="text-[8px] text-muted-foreground pl-4 truncate" title={`Prereq: ${course.prereqs.join(", ")}`}>
+                                <span className="font-semibold">Prereq:</span> {course.prereqs.join(" → ")}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between pl-4 gap-2">
                               <span className={cn(
                                 "text-[8px] font-medium px-1.5 py-0.5 rounded-full border",
                                 LABEL_BADGE[course.label]
                               )}>
                                 {LABEL_META[course.label].label}
                               </span>
-                              <div className="flex items-center gap-0.5">
+                              <div className="flex items-center gap-1">
                                 {course.selectedSectionId && (
                                   <span className="text-[7px] font-mono bg-primary/10 text-primary px-1 py-0.5 rounded">
                                     SEC
@@ -518,11 +759,6 @@ export default function PlannerPage() {
                                     {course.grade}
                                   </span>
                                 )}
-                                {course.offeredTerms.map((term) => (
-                                  <span key={term} className="text-[7px] font-mono bg-muted text-muted-foreground px-1 py-0.5 rounded">
-                                    {TERM_ABBR(term)}
-                                  </span>
-                                ))}
                               </div>
                               <span className="text-[9px] font-mono text-muted-foreground">{course.credits}cr</span>
                             </div>
@@ -591,10 +827,39 @@ export default function PlannerPage() {
             );
           })}
 
+          {/* Empty state — shown when no semesters exist */}
+          {semesters.length === 0 && (
+            <div className="flex-shrink-0 w-80 rounded-xl border border-border bg-card p-8 flex flex-col items-center text-center gap-4 min-h-[260px] justify-center">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <GraduationCap className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground mb-1">Start planning your degree</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Add your first semester to begin building your 4-year plan, or import your transcript if you&apos;re already in progress.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={() => setSemesterDialogOpen(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium px-4 py-2.5 hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add First Semester
+                </button>
+                <Link
+                  href="/requirements"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border text-xs font-medium px-4 py-2.5 text-muted-foreground hover:text-foreground hover:border-border/80 transition-colors"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" /> View Degree Requirements
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Add semester button */}
           <button
-            onClick={addSemester}
-            className="flex-shrink-0 w-52 rounded-xl border-2 border-dashed border-border hover:border-primary/40 text-muted-foreground hover:text-primary transition-colors flex flex-col items-center justify-center gap-2 min-h-[300px]"
+            onClick={() => setSemesterDialogOpen(true)}
+            className="flex-shrink-0 w-60 rounded-xl border-2 border-dashed border-border hover:border-primary/40 text-muted-foreground hover:text-primary transition-colors flex flex-col items-center justify-center gap-2 min-h-[260px]"
           >
             <Plus className="w-5 h-5" />
             <span className="text-xs font-medium">Add Semester</span>
@@ -609,7 +874,7 @@ export default function PlannerPage() {
           onClick={() => setSelectedCourse(null)}
         >
           <div
-            className="bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl w-full max-w-md p-5"
+            className="bg-card rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl w-full max-w-md p-5 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -627,7 +892,9 @@ export default function PlannerPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-4">{selectedCourse.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              {selectedCourse.description?.trim() || "No catalog description is available for this course yet."}
+            </p>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="rounded-lg bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground mb-0.5">Credits</p>
@@ -639,12 +906,19 @@ export default function PlannerPage() {
               </div>
             </div>
             {selectedCourse.prereqs.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-foreground mb-2">Prerequisites</p>
+              <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-xs font-semibold text-foreground mb-2">
+                  Must complete before this course
+                </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedCourse.prereqs.map((prereq) => (
-                    <span key={prereq} className="text-xs bg-muted border border-border rounded-md px-2 py-1 font-medium">
-                      {prereq}
+                  {selectedCourse.prereqs.map((prereq, i) => (
+                    <span key={prereq} className="flex items-center gap-1">
+                      <span className="text-xs bg-background border border-border rounded-md px-2 py-1 font-mono font-medium text-foreground">
+                        {prereq}
+                      </span>
+                      {i < selectedCourse.prereqs.length - 1 && (
+                        <span className="text-xs text-muted-foreground">→</span>
+                      )}
                     </span>
                   ))}
                 </div>
@@ -663,12 +937,6 @@ export default function PlannerPage() {
                 </p>
               </div>
             )}
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs text-muted-foreground">Offered:</p>
-              {selectedCourse.offeredTerms.map((t) => (
-                <span key={t} className="text-xs bg-muted border border-border rounded px-1.5 py-0.5">{t}</span>
-              ))}
-            </div>
             {!selectedCourseSemester?.isPast && (
               <div className="mt-4 space-y-3 border-t border-border pt-4">
                 <div>
@@ -676,30 +944,52 @@ export default function PlannerPage() {
                   {sectionsLoading ? (
                     <p className="text-xs text-muted-foreground">Loading sections…</p>
                   ) : selectedCourseSections.length > 0 ? (
-                    <Select
-                      value={selectedCourse.selectedSectionId ?? "__none__"}
-                      onValueChange={(value) => {
-                        const nextValue = value === "__none__" ? null : value;
-                        updateCourse(selectedCourse.code, { selectedSectionId: nextValue });
-                        setSelectedCourse((prev) => (
-                          prev ? { ...prev, selectedSectionId: nextValue } : prev
-                        ));
-                        triggerSave();
-                        toast.success(nextValue ? "Section updated" : "Section cleared");
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose a section" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">No section selected</SelectItem>
+                    <div className="space-y-3">
+                      <Select
+                        value={sectionDraftId}
+                        onValueChange={setSectionDraftId}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose a section" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          <SelectItem value="__none__">No section selected</SelectItem>
+                          {selectedCourseSections.map((section) => (
+                            <SelectItem key={section.id} value={section.id}>
+                              {section.section_code} · {getInstructorNames(section)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                         {selectedCourseSections.map((section) => (
-                          <SelectItem key={section.id} value={section.id}>
-                            {section.section_code} · {section.instructors?.[0]?.name ?? "Instructor TBA"}
-                          </SelectItem>
+                          <SectionOptionCard
+                            key={section.id}
+                            section={section}
+                            selected={sectionDraftId === section.id}
+                            onClick={() => setSectionDraftId(section.id)}
+                          />
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSectionDraftId("__none__")}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Clear selection
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveSelectedCourseSection}
+                          disabled={savingSectionSelection || sectionDraftId === (selectedCourse.selectedSectionId ?? "__none__")}
+                          className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+                        >
+                          {savingSectionSelection ? "Saving..." : "Save section"}
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">No sections available for this term.</p>
                   )}
@@ -769,6 +1059,8 @@ export default function PlannerPage() {
                 )}
               </div>
             )}
+
+            <CourseReviews courseCode={selectedCourse.code} />
           </div>
         </div>
       )}
@@ -806,6 +1098,22 @@ export default function PlannerPage() {
               </div>
             </>
           )}
+          {confirmAction?.type === "clear-plan" && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear entire planner?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes all semesters and courses from the planner and clears imported completed courses and GPA.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="flex gap-3">
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmClearPlan} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Clear everything
+                </AlertDialogAction>
+              </div>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
 
@@ -820,7 +1128,7 @@ export default function PlannerPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Select a Section</DialogTitle>
             <DialogDescription>
@@ -835,19 +1143,46 @@ export default function PlannerPage() {
             {pendingSectionsLoading ? (
               <p className="text-sm text-muted-foreground">Loading sections…</p>
             ) : (
-              <Select value={pendingSectionId} onValueChange={setPendingSectionId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a section" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Add without section</SelectItem>
+              <div className="space-y-3">
+                <Select value={pendingSectionId} onValueChange={setPendingSectionId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a section" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="__none__">Add without section</SelectItem>
+                    {pendingSections.map((section) => (
+                      <SelectItem key={section.id} value={section.id}>
+                        {section.section_code} · {getInstructorNames(section)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <button
+                  type="button"
+                  onClick={() => setPendingSectionId("__none__")}
+                  className={cn(
+                    "w-full rounded-lg border border-dashed p-3 text-left transition-colors",
+                    pendingSectionId === "__none__"
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  )}
+                >
+                  <p className="text-sm font-semibold">Add without section</p>
+                  <p className="text-xs">You can choose a section later from the course details.</p>
+                </button>
+
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {pendingSections.map((section) => (
-                    <SelectItem key={section.id} value={section.id}>
-                      {section.section_code} · {section.instructors?.[0]?.name ?? "Instructor TBA"}
-                    </SelectItem>
+                    <SectionOptionCard
+                      key={section.id}
+                      section={section}
+                      selected={pendingSectionId === section.id}
+                      onClick={() => setPendingSectionId(section.id)}
+                    />
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             )}
           </div>
           <DialogFooter>
@@ -869,6 +1204,162 @@ export default function PlannerPage() {
               className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
             >
               Add course
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Missing Requirements modal */}
+      <Dialog open={reqModalOpen} onOpenChange={setReqModalOpen}>
+        <DialogContent className="max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Missing Required Courses</DialogTitle>
+            <DialogDescription>
+              These Required and Group Choice courses aren&apos;t in your plan yet. Pick a semester and add them.
+            </DialogDescription>
+          </DialogHeader>
+
+          {semesters.filter((s) => !s.isPast).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Add a semester first, then come back here to schedule your required courses.
+            </p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-foreground">Add to:</span>
+                <Select value={reqModalSemId} onValueChange={setReqModalSemId}>
+                  <SelectTrigger className="h-8 text-xs flex-1">
+                    <SelectValue placeholder="Select semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {semesters.filter((s) => !s.isPast).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.term} {s.year}{s.isCurrent ? " (Current)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1 overflow-y-auto divide-y divide-border border border-border rounded-lg">
+                {missingRequired.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    All required and group choice courses are already in your plan.
+                  </p>
+                ) : (
+                  missingRequired.map(({ code, entry }) => {
+                    const label = LABEL_KEY[entry.label] ?? "general";
+                    const course: Course = {
+                      id: code,
+                      code,
+                      title: entry.detail || code,
+                      credits: entry.credits ?? 3,
+                      label,
+                      status: "planned",
+                      grade: null,
+                      selectedSectionId: null,
+                      description: "",
+                      prereqs: [],
+                      offeredTerms: [],
+                      subject: code.split("-")[0] ?? "",
+                      level: (() => {
+                        const n = parseInt(code.match(/\d{3}/)?.[0] ?? "100");
+                        return (n < 200 ? 100 : n < 300 ? 200 : n < 400 ? 300 : 400) as 100 | 200 | 300 | 400;
+                      })(),
+                    };
+                    return (
+                      <div key={code} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 transition-colors">
+                        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", LABEL_DOT[label])} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">{code}</p>
+                          {entry.detail && entry.detail !== code && (
+                            <p className="text-[10px] text-muted-foreground truncate">{entry.detail}</p>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
+                          {entry.credits ?? "?"}cr
+                        </span>
+                        <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full border flex-shrink-0", LABEL_BADGE[label])}>
+                          {LABEL_META[label].label}
+                        </span>
+                        <button
+                          disabled={!reqModalSemId}
+                          onClick={() => {
+                            if (!reqModalSemId) return;
+                            addCourse(reqModalSemId, course);
+                          }}
+                          className="flex-shrink-0 text-[10px] font-medium bg-primary text-primary-foreground px-2.5 py-1 rounded-md hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setReqModalOpen(false)}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 py-2 text-sm"
+            >
+              Done
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={semesterDialogOpen} onOpenChange={setSemesterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add a Semester</DialogTitle>
+            <DialogDescription>
+              Choose exactly where this semester belongs. It will be inserted into the correct year automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Term</p>
+              <Select value={newSemesterTerm} onValueChange={(value) => setNewSemesterTerm(value as SemesterTerm)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Spring", "Summer", "Fall", "Winter"] as SemesterTerm[]).map((term) => (
+                    <SelectItem key={term} value={term}>{term}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">Year</p>
+              <input
+                type="number"
+                value={newSemesterYear}
+                onChange={(event) => setNewSemesterYear(Number(event.target.value))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                min={2000}
+                max={2100}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setSemesterDialogOpen(false)}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-input px-4 py-2 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={addSemester}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+            >
+              Add semester
             </button>
           </DialogFooter>
         </DialogContent>

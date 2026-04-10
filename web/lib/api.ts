@@ -1,6 +1,8 @@
 // All calls to the FastAPI backend at NEXT_PUBLIC_API_BASE_URL
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+let subjectsCache: Major[] | null = null;
+let subjectsPromise: Promise<Major[]> | null = null;
 
 async function get<T>(path: string, token?: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -24,11 +26,29 @@ async function put<T>(path: string, body: unknown, token: string): Promise<T> {
   return res.json();
 }
 
+async function post<T>(path: string, body: unknown, token: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({})) as { detail?: string };
+    throw new Error(detail.detail ?? `POST ${path} → ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─── Types matching backend responses ────────────────────────────────────────
 
 export interface Major {
   code: string;
   name: string;
+  degree_type?: string | null;
+  total_credits_required?: number | null;
 }
 
 export interface BackendCourse {
@@ -132,6 +152,7 @@ export interface ElectiveRule {
 export interface CourseLabelsResponse {
   labels: Record<string, CourseLabelEntry>;
   rules: ElectiveRule[];
+  total_credits: number;
 }
 
 export interface TermCalendarEntry {
@@ -139,6 +160,18 @@ export interface TermCalendarEntry {
   year: number;
   start_date: string | null;
   end_date: string | null;
+}
+
+export interface BackendSubjectCourse {
+  id: string;
+  code: string;
+  title: string;
+  credits: number;
+  description: string | null;
+  prerequisites: string[];
+  offeredTerms: string[];
+  type: string;
+  requirementBucket: string | null;
 }
 
 // ─── Public endpoints ─────────────────────────────────────────────────────────
@@ -149,7 +182,23 @@ export async function fetchMajors(): Promise<Major[]> {
 }
 
 export async function fetchSubjects(): Promise<Major[]> {
-  const res = await get<{ data: Major[] }>("/api/subjects");
+  if (subjectsCache) return subjectsCache;
+  if (!subjectsPromise) {
+    subjectsPromise = get<{ data: Major[] }>("/api/subjects")
+      .then((res) => {
+        subjectsCache = res.data;
+        return res.data;
+      })
+      .finally(() => {
+        subjectsPromise = null;
+      });
+  }
+  return subjectsPromise;
+}
+
+export async function fetchCoursesBySubject(subject: string): Promise<BackendSubjectCourse[]> {
+  const params = new URLSearchParams({ subject });
+  const res = await get<{ data: BackendSubjectCourse[] }>(`/api/courses?${params}`);
   return res.data;
 }
 
@@ -183,27 +232,67 @@ export async function fetchTermCalendar(): Promise<TermCalendarEntry[]> {
 export async function fetchCourseLabels(
   majorCode: string
 ): Promise<CourseLabelsResponse> {
-  const res = await get<{ data: Record<string, CourseLabelEntry>; rules: ElectiveRule[] }>(
+  const res = await get<{ data: Record<string, CourseLabelEntry>; rules: ElectiveRule[]; total_credits?: number }>(
     `/api/course-labels?major_code=${encodeURIComponent(majorCode)}`
   );
-  return { labels: res.data ?? {}, rules: res.rules ?? [] };
+  return { labels: res.data ?? {}, rules: res.rules ?? [], total_credits: res.total_credits ?? 120 };
 }
 
 // ─── Transcript parsing ───────────────────────────────────────────────────────
 
 export interface ParsedTranscriptCourse {
+  rowId: string;
   code: string;       // e.g. "CSCI 110"
   title: string;      // e.g. "Intro to Computer Science I"
-  grade: string;      // e.g. "A-"
-  credits: number;
-  term: string;       // "Fall" | "Spring" | "Summer" | "Winter"
-  year: number;
+  grade: string | null;      // e.g. "A-" or null for in-progress/current term
+  credits: number | null;
+  term: string | null;       // "Fall" | "Spring" | "Summer" | "Winter" | null for transfer
+  year: number | null;
+  status: "completed" | "planned";
+  sourceType: "term" | "transfer";
 }
 
 export interface ParsedTranscript {
   student_name: string | null;
   gpa: number | null;
   courses: ParsedTranscriptCourse[];
+}
+
+// ─── Course reviews ───────────────────────────────────────────────────────────
+
+export interface CourseReview {
+  id: string;
+  course_code: string;
+  year_taken: number | null;
+  term_taken: string | null;
+  professor: string | null;
+  comment: string;
+  helpful_count: number;
+  created_at: string | null;
+}
+
+export async function fetchReviews(courseCode: string): Promise<CourseReview[]> {
+  const res = await get<{ data: CourseReview[] }>(`/api/reviews?course_code=${encodeURIComponent(courseCode)}`);
+  return res.data ?? [];
+}
+
+export async function fetchRecentReviews(limit = 20): Promise<CourseReview[]> {
+  const res = await get<{ data: CourseReview[] }>(`/api/reviews/recent?limit=${limit}`);
+  return res.data ?? [];
+}
+
+export async function submitReview(
+  token: string,
+  payload: {
+    course_code: string;
+    year_taken?: number | null;
+    term_taken?: string | null;
+    professor?: string | null;
+    comment: string;
+  }
+): Promise<CourseReview> {
+  const res = await post<{ data: CourseReview }>("/api/reviews", payload, token);
+  return res.data;
 }
 
 export async function parseTranscriptPDF(file: File): Promise<ParsedTranscript> {
@@ -216,6 +305,26 @@ export async function parseTranscriptPDF(file: File): Promise<ParsedTranscript> 
   }
   const json = await res.json() as { data: ParsedTranscript };
   return json.data;
+}
+
+// ─── AI Advisor ───────────────────────────────────────────────────────────────
+
+export interface AdvisorMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function callAdvisor(
+  token: string,
+  message: string,
+  history: AdvisorMessage[] = []
+): Promise<string> {
+  const res = await post<{ reply: string }>(
+    "/api/ai/advise",
+    { message, history },
+    token
+  );
+  return res.reply;
 }
 
 // ─── Authenticated endpoints ──────────────────────────────────────────────────

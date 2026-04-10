@@ -117,7 +117,7 @@ export default function LandingPage() {
               {
                 step: "03",
                 title: "Track your progress",
-                desc: "See exactly how many credits you've completed and when you'll graduate — always up to date.",
+                desc: "See exactly how many credits you've completed and when you'll graduate, always up to date.",
                 icon: CheckCircle,
               },
             ].map(({ step, title, desc, icon: Icon }, index) => (
@@ -153,7 +153,7 @@ export default function LandingPage() {
           {[
             {
               title: "Drag-and-drop planner",
-              desc: "Rearrange courses between semesters instantly. Prereq warnings appear inline — no popups.",
+              desc: "Rearrange courses between semesters instantly. Prereq warnings appear inline, no popups.",
               icon: Map,
             },
             {
@@ -289,7 +289,7 @@ function PlannerPreview() {
         <span className="w-3 h-3 rounded-full bg-red-400" />
         <span className="w-3 h-3 rounded-full bg-yellow-400" />
         <span className="w-3 h-3 rounded-full bg-green-400" />
-        <span className="ml-3 text-xs text-muted-foreground">GradPath — Planner</span>
+        <span className="ml-3 text-xs text-muted-foreground">GradPath · Planner</span>
         <span className="ml-auto text-[10px] text-green-600 font-medium flex items-center gap-1">
           <CheckCircle className="w-3 h-3" /> Autosaved
         </span>

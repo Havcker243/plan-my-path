@@ -1,9 +1,16 @@
 "use client";
 
-import { GraduationCap, BookOpen, TrendingUp, Download, Camera, Loader2, Save } from "lucide-react";
+import { GraduationCap, BookOpen, TrendingUp, Camera, Loader2, Save } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getCompletedCredits } from "@/lib/data";
@@ -11,55 +18,76 @@ import { getSupabase } from "@/lib/supabase";
 import { formatDisplayName } from "@/lib/utils";
 import { toast } from "sonner";
 
-const DEGREE_CREDITS = 120;
+const TERMS = ["fall", "spring", "summer", "winter"] as const;
+const TERM_LABELS: Record<string, string> = {
+  fall: "Fall", spring: "Spring", summer: "Summer", winter: "Winter",
+};
+const currentYear = new Date().getFullYear();
+const GRAD_YEARS = Array.from({ length: 12 }, (_, i) => currentYear - 2 + i);
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const { profile, semesters, planCatalog, majors, doUpdateProfile } = usePlan();
+  const {
+    profile,
+    semesters,
+    planCatalog,
+    majors,
+    majorsLoading,
+    degreeCreditTotal,
+    doUpdateProfile,
+  } = usePlan();
+
+  const DEGREE_CREDITS = degreeCreditTotal;
+
+  // ── Form state ────────────────────────────────────────────────────────────
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
   const [firstName, setFirstName] = useState(() => profile?.name?.split(" ")[0] ?? "");
   const [lastName, setLastName] = useState(() => profile?.name?.split(" ").slice(1).join(" ") ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [major, setMajor] = useState(profile?.major_code ?? "");
+  const [gradTerm, setGradTerm] = useState(profile?.graduation_term ?? "spring");
+  const [gradYear, setGradYear] = useState<number>(profile?.graduation_year ?? currentYear + 2);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const majorChanged = major !== (profile?.major_code ?? "");
 
   useEffect(() => {
     setAvatar(profile?.avatar_url ?? null);
     setFirstName(profile?.name?.split(" ")[0] ?? "");
     setLastName(profile?.name?.split(" ").slice(1).join(" ") ?? "");
     setPhone(profile?.phone ?? "");
-  }, [profile?.avatar_url, profile?.name, profile?.phone]);
+    setMajor(profile?.major_code ?? "");
+    setGradTerm(profile?.graduation_term ?? "spring");
+    setGradYear(profile?.graduation_year ?? currentYear + 2);
+  }, [
+    profile?.avatar_url,
+    profile?.name,
+    profile?.phone,
+    profile?.major_code,
+    profile?.graduation_term,
+    profile?.graduation_year,
+  ]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Show local preview immediately
     const reader = new FileReader();
     reader.onload = (ev) => setAvatar(ev.target?.result as string);
     reader.readAsDataURL(file);
-
-    // Upload to Supabase Storage
     setUploading(true);
     try {
       const supabase = getSupabase();
       const userId = user?.id;
       if (!userId) throw new Error("Not authenticated");
-
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${userId}/avatar.${ext}`;
-
       const { error: uploadError } = await supabase.storage
         .from("ProfilePictures")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from("ProfilePictures")
-        .getPublicUrl(path);
-
+      const { data } = supabase.storage.from("ProfilePictures").getPublicUrl(path);
       setAvatar(data.publicUrl);
     } catch {
       toast.error("Failed to upload avatar");
@@ -69,14 +97,28 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (!major) { toast.error("Please select a major"); return; }
+    const year = Number(gradYear);
+    if (!Number.isFinite(year) || year < 2000 || year > 2100) {
+      toast.error("Enter a valid graduation year");
+      return;
+    }
     setSaving(true);
-    setSaved(false);
     try {
       const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
-      await doUpdateProfile({ name: fullName || null, phone: phone || null, avatar_url: avatar || null });
-      setSaved(true);
-      toast.success("Profile updated");
-      setTimeout(() => setSaved(false), 3000);
+      await doUpdateProfile({
+        name: fullName || null,
+        phone: phone || null,
+        avatar_url: avatar || null,
+        major_code: major,
+        graduation_term: gradTerm,
+        graduation_year: year,
+      });
+      toast.success(
+        majorChanged
+          ? "Profile saved — course labels updated for your new major"
+          : "Profile saved"
+      );
     } catch {
       toast.error("Failed to save profile");
     } finally {
@@ -84,14 +126,18 @@ export default function ProfilePage() {
     }
   };
 
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const completedCredits = getCompletedCredits(semesters, planCatalog);
   const remainingCredits = Math.max(0, DEGREE_CREDITS - completedCredits);
-  const gpa = profile?.gpa ?? null;
+  const rawGpa = profile?.gpa;
+  const parsedGpa = rawGpa == null ? null : typeof rawGpa === "number" ? rawGpa : Number(rawGpa);
+  const gpa = parsedGpa != null && Number.isFinite(parsedGpa) ? parsedGpa : null;
 
-  const majorCode = profile?.major_code;
-  const majorName = formatDisplayName(majors.find((m) => m.code === majorCode)?.name ?? majorCode);
-  const gradTerm = profile?.graduation_term;
-  const gradYear = profile?.graduation_year;
+  const majorName = formatDisplayName(
+    majors.find((m) => m.code === profile?.major_code)?.name ?? profile?.major_code
+  );
+  const gradTermDisplay = profile?.graduation_term;
+  const gradYearDisplay = profile?.graduation_year;
   const startTerm = profile?.start_term;
   const startYear = profile?.start_year;
 
@@ -127,11 +173,11 @@ export default function ProfilePage() {
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
         </div>
         <div>
-          <p className="text-base font-semibold text-foreground">{profile?.name ?? user?.email ?? "—"}</p>
+          <p className="text-base font-semibold text-foreground">{profile?.name ?? user?.email ?? ""}</p>
           {majorName && <p className="text-sm text-muted-foreground">{majorName}</p>}
-          {startTerm && startYear && gradTerm && gradYear && (
+          {startTerm && startYear && gradTermDisplay && gradYearDisplay && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {capitalize(startTerm)} {startYear} → {capitalize(gradTerm)} {gradYear}
+              {capitalize(startTerm)} {startYear} → {capitalize(gradTermDisplay)} {gradYearDisplay}
             </p>
           )}
           {user?.email && <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>}
@@ -141,9 +187,9 @@ export default function ProfilePage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: "Cumulative GPA", value: gpa !== null ? gpa.toFixed(2) : "—", icon: TrendingUp },
+          { label: "Cumulative GPA", value: gpa !== null ? gpa.toFixed(2) : "N/A", icon: TrendingUp },
           { label: "Credits Completed", value: String(completedCredits), icon: BookOpen },
-          { label: "Credits Remaining", value: String(remainingCredits), icon: GraduationCap },
+          { label: `Credits Remaining`, value: String(remainingCredits), icon: GraduationCap },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
             <Icon className="w-4 h-4 text-muted-foreground" />
@@ -153,10 +199,12 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {/* Edit profile */}
+      {/* Edit profile — personal + academic in one form */}
       <div className="rounded-xl border border-border bg-card p-5 mb-4">
         <h2 className="text-sm font-semibold text-foreground mb-4">Edit Profile</h2>
-        <div className="space-y-3">
+        <div className="space-y-4">
+
+          {/* Name */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">First Name</label>
@@ -177,6 +225,8 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+
+          {/* Phone */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Phone</label>
             <Input
@@ -186,32 +236,77 @@ export default function ProfilePage() {
               className="h-9"
             />
           </div>
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : <><Save className="w-3.5 h-3.5" /> Save Changes</>}
-          </Button>
-          {saved && <span className="text-xs text-green-600">Saved!</span>}
-        </div>
-      </div>
 
-      {/* Advisor export */}
-      <div className="p-5 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between gap-4 mb-4">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Advisor Export</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Download a clean PDF of your plan for your advisor meeting.</p>
+          <div className="border-t border-border pt-4">
+            {/* Major */}
+            <div className="mb-3">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Major</label>
+              <Select value={major} onValueChange={setMajor} disabled={majorsLoading}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder={majorsLoading ? "Loading…" : "Select major"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {majors.map((m) => (
+                    <SelectItem key={m.code} value={m.code}>
+                      {formatDisplayName(m.name ?? m.code)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Graduation */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Expected Graduation</label>
+              <div className="grid grid-cols-2 gap-3">
+                <Select value={gradTerm} onValueChange={setGradTerm}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TERMS.map((t) => (
+                      <SelectItem key={t} value={t}>{TERM_LABELS[t]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={String(gradYear)} onValueChange={(v) => setGradYear(Number(v))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GRAD_YEARS.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {majorChanged && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              Switching major will refresh all course labels in your plan.
+            </p>
+          )}
         </div>
-        <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={() => window.print()}>
-          <Download className="w-3.5 h-3.5" /> Export PDF
-        </Button>
+
+        <div className="mt-4">
+          <Button size="sm" onClick={handleSave} disabled={saving || uploading} className="gap-2">
+            {saving
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+              : <><Save className="w-3.5 h-3.5" /> Save Profile</>}
+          </Button>
+        </div>
       </div>
 
       {/* Graduation status */}
-      {gradTerm && gradYear && (
+      {gradTermDisplay && gradYearDisplay && (
         <div className="p-4 rounded-xl border border-border bg-card text-sm text-muted-foreground leading-relaxed">
           At your current pace, you&apos;ll graduate{" "}
-          <span className="font-semibold text-foreground">{capitalize(gradTerm)} {gradYear}</span>.{" "}
-          You&apos;re {Math.round((completedCredits / DEGREE_CREDITS) * 100)}% of the way through your degree requirements.
+          <span className="font-semibold text-foreground">
+            {capitalize(gradTermDisplay)} {gradYearDisplay}
+          </span>.{" "}
+          You&apos;re {Math.round((completedCredits / DEGREE_CREDITS) * 100)}% of the way through your {DEGREE_CREDITS}-credit degree.
         </div>
       )}
     </div>

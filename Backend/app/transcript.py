@@ -34,6 +34,8 @@ VALID_GRADES = {
     "F",
 }
 
+GRADE_TOKENS = VALID_GRADES | {"IP", "I", "W", "AU", "P", "NP", "S", "U"}
+
 # Regex: a term-year prefix like "2024FA" or "2025SP"
 RE_TERM_HEADER = re.compile(r"^(\d{4})(FA|SP|SU|SM|WI)\s*(.*)", re.DOTALL)
 
@@ -47,6 +49,28 @@ RE_COURSE_COMPLETED = re.compile(
     r"([A-DF][+\-]?)\s+"  # letter grade (A/B/C/D/F with optional +/-)
     r"[NTR]\s+"            # grade type (N=normal, T=transfer, R=repeat)
     r"(\d+\.\d)",          # credits attempted
+    re.IGNORECASE,
+)
+
+RE_COURSE_IN_PROGRESS = re.compile(
+    r"^(.+?)\s+"
+    r"([A-Z]{2,6})\s+"
+    r"(\d+[A-Z0-9]*)\s+"
+    r"(\w+)"
+    r"(?:\s+([A-Z][+\-]?))?"
+    r"(?:\s+([NTR]))?"
+    r"(?:\s+(\d+\.\d))?$",
+    re.IGNORECASE,
+)
+
+RE_TRANSFER_COURSE = re.compile(
+    r"^(.+?)\s+"
+    r"([A-Z]{2,6})\s+"
+    r"(\d+[A-Z0-9]*)\s+"
+    r"([NTR])\s+"
+    r"([NTR])\s+"
+    r"(\d+\.\d)\s+"
+    r"(\d+\.\d)$",
     re.IGNORECASE,
 )
 
@@ -104,6 +128,12 @@ def parse_transcript(file_bytes: bytes) -> dict:
     current_term: Optional[dict] = None
     cumulative_gpa: Optional[float] = None
     student_name: Optional[str] = None
+    row_id = 0
+
+    def next_row_id() -> str:
+        nonlocal row_id
+        row_id += 1
+        return f"transcript-row-{row_id}"
 
     # The student name appears near the top before any term blocks.
     # Heuristic: first "Firstname Lastname" line (title-case, 2–4 words, no digits)
@@ -165,50 +195,94 @@ def parse_transcript(file_bytes: bytes) -> dict:
             else:
                 continue
 
-        # ── Course line (completed, with a real letter grade) ───────────────
         if current_term is None:
+            transfer_match = RE_TRANSFER_COURSE.match(line)
+            if transfer_match:
+                title = transfer_match.group(1).strip()
+                subject = transfer_match.group(2).upper()
+                number = transfer_match.group(3).upper()
+                credits = float(transfer_match.group(6))
+                if credits <= 0:
+                    continue
+                courses.append({
+                    "rowId": next_row_id(),
+                    "code": f"{subject} {number}",
+                    "title": title,
+                    "grade": None,
+                    "credits": credits,
+                    "term": None,
+                    "year": None,
+                    "status": "completed",
+                    "sourceType": "transfer",
+                })
             continue
 
+        # ── Course line (completed, with a real letter grade) ───────────────
         cm = RE_COURSE_COMPLETED.match(line)
-        if not cm:
+        if cm:
+            title = cm.group(1).strip()
+            subject = cm.group(2).upper()
+            number = cm.group(3).upper()
+            grade = cm.group(5).upper()
+            credits = float(cm.group(6))
+
+            if grade not in VALID_GRADES or credits <= 0:
+                continue
+
+            courses.append({
+                "rowId": next_row_id(),
+                "code": f"{subject} {number}",
+                "title": title,
+                "grade": grade,
+                "credits": credits,
+                "term": current_term["term"],
+                "year": current_term["year"],
+                "status": "completed",
+                "sourceType": "term",
+            })
             continue
 
-        title   = cm.group(1).strip()
-        subject = cm.group(2).upper()
-        number  = cm.group(3).upper()
-        grade   = cm.group(5).upper()
-        credits = float(cm.group(6))
-
-        # Only include courses with a valid grade and non-zero credits
-        if grade not in VALID_GRADES:
-            continue
-        if credits <= 0:
+        # ── In-progress line (often current semester, no final grade yet) ───
+        ip = RE_COURSE_IN_PROGRESS.match(line)
+        if not ip:
             continue
 
-        code = f"{subject} {number}"
-
-        # De-duplicate: same code + same term (handles labs that may re-appear)
-        already = any(
-            c["code"] == code
-            and c["term"] == current_term["term"]
-            and c["year"] == current_term["year"]
-            for c in courses
-        )
-        if already:
+        title = ip.group(1).strip()
+        subject = ip.group(2).upper()
+        number = ip.group(3).upper()
+        grade_token = ip.group(5).upper() if ip.group(5) else None
+        grade_type = ip.group(6).upper() if ip.group(6) else None
+        credits_raw = ip.group(7)
+        if grade_token in {"N", "T", "R"} and grade_type is None:
+            grade_type = grade_token
+            grade_token = None
+        if grade_token and grade_token in VALID_GRADES:
             continue
-
+        if grade_token and grade_token not in GRADE_TOKENS:
+            continue
+        credits = float(credits_raw) if credits_raw else None
         courses.append({
-            "code":    code,
-            "title":   title,
-            "grade":   grade,
+            "rowId": next_row_id(),
+            "code": f"{subject} {number}",
+            "title": title,
+            "grade": None,
             "credits": credits,
-            "term":    current_term["term"],
-            "year":    current_term["year"],
+            "term": current_term["term"],
+            "year": current_term["year"],
+            "status": "planned",
+            "sourceType": "term",
         })
 
     # Sort by year then term order
     _term_order = {"Spring": 0, "Summer": 1, "Fall": 2, "Winter": 3}
-    courses.sort(key=lambda c: (c["year"], _term_order.get(c["term"], 9)))
+    courses.sort(
+        key=lambda c: (
+            -1 if c.get("sourceType") == "transfer" else (c["year"] if c["year"] is not None else 9999),
+            -1 if c.get("sourceType") == "transfer" else _term_order.get(c["term"], 9),
+            c["code"],
+            c["title"],
+        )
+    )
 
     return {
         "student_name": student_name,

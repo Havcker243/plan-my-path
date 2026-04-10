@@ -25,14 +25,14 @@ import TranscriptUpload, { type TranscriptResult } from "@/components/transcript
 import { toast } from "sonner";
 import type { OnboardingCourse } from "@/contexts/plan-context";
 
-const DEGREE_CREDITS = 120;
 
 function CircleProgress({ pct, size = 80, stroke = 7, color = "stroke-primary" }: {
   pct: number; size?: number; stroke?: number; color?: string;
 }) {
   const r = (size - stroke * 2) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
+  const safePct = Number.isFinite(pct) ? Math.min(Math.max(pct, 0), 100) : 0;
+  const offset = circ - (safePct / 100) * circ;
   return (
     <svg width={size} height={size} className="-rotate-90">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-muted" />
@@ -50,15 +50,19 @@ function CircleProgress({ pct, size = 80, stroke = 7, color = "stroke-primary" }
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { profile, semesters, planCatalog, majors, loading, importTranscript } = usePlan();
+  const { profile, semesters, planCatalog, majors, degreeCreditTotal, loading, importTranscript } = usePlan();
+  const DEGREE_CREDITS = degreeCreditTotal;
   const [showTranscriptModal, setShowTranscriptModal] = useState(false);
 
   const handleTranscriptImport = async (result: TranscriptResult) => {
     const courses: OnboardingCourse[] = result.courses.map((c) => ({
       code: c.code,
+      status: c.status,
       grade: c.grade,
       term: c.term,
       year: c.year,
+      title: c.title,
+      credits: c.credits ?? undefined,
     }));
     try {
       const { added, skipped } = await importTranscript(courses, result.gpa);
@@ -85,7 +89,9 @@ export default function DashboardPage() {
     .flatMap((s) => s.courseIds)
     .reduce((acc, id) => {
       const course = planCatalog[id];
-      return course?.status === "planned" ? acc + course.credits : acc;
+      const credits =
+        typeof course?.credits === "number" && Number.isFinite(course.credits) ? course.credits : 0;
+      return course?.status === "planned" ? acc + credits : acc;
     }, 0);
   const remainingCredits = Math.max(0, DEGREE_CREDITS - completedCredits - plannedCredits);
   const creditPct = Math.round((completedCredits / DEGREE_CREDITS) * 100);
@@ -96,7 +102,14 @@ export default function DashboardPage() {
     .filter((c): c is NonNullable<typeof c> => !!c && c.label === "required");
   const completedRequired = requiredCourses.filter((c) => c.status === "completed").length;
 
-  const gpa = profile?.gpa ?? null;
+  const rawGpa = profile?.gpa;
+  const parsedGpa =
+    rawGpa == null
+      ? null
+      : typeof rawGpa === "number"
+      ? rawGpa
+      : Number(rawGpa);
+  const gpa = parsedGpa != null && Number.isFinite(parsedGpa) ? parsedGpa : null;
 
   const majorName = formatDisplayName(
     majors.find((m) => m.code === profile?.major_code)?.name
@@ -138,8 +151,8 @@ export default function DashboardPage() {
     if (!gradText) return "Complete your profile to see graduation info.";
     if (semestersToGrad === null) return `Graduating ${gradText}.`;
     if (semestersToGrad < 0) return `You graduated ${gradText}.`;
-    if (semestersToGrad === 0) return <>You&apos;re graduating this semester — <span className="font-semibold text-foreground">{gradText}</span>.</>;
-    return <>On track to graduate <span className="font-semibold text-foreground">{gradText}</span> — {semestersToGrad} semester{semestersToGrad !== 1 ? "s" : ""} away.</>;
+    if (semestersToGrad === 0) return <>You&apos;re graduating this semester, <span className="font-semibold text-foreground">{gradText}</span>.</>;
+    return <>On track to graduate <span className="font-semibold text-foreground">{gradText}</span>, {semestersToGrad} semester{semestersToGrad !== 1 ? "s" : ""} away.</>;
   })();
 
   if (loading) {
@@ -229,7 +242,7 @@ export default function DashboardPage() {
         {[
           {
             label: "Semesters Left",
-            value: semestersToGrad !== null && semestersToGrad >= 0 ? semestersToGrad : "—",
+            value: semestersToGrad !== null && semestersToGrad >= 0 ? semestersToGrad : "N/A",
             sub: semestersToGrad === 0 ? "Graduating this semester" : null,
           },
           {
@@ -239,12 +252,12 @@ export default function DashboardPage() {
           },
           {
             label: "Required Courses",
-            value: `${completedRequired}/${requiredCourses.length || "—"}`,
+            value: `${completedRequired}/${requiredCourses.length || 0}`,
             sub: "completed",
           },
           {
             label: "GPA",
-            value: gpa !== null ? gpa.toFixed(2) : "—",
+            value: gpa !== null ? gpa.toFixed(2) : "N/A",
             sub: gpa !== null ? (gpa >= 3.0 ? "Above 3.0" : "Below 3.0") : null,
             valueColor: gpa !== null ? "text-green-600" : "text-muted-foreground",
             subColor: gpa !== null ? "text-green-600" : undefined,
@@ -358,7 +371,7 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="text-base font-bold text-foreground">Import Transcript</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Upload your PDF — courses will be added to their exact semesters with grades
+                    Upload your PDF. Courses will be added to their exact semesters with grades.
                   </p>
                 </div>
                 <button
@@ -406,7 +419,7 @@ function SemesterPreviewCard({
           "text-[10px] font-semibold px-2 py-1 rounded-full",
           isOverloaded ? "bg-red-50 text-red-700" : isLight ? "bg-yellow-50 text-yellow-700" : "bg-green-50 text-green-700"
         )}>
-          {semCredits} credits {isOverloaded ? "— Overloaded" : isLight ? "— Light" : "— OK"}
+          {semCredits} credits · {isOverloaded ? "Overloaded" : isLight ? "Light" : "OK"}
         </span>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -427,7 +440,9 @@ function SemesterPreviewCard({
               })} />
               <span className="font-medium text-foreground truncate">{course.code}</span>
               <span className="text-muted-foreground truncate">{course.title}</span>
-              <span className="ml-auto flex-shrink-0 font-mono text-muted-foreground">{course.credits}cr</span>
+              <span className="ml-auto flex-shrink-0 font-mono text-muted-foreground">
+                {typeof course.credits === "number" && Number.isFinite(course.credits) ? course.credits : 0}cr
+              </span>
             </div>
           );
         })}

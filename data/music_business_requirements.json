@@ -1,0 +1,87 @@
+{
+  "major_code": "MUSIC-BIZ",
+  "major_name": "Music Business / Music Minor Balance Sheet",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "shared_business_core",
+      "group_name": "Shared Business Core",
+      "group_type": "template_reference",
+      "template_reference": "business_admin_non_concentration_requirements.json",
+      "description": "Uses the shared business administration base structure."
+    },
+    {
+      "group_id": "business_admin_requirements",
+      "group_name": "Business Administration Requirements",
+      "group_type": "all_of",
+      "credits_required": 12,
+      "description": "Business administration courses shown on the music business balance sheet.",
+      "courses": [
+        { "course_code": "BAD 320", "course_name": "Marketing", "credits": 3 },
+        { "course_code": "ECON 230", "course_name": "Principles of Microeconomics", "credits": 3 },
+        { "course_code": "MGT 320", "course_name": "Human Resource Management", "credits": 3 },
+        { "course_code": "MGT 380", "course_name": "Entrepreneurial Development", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "music_courses",
+      "group_name": "Music Courses at Fisk University",
+      "group_type": "all_of",
+      "credits_required": 30,
+      "description": "Fisk music courses and applied/ensemble requirements from the music business balance sheet.",
+      "courses": [
+        { "course_code": "MUS 100", "course_name": "Elements of Music", "credits": 3 },
+        { "course_code": "MUS 101", "course_name": "Materials of Music Theory", "credits": 3 },
+        { "course_code": "MUS 102", "course_name": "Materials of Music Theory", "credits": 3 },
+        { "course_code": "MUS 201", "course_name": "Materials of Music Theory", "credits": 3 },
+        { "course_code": "MUS 202", "course_name": "Materials of Music Theory", "credits": 3 },
+        { "course_code": "MUS 307", "course_name": "Music History and Literature 1", "credits": 3 },
+        { "course_code": "MUS 308", "course_name": "Music History and Literature 2", "credits": 3 },
+        { "course_code": "MUS 323", "course_name": "Conducting 1", "credits": 3 },
+        { "course_code": "MUSIC ENSEMBLE", "course_name": "Music Ensemble", "credits": 8 },
+        { "course_code": "MUS 131/151/171", "course_name": "Principal or Secondary Applied Study", "credits": 1 },
+        { "course_code": "MUS 132/152/172", "course_name": "Second Semester Applied Study", "credits": 1 },
+        {
+          "course_code": "MUS ELECTIVE",
+          "course_name": "One of MUS 110, 120, 200, 205, 206, 207, or 208",
+          "credits": 2
+        }
+      ],
+      "notes": "Applied study courses may require MUS 157 or MUS 158 as corequisites depending on instrument/voice placement."
+    },
+    {
+      "group_id": "music_business_courses",
+      "group_name": "Music Business Courses from Belmont University",
+      "group_type": "all_of",
+      "credits_required": 18,
+      "description": "Music business minor courses listed on the source sheet.",
+      "courses": [
+        { "course_code": "MBU 1110", "course_name": "Survey of Music Business", "credits": 3 },
+        { "course_code": "MBU 2520", "course_name": "Copyright Law", "credits": 3 },
+        { "course_code": "MBU 3450", "course_name": "Music Publishing", "credits": 3 },
+        { "course_code": "MBU/AET/CEI ELECTIVE 1", "course_name": "MBU, AET, or CEI Elective", "credits": 3 },
+        { "course_code": "MBU/AET/CEI ELECTIVE 2", "course_name": "MBU, AET, or CEI Elective", "credits": 3 },
+        { "course_code": "MBU/AET/CEI ELECTIVE 3", "course_name": "MBU, AET, or CEI Elective", "credits": 3 }
+      ],
+      "notes": "The source sheet references Belmont University music business courses and prerequisites."
+    },
+    {
+      "group_id": "general_electives_override",
+      "group_name": "General Electives Override",
+      "group_type": "credit_threshold",
+      "credits_required": {
+        "min": 5,
+        "max": 5
+      },
+      "description": "The source sheet explicitly lists 5 general elective credits."
+    }
+  ],
+  "metadata": {
+    "source": "20210325-BSBA-Business-Administration-major-minor-in-Music.pdf",
+    "notes": [
+      "The source document is labeled as a music concentration / music business minor style sheet and includes Belmont University courses.",
+      "This is preserved as a template data file only and is not wired into any major mapping."
+    ]
+  }
+}

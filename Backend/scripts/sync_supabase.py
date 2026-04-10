@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urlparse, parse_qs
 
+import time
+
 import psycopg2
 import requests
 
@@ -83,9 +85,16 @@ def sanitize_pooler_url(url: str) -> str:
 
 def request_json(url: str, params: Dict[str, str], api_key: str) -> Any:
     headers = {"X-API-Key": api_key}
-    resp = requests.get(url, params=params, headers=headers, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+    for attempt in range(5):
+        resp = requests.get(url, params=params, headers=headers, timeout=60)
+        if resp.status_code == 429:
+            wait = 2 ** attempt * 10  # 10s, 20s, 40s, 80s, 160s
+            print(f"  Rate limited — waiting {wait}s before retry {attempt + 1}/5…")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
+    resp.raise_for_status()  # re-raise after all retries exhausted
 
 
 def parse_courses_file(path: Path, only_subject: Optional[str] = None) -> List[Tuple[str, str]]:
@@ -401,7 +410,7 @@ def sync_subject(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sync parse.bot courses into Supabase.")
     script_dir = Path(__file__).resolve().parent
-    parser.add_argument("--env-path", default=str(script_dir / ".env"))
+    parser.add_argument("--env-path", default=str(script_dir.parent / ".env"))
     parser.add_argument("--subjects-file", default=str(script_dir / "courses.txt"))
     parser.add_argument("--subject", default=None, help="Optional subject code filter, e.g. CSCI")
     parser.add_argument(
@@ -437,6 +446,7 @@ def main() -> int:
                 total_courses = 0
                 total_sections = 0
                 for subject_code, subject_name in subjects:
+                    time.sleep(2)  # 2s between subjects to avoid rate limiting
                     courses, sections = sync_subject(cur, subject_code, subject_name, api_key)
                     total_courses += courses
                     total_sections += sections

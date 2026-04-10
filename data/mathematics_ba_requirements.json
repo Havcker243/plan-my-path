@@ -1,0 +1,202 @@
+{
+  "major_code": "MATH",
+  "major_name": "Mathematics",
+  "degree_type": "B.A.",
+  "total_credits_required": 124,
+  "requirement_groups": [
+    {
+      "group_id": "core_fixed",
+      "group_name": "CORE Requirements - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 20,
+      "description": "Fixed core curriculum courses from the mathematics balance sheet.",
+      "courses": [
+        { "course_code": "CORE 100", "course_name": "New Student Orientation Seminar", "credits": 1 },
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 120", "course_name": "Critical Thinking", "credits": 2 },
+        { "course_code": "CORE 131", "course_name": "Mathematics I / College Algebra", "credits": 3 },
+        { "course_code": "MATH 101", "course_name": "College Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 110", "course_name": "Intermediate Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4, "satisfies_requirement": "CORE 131" },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 4 }
+      ],
+      "notes": "The balance sheet notes that MATH 101, 110, or 120 may substitute for CORE 131, and Math 100 does not count toward graduation."
+    },
+    {
+      "group_id": "core_group_a",
+      "group_name": "CORE - Group A: Cultural Exposure",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group A - Cultural Exposure.",
+      "courses": [
+        { "course_code": "ART 291", "credits": 3 },
+        { "course_code": "ART 292", "credits": 3 },
+        { "course_code": "ENG 275", "credits": 3 },
+        { "course_code": "HIS 180", "credits": 3 },
+        { "course_code": "HIS 270", "credits": 3 },
+        { "course_code": "MUS 200", "credits": 2 },
+        { "course_code": "MUS 206", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_b",
+      "group_name": "CORE - Group B: Analytical Skills",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group B - Analytical Skills.",
+      "courses": [
+        { "course_code": "CORE 132", "credits": 3 },
+        { "course_code": "BAD 200", "credits": 3 },
+        { "course_code": "BAD 260", "credits": 3 },
+        { "course_code": "MATH 125", "credits": 3 },
+        { "course_code": "MATH 120", "credits": 4 },
+        { "course_code": "NSCI 360", "credits": 3 },
+        { "course_code": "HSS 280", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_c",
+      "group_name": "CORE - Group C: The Arts",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group C - The Arts.",
+      "courses": [
+        { "course_code": "CORE 220", "credits": 3 },
+        { "course_code": "MUS 207", "credits": 3 },
+        { "course_code": "MUS 208", "credits": 3 },
+        { "course_code": "MUS 205", "credits": 3 },
+        { "course_code": "ART 207", "credits": 3 },
+        { "course_code": "ART 208", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_d",
+      "group_name": "CORE - Group D: The Science",
+      "group_type": "choose_one",
+      "credits_required": 4,
+      "description": "Choose CORE 240 or two science lecture/lab pairings as described on the source balance sheet.",
+      "courses": [
+        { "course_code": "CORE 240", "credits": 3 },
+        { "course_code": "BIOL 101", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "credits": 1, "corequisite_for": "BIOL 101" },
+        { "course_code": "CHEM 113", "credits": 3, "requires_corequisite": "CHEM 103L" },
+        { "course_code": "CHEM 103L", "credits": 1, "corequisite_for": "CHEM 113" },
+        { "course_code": "PHYS 130", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "credits": 1, "corequisite_for": "PHYS 130" }
+      ],
+      "notes": "The source sheet says Group D can be satisfied by CORE 240 or by combinations of BIOL/CHEM/PHYS lecture-lab pairs."
+    },
+    {
+      "group_id": "core_group_e",
+      "group_name": "CORE - Group E: Social Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group E - Social Science.",
+      "courses": [
+        { "course_code": "ECON 230", "credits": 3 },
+        { "course_code": "ECON 240", "credits": 3 },
+        { "course_code": "HIS 160", "credits": 3 },
+        { "course_code": "PSCI 122", "credits": 3 },
+        { "course_code": "PSY 180", "credits": 3 },
+        { "course_code": "SOC 100", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "foreign_language",
+      "group_name": "Foreign Language",
+      "group_type": "credit_threshold",
+      "credits_required": {
+        "min": 0,
+        "max": 12
+      },
+      "description": "Foreign language hours vary by placement score.",
+      "courses": [
+        { "course_code": "SPAN 101", "course_name": "Elementary Spanish I", "credits": 3 },
+        { "course_code": "SPAN 102", "course_name": "Elementary Spanish II", "credits": 3 },
+        { "course_code": "SPAN 200", "course_name": "Intermediate Spanish", "credits": 3 },
+        { "course_code": "FREN 101", "course_name": "Elementary French I", "credits": 3 },
+        { "course_code": "FREN 102", "course_name": "Elementary French II", "credits": 3 }
+      ],
+      "notes": "The source sheet lists 0-12 credits depending on placement."
+    },
+    {
+      "group_id": "required_cognates",
+      "group_name": "Required Cognates",
+      "group_type": "all_of",
+      "credits_required": 16,
+      "description": "Required cognates listed for the mathematics degree.",
+      "courses": [
+        { "course_code": "CSCI 110", "course_name": "Introduction to Computer Sciences I", "credits": 3, "requires_corequisite": "CSCI 110L" },
+        { "course_code": "CSCI 110L", "course_name": "Introduction to Computer Sciences I Lab", "credits": 1, "corequisite_for": "CSCI 110" },
+        { "course_code": "CSCI 120", "course_name": "Introduction to Computer Sciences II", "credits": 3, "requires_corequisite": "CSCI 120L" },
+        { "course_code": "CSCI 120L", "course_name": "Introduction to Computer Sciences II Lab", "credits": 1, "corequisite_for": "CSCI 120" },
+        { "course_code": "NSCI 360", "course_name": "Statistics", "credits": 4 },
+        { "course_code": "PHYS 130", "course_name": "Experiments in General Physics", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "course_name": "Experiments in General Physics Lab", "credits": 1, "corequisite_for": "PHYS 130" }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 33,
+      "description": "Required mathematics courses.",
+      "courses": [
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4 },
+        { "course_code": "MATH 130", "course_name": "Calculus II", "credits": 4 },
+        { "course_code": "MATH 210", "course_name": "Calculus III", "credits": 4 },
+        { "course_code": "MATH 220", "course_name": "Introduction to Higher Algebra", "credits": 4 },
+        { "course_code": "MATH 240", "course_name": "Linear Algebra", "credits": 4 },
+        { "course_code": "MATH 270", "course_name": "Ordinary Differential Equations", "credits": 4 },
+        { "course_code": "MATH 320", "course_name": "Algebraic Structures", "credits": 4 },
+        { "course_code": "MATH 353", "course_name": "Introduction to Real Analysis", "credits": 4 },
+        { "course_code": "MATH 395", "course_name": "Senior Seminar", "credits": 1 }
+      ]
+    },
+    {
+      "group_id": "education_core",
+      "group_name": "Education Core",
+      "group_type": "all_of",
+      "credits_required": 25,
+      "description": "Education sequence included on the mathematics balance sheet.",
+      "courses": [
+        { "course_code": "EDUC 248", "course_name": "Educational Psychology", "credits": 3 },
+        { "course_code": "EDUC 250", "course_name": "Fundamental Responsibilities of Teaching", "credits": 1 },
+        { "course_code": "EDUC 260", "course_name": "Theory and Practice of Teaching", "credits": 3 },
+        { "course_code": "EDUC 340", "course_name": "Secondary Curriculum Methods I", "credits": 3 },
+        { "course_code": "EDUC 350", "course_name": "Secondary Curriculum Methods II", "credits": 3 },
+        { "course_code": "EDUC 450", "course_name": "Secondary Student Teaching", "credits": 9 },
+        { "course_code": "EDUC 460", "course_name": "Secondary Education Seminar", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "mandatory_electives",
+      "group_name": "Mandatory Electives",
+      "group_type": "all_of",
+      "credits_required": 6,
+      "description": "Mandatory electives shown on the source balance sheet.",
+      "courses": [
+        { "course_code": "PSY 180", "course_name": "General Psychology", "credits": 3 },
+        { "course_code": "PSY 205", "course_name": "Child and Adolescent Development", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "general_electives",
+      "group_name": "General Electives",
+      "group_type": "fill_remaining",
+      "credits_required": null,
+      "description": "Any remaining courses needed to reach the total degree hours."
+    }
+  ],
+  "metadata": {
+    "source": "Mathematics BA Balance Sheet.docx",
+    "notes": [
+      "This template reflects the education-heavy mathematics balance sheet currently stored in the repo.",
+      "The source sheet shows total required hours as 124, which is higher than several other templates in this project.",
+      "The balance sheet includes teaching-oriented education requirements and mandatory psychology electives."
+    ]
+  }
+}

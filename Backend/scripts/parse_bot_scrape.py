@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+import time
+
 import requests
 
 
@@ -58,9 +60,16 @@ def resolve_api_key(env_path: Path, cli_key: Optional[str]) -> str:
 
 def request_json(url: str, params: Dict[str, str], api_key: str) -> Any:
     headers = {"X-API-Key": api_key}
-    resp = requests.get(url, params=params, headers=headers, timeout=45)
-    resp.raise_for_status()
-    return resp.json()
+    for attempt in range(5):
+        resp = requests.get(url, params=params, headers=headers, timeout=45)
+        if resp.status_code == 429:
+            wait = 2 ** attempt * 10  # 10s, 20s, 40s, 80s, 160s
+            print(f"  Rate limited — waiting {wait}s before retry {attempt + 1}/5…")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
+    resp.raise_for_status()  # re-raise after all retries exhausted
 
 
 def iter_course_like_items(payload: Any) -> Iterable[Dict[str, Any]]:
@@ -145,7 +154,7 @@ def main() -> int:
     script_dir = Path(__file__).resolve().parent
     parser.add_argument(
         "--env-path",
-        default=str(script_dir / ".env"),
+        default=str(script_dir.parent / ".env"),
         help="Path to .env containing SCRAPPER_ENV_KEY",
     )
     parser.add_argument(

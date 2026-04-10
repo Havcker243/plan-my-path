@@ -29,6 +29,29 @@ export interface Semester {
   isCurrent: boolean;
 }
 
+const TERM_ORDER: Record<SemesterTerm, number> = {
+  Spring: 0,
+  Summer: 1,
+  Fall: 2,
+  Winter: 3,
+};
+
+const GRADE_POINTS: Record<string, number> = {
+  "A+": 4,
+  A: 4,
+  "A-": 3.7,
+  "B+": 3.3,
+  B: 3,
+  "B-": 2.7,
+  "C+": 2.3,
+  C: 2,
+  "C-": 1.7,
+  "D+": 1.3,
+  D: 1,
+  "D-": 0.7,
+  F: 0,
+};
+
 // ─── Requirement label helpers ───────────────────────────────────────────────
 
 export const LABEL_META: Record<RequirementLabel, { label: string; color: string; bg: string }> = {
@@ -51,7 +74,10 @@ export function getTotalCredits(
   courseIds: string[],
   catalog: Record<string, Course>
 ): number {
-  return courseIds.reduce((acc, id) => acc + (catalog[id]?.credits ?? 0), 0);
+  return courseIds.reduce((acc, id) => {
+    const credits = catalog[id]?.credits;
+    return acc + (typeof credits === "number" && Number.isFinite(credits) ? credits : 0);
+  }, 0);
 }
 
 export function getCompletedCredits(
@@ -62,7 +88,9 @@ export function getCompletedCredits(
     .flatMap((s) => s.courseIds)
     .reduce((acc, id) => {
       const course = catalog[id];
-      return course?.status === "completed" ? acc + course.credits : acc;
+      const credits =
+        typeof course?.credits === "number" && Number.isFinite(course.credits) ? course.credits : 0;
+      return course?.status === "completed" ? acc + credits : acc;
     }, 0);
 }
 
@@ -133,6 +161,7 @@ export function getPrereqWarnings(
   for (const [courseId, semIdx] of Object.entries(semesterIndexForCourse)) {
     const course = catalog[courseId];
     if (!course) continue;
+    if (course.status === "completed") continue;
     for (const prereqId of course.prereqs) {
       const prereqIdx = semesterIndexForCourse[prereqId];
       if (prereqIdx === undefined || prereqIdx >= semIdx) {
@@ -141,4 +170,40 @@ export function getPrereqWarnings(
     }
   }
   return warnings;
+}
+
+export function compareSemesters(a: Semester, b: Semester): number {
+  return a.year !== b.year
+    ? a.year - b.year
+    : (TERM_ORDER[a.term] ?? 9) - (TERM_ORDER[b.term] ?? 9);
+}
+
+export function markCurrentSemester(semesters: Semester[]): Semester[] {
+  const firstFutureIdx = semesters.findIndex((semester) => !semester.isPast);
+  return semesters.map((semester, index) => ({
+    ...semester,
+    isCurrent: firstFutureIdx !== -1 && index === firstFutureIdx,
+  }));
+}
+
+export function getSemesterGpa(
+  semester: Semester,
+  catalog: Record<string, Course>
+): number | null {
+  let totalQualityPoints = 0;
+  let totalCredits = 0;
+
+  for (const courseId of semester.courseIds) {
+    const course = catalog[courseId];
+    if (!course?.grade) continue;
+    const points = GRADE_POINTS[course.grade];
+    if (points === undefined) continue;
+    const credits =
+      typeof course.credits === "number" && Number.isFinite(course.credits) ? course.credits : 0;
+    totalQualityPoints += points * credits;
+    totalCredits += credits;
+  }
+
+  if (totalCredits === 0) return null;
+  return totalQualityPoints / totalCredits;
 }

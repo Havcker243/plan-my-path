@@ -5,14 +5,17 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import resolve_jwt_secret, verify_token
+from app.advisor import get_advisor_reply
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
     fetch_courses_by_subject,
+    fetch_majors,
     fetch_profile,
     fetch_sections_by_course_codes,
     fetch_subjects,
@@ -24,6 +27,9 @@ from app.db import (
     upsert_profile,
     fetch_course_labels,
     get_course_label,
+    get_reviews,
+    get_recent_reviews,
+    create_review,
 )
 
 app = FastAPI(title="PlanMyPath API")
@@ -102,11 +108,8 @@ def list_subjects() -> Dict[str, object]:
 
 @app.get("/api/majors")
 def list_majors() -> Dict[str, object]:
-    subjects = fetch_subjects(POOLER_URL)
-    majors = [{"code": "UNDECLARED", "name": "Undeclared"}] + [
-        {"code": item["code"], "name": item["name"] or item["code"]} for item in subjects
-    ]
-    return {"data": majors}
+    majors = fetch_majors(POOLER_URL)
+    return {"data": [{"code": "UNDECLARED", "name": "Undeclared", "degree_type": None, "total_credits_required": 120}] + majors}
 
 
 @app.get("/api/courses")
@@ -195,7 +198,11 @@ def get_course_labels_endpoint(
         return {"data": result}
 
     # Otherwise return all explicitly labeled courses
-    return {"data": labels_data.get('labels', {}), "rules": labels_data.get('rules', [])}
+    return {
+        "data": labels_data.get('labels', {}),
+        "rules": labels_data.get('rules', []),
+        "total_credits": labels_data.get('total_credits', 120),
+    }
 
 
 def get_current_user(
@@ -295,3 +302,105 @@ def put_plan(payload: dict, user: Dict[str, object] = Depends(get_current_user))
             course["semesterId"] = course.pop("semester_id", None)
             course["selectedSectionId"] = course.pop("selected_section_id", None)
     return {"data": saved}
+
+
+# ---------------------------------------------------------------------------
+# Course reviews
+# ---------------------------------------------------------------------------
+
+class ReviewPayload(BaseModel):
+    course_code: str
+    year_taken: Optional[int] = None
+    term_taken: Optional[str] = None
+    professor: Optional[str] = None
+    comment: str
+
+
+@app.get("/api/reviews/recent")
+def list_recent_reviews(limit: int = 20) -> Dict[str, object]:
+    reviews = get_recent_reviews(POOLER_URL, limit)
+    return {"data": reviews}
+
+
+@app.get("/api/reviews")
+def list_reviews(course_code: str) -> Dict[str, object]:
+    if not course_code:
+        raise HTTPException(status_code=400, detail="course_code is required")
+    reviews = get_reviews(POOLER_URL, course_code)
+    return {"data": reviews}
+
+
+@app.post("/api/reviews")
+def post_review(
+    payload: ReviewPayload,
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    comment = (payload.comment or "").strip()
+    if not comment:
+        raise HTTPException(status_code=400, detail="comment is required")
+    if len(comment) > 2000:
+        raise HTTPException(status_code=400, detail="comment must be 2000 characters or fewer")
+    review = create_review(
+        POOLER_URL,
+        payload.course_code,
+        payload.year_taken,
+        payload.term_taken,
+        (payload.professor or "").strip() or None,
+        comment,
+    )
+    return {"data": review}
+
+
+# ---------------------------------------------------------------------------
+# AI Advisor
+# ---------------------------------------------------------------------------
+
+class AdvisorPayload(BaseModel):
+    message: str
+    history: Optional[List[dict]] = None
+
+
+@app.post("/api/ai/advise")
+def advise(
+    payload: AdvisorPayload,
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    message = (payload.message or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    # Fetch student data
+    profile = fetch_profile(POOLER_URL, str(user_id)) or {}
+    plan = fetch_plan(POOLER_URL, str(user_id))
+    major_code = profile.get("major_code") or ""
+
+    labels_data: dict = {}
+    total_credits = 120
+    if major_code and major_code != "UNDECLARED":
+        raw = fetch_course_labels(POOLER_URL, major_code)
+        labels_data = {k: dict(v) for k, v in raw.get("labels", {}).items()}
+        total_credits = raw.get("total_credits", 120)
+
+    # Grab recent hub reviews relevant to this major
+    reviews = get_recent_reviews(POOLER_URL, limit=50)
+
+    try:
+        reply = get_advisor_reply(
+            message=message,
+            profile=dict(profile),
+            plan=dict(plan) if plan else None,
+            labels=labels_data,
+            total_credits=total_credits,
+            reviews=reviews,
+            history=payload.history,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Advisor unavailable — try again shortly")
+
+    return {"reply": reply}

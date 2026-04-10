@@ -19,14 +19,60 @@ from psycopg2.extras import execute_values
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
+def _load_env_file(env_path: Path) -> None:
+    """Load key=value pairs from a .env file into os.environ (does not overwrite existing)."""
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key not in os.environ:
+            os.environ[key] = value
+
+
+# Load Backend/.env automatically so scripts can be run without pre-setting env vars
+_load_env_file(Path(__file__).resolve().parent.parent / ".env")
+
+
 def get_db_connection():
-    """Get database connection from environment variables"""
-    database_url = os.getenv('SUPABASE_DB_URL') or os.getenv('DATABASE_URL')
+    """Get database connection from environment variables."""
+    # Accept the supabase_URL key (postgresql:// variant) used in Backend/.env
+    database_url = (
+        os.getenv('SUPABASE_DB_URL')
+        or os.getenv('DATABASE_URL')
+        or os.getenv('supabase_URL', '').split('\n')[0]  # first line if duplicated
+    )
+    # Only use it if it's a postgres URL (the .env has two supabase_URL entries)
+    if database_url and not database_url.startswith('postgresql://'):
+        database_url = None
+    # Re-scan env for a postgresql:// supabase_URL
+    if not database_url:
+        for key in ('supabase_URL', 'SUPABASE_POOLER_URL', 'supabase_POOLER_URL'):
+            val = os.getenv(key, '')
+            if val.startswith('postgresql://'):
+                database_url = val
+                break
 
     if not database_url:
-        print("ERROR: SUPABASE_DB_URL or DATABASE_URL environment variable not set")
-        print("\nPlease set it in your .env file:")
-        print('SUPABASE_DB_URL="postgresql://postgres:[password]@[host]:[port]/postgres"')
+        print("ERROR: No PostgreSQL URL found in Backend/.env or environment")
+        print("\nExpected one of these keys in Backend/.env:")
+        print('  SUPABASE_DB_URL="postgresql://..."')
+        print('  supabase_URL="postgresql://..."')
+        sys.exit(1)
+
+    # Fix unencoded @ in password (e.g. password@@host → password%40@host)
+    if "@@" in database_url and "%40" not in database_url:
+        database_url = database_url.replace("@@", "%40@", 1)
+
+    try:
+        conn = psycopg2.connect(database_url)
+        return conn
+    except Exception as e:
+        print(f"ERROR: Failed to connect to database: {e}")
         sys.exit(1)
 
     try:
@@ -78,9 +124,42 @@ def seed_major(conn, requirements_data):
     return major_id
 
 
-def seed_requirement_groups(conn, major_id, requirement_groups):
+def resolve_groups(requirement_groups, data_dir, _seen=None):
+    """
+    Expand any template_reference groups by inlining the groups from the
+    referenced file.  Returns a flat list with all template_reference entries
+    replaced by the real groups they point to.
+    """
+    if _seen is None:
+        _seen = set()
+
+    result = []
+    for group in requirement_groups:
+        if group.get('group_type') == 'template_reference':
+            ref_filename = group.get('template_reference', '')
+            ref_path = data_dir / ref_filename
+            if ref_filename in _seen:
+                print(f"    ⚠ Skipping circular template_reference to {ref_filename}")
+                continue
+            if not ref_path.exists():
+                print(f"    ⚠ template_reference file not found: {ref_path} — skipping")
+                continue
+            _seen = _seen | {ref_filename}
+            ref_data = load_requirements_json(ref_path)
+            print(f"    → Resolving template_reference → {ref_filename}")
+            result.extend(resolve_groups(ref_data['requirement_groups'], data_dir, _seen))
+        else:
+            result.append(group)
+    return result
+
+
+def seed_requirement_groups(conn, major_id, requirement_groups, data_dir=None):
     """Insert requirement groups and their courses"""
     cur = conn.cursor()
+
+    # Expand any template_reference groups before inserting
+    if data_dir is not None:
+        requirement_groups = resolve_groups(requirement_groups, data_dir)
 
     for idx, group in enumerate(requirement_groups):
         group_id = group['group_id']
@@ -199,55 +278,81 @@ def seed_requirement_rules(cur, group_id, rules):
 
 def main():
     """Main seeding function"""
-    print("=" * 80)
-    print("SEEDING CS DEGREE REQUIREMENTS")
-    print("=" * 80)
-    print()
+    import argparse
+    parser = argparse.ArgumentParser(description="Seed degree requirements into the database.")
+    parser.add_argument(
+        "file",
+        nargs="?",
+        help="Path to requirements JSON file. Defaults to data/cs_requirements.json.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Seed all requirements JSON files found in the data/ directory.",
+    )
+    args = parser.parse_args()
 
-    # Get project root directory
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent
-    requirements_file = project_root / 'data' / 'cs_requirements.json'
+    data_dir = project_root / "data"
 
-    print(f"Loading requirements from: {requirements_file}")
-    requirements_data = load_requirements_json(requirements_file)
-    print()
+    if args.all:
+        files = sorted(data_dir.glob("*_requirements.json"))
+        if not files:
+            print(f"ERROR: No *_requirements.json files found in {data_dir}")
+            sys.exit(1)
+    elif args.file:
+        files = [Path(args.file)]
+    else:
+        files = [data_dir / "cs_requirements.json"]
 
-    # Connect to database
-    print("Connecting to database...")
-    conn = get_db_connection()
-    print("✓ Connected")
-    print()
-
-    try:
-        # Seed major
-        print("Seeding major...")
-        major_id = seed_major(conn, requirements_data)
+    for requirements_file in files:
+        major_label = requirements_file.stem.replace("_requirements", "").upper()
+        print("=" * 80)
+        print(f"SEEDING REQUIREMENTS: {requirements_file.name}")
+        print("=" * 80)
         print()
 
-        # Seed requirement groups
-        print("Seeding requirement groups...")
-        seed_requirement_groups(conn, major_id, requirements_data['requirement_groups'])
+        print(f"Loading requirements from: {requirements_file}")
+        requirements_data = load_requirements_json(requirements_file)
         print()
 
-        # Commit transaction
-        conn.commit()
-        print("=" * 80)
-        print("✓ SUCCESS: CS requirements seeded successfully!")
-        print("=" * 80)
-
-    except Exception as e:
-        conn.rollback()
+        # Connect to database
+        print("Connecting to database...")
+        conn = get_db_connection()
+        print("✓ Connected")
         print()
-        print("=" * 80)
-        print(f"✗ ERROR: Failed to seed requirements: {e}")
-        print("=" * 80)
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
 
-    finally:
-        conn.close()
+        try:
+            # Seed major
+            print("Seeding major...")
+            major_id = seed_major(conn, requirements_data)
+            print()
+
+            # Seed requirement groups (pass data_dir so template_references can be resolved)
+            print("Seeding requirement groups...")
+            seed_requirement_groups(conn, major_id, requirements_data['requirement_groups'], data_dir=data_dir)
+            print()
+
+            # Commit transaction
+            conn.commit()
+            print("=" * 80)
+            print(f"✓ SUCCESS: {requirements_file.name} seeded successfully!")
+            print("=" * 80)
+            print()
+
+        except Exception as e:
+            conn.rollback()
+            print()
+            print("=" * 80)
+            print(f"✗ ERROR: Failed to seed {requirements_file.name}: {e}")
+            print("=" * 80)
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+
+        finally:
+            conn.close()
 
 
 if __name__ == '__main__':

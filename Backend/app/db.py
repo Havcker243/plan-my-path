@@ -168,6 +168,7 @@ class ElectiveRule(TypedDict):
 class CourseLabelsData(TypedDict):
     labels: dict  # dict[str, CourseLabelEntry]
     rules: List[ElectiveRule]
+    total_credits: int
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +227,24 @@ def fetch_subjects(pooler_url: str) -> List[SubjectRow]:
             cur.execute("select id, code, name from subjects order by code;")
             rows = cur.fetchall()
     return [{"id": row[0], "code": row[1], "name": row[2]} for row in rows]
+
+
+def fetch_majors(pooler_url: str) -> List[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT code, name, degree_type, total_credits_required FROM majors ORDER BY name;"
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "code": row[0],
+            "name": row[1] or row[0],
+            "degree_type": row[2],
+            "total_credits_required": row[3],
+        }
+        for row in rows
+    ]
 
 
 def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[CourseRow]:
@@ -868,6 +887,14 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
     """
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
+            # Get total credits required for this major
+            cur.execute(
+                "SELECT total_credits_required FROM majors WHERE code = %s",
+                (major_code,),
+            )
+            major_row = cur.fetchone()
+            total_credits: int = major_row[0] if major_row and major_row[0] else 120
+
             # Get all requirement courses for this major
             cur.execute(
                 """
@@ -953,7 +980,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                     'group_name': group_name,
                 })
 
-    return {'labels': labels, 'rules': elective_rules}
+    return {'labels': labels, 'rules': elective_rules, 'total_credits': total_credits}
 
 
 def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseLabelEntry:
@@ -1007,4 +1034,100 @@ def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseL
         'group_type': 'fill_remaining',
         'detail': 'Counts toward 120 total credits',
         'credits': None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Course reviews
+# ---------------------------------------------------------------------------
+
+def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, course_code, year_taken, term_taken, professor, comment,
+                       helpful_count, created_at
+                FROM course_reviews
+                WHERE course_code = %s
+                ORDER BY created_at DESC
+                LIMIT 50
+                """,
+                (course_code,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "course_code": row[1],
+            "year_taken": row[2],
+            "term_taken": row[3],
+            "professor": row[4],
+            "comment": row[5],
+            "helpful_count": row[6],
+            "created_at": row[7].isoformat() if row[7] else None,
+        }
+        for row in rows
+    ]
+
+
+def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, course_code, year_taken, term_taken, professor, comment,
+                       helpful_count, created_at
+                FROM course_reviews
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (min(limit, 100),),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "course_code": row[1],
+            "year_taken": row[2],
+            "term_taken": row[3],
+            "professor": row[4],
+            "comment": row[5],
+            "helpful_count": row[6],
+            "created_at": row[7].isoformat() if row[7] else None,
+        }
+        for row in rows
+    ]
+
+
+def create_review(
+    pooler_url: str,
+    course_code: str,
+    year_taken: Optional[int],
+    term_taken: Optional[str],
+    professor: Optional[str],
+    comment: str,
+) -> dict:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO course_reviews (course_code, year_taken, term_taken, professor, comment)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, course_code, year_taken, term_taken, professor, comment,
+                          helpful_count, created_at
+                """,
+                (course_code, year_taken, term_taken, professor, comment),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    return {
+        "id": str(row[0]),
+        "course_code": row[1],
+        "year_taken": row[2],
+        "term_taken": row[3],
+        "professor": row[4],
+        "comment": row[5],
+        "helpful_count": row[6],
+        "created_at": row[7].isoformat() if row[7] else None,
     }

@@ -1,0 +1,65 @@
+{
+  "major_code": "MKT",
+  "major_name": "Marketing Concentration",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "shared_business_core",
+      "group_name": "Shared Business Core",
+      "group_type": "template_reference",
+      "template_reference": "business_admin_non_concentration_requirements.json",
+      "description": "Uses the shared business administration core structure as the base."
+    },
+    {
+      "group_id": "marketing_concentration_fixed",
+      "group_name": "Marketing Concentration - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 18,
+      "description": "Fixed marketing concentration courses from the balance sheet.",
+      "courses": [
+        { "course_code": "MGT 350", "course_name": "International Business", "credits": 3 },
+        { "course_code": "MKT 310", "course_name": "Consumer Behavior", "credits": 3 },
+        { "course_code": "MGT 380", "course_name": "Entrepreneurial Development", "credits": 3 },
+        { "course_code": "MGT 320", "course_name": "Human Resource Management", "credits": 3 },
+        { "course_code": "MKT 4XX", "course_name": "Marketing Analytics", "credits": 3 },
+        { "course_code": "MKT 420", "course_name": "Marketing Strategy", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "marketing_concentration_electives",
+      "group_name": "Marketing Concentration - Choose Two",
+      "group_type": "choose_n",
+      "credits_required": 6,
+      "selection_count": 2,
+      "description": "Choose two marketing electives from the source sheet.",
+      "courses": [
+        { "course_code": "MKT 3XX", "course_name": "Brand Strategy", "credits": 3 },
+        { "course_code": "MKT 320", "course_name": "Digital Marketing", "credits": 3 },
+        { "course_code": "MKT 3XX-IMC", "course_name": "Integrated Marketing Communications", "credits": 3 },
+        { "course_code": "MKT XXX-MUSIC", "course_name": "Music Marketing", "credits": 3 },
+        { "course_code": "MKT 3XX-SCM", "course_name": "Supply Chain Management", "credits": 3 },
+        { "course_code": "MKT 3XX-SALES", "course_name": "Professional Selling and Sales Management", "credits": 3 },
+        { "course_code": "MKT 3XX-HEALTH", "course_name": "Healthcare Marketing", "credits": 3 },
+        { "course_code": "MKT 4XX-TOPICS", "course_name": "Special Topics in Marketing", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "general_electives_override",
+      "group_name": "General Electives Override",
+      "group_type": "credit_threshold",
+      "credits_required": {
+        "min": 13,
+        "max": 13
+      },
+      "description": "The marketing balance sheet explicitly lists 13 general elective credits."
+    }
+  ],
+  "metadata": {
+    "source": "20210325-BSBA-Marketing-Concentration.pdf",
+    "notes": [
+      "This template references the shared business administration base and adds the marketing concentration layers.",
+      "Several marketing electives are placeholder 3XX/4XX entries on the source document and remain placeholders here."
+    ]
+  }
+}

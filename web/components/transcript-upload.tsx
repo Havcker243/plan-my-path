@@ -272,7 +272,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
             <p className="text-sm font-semibold text-foreground">{raw.courses.length} transcript rows found</p>
             <p className="text-xs text-muted-foreground">
               {selected.size} selected · {totalCredits} credits
-              {raw.gpa !== null && <> · GPA <span className="font-semibold text-foreground">{raw.gpa.toFixed(3)}</span></>}
+              {raw.gpa !== null && <> · GPA <span className="font-semibold text-foreground">{Number(raw.gpa).toFixed(3)}</span></>}
             </p>
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         >
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
           {submitting ? "Adding courses…" : `Use ${selected.size} row${selected.size !== 1 ? "s" : ""}`}
-          {!submitting && raw.gpa !== null && <> + GPA {raw.gpa.toFixed(2)}</>}
+          {!submitting && raw.gpa !== null && <> + GPA {Number(raw.gpa).toFixed(2)}</>}
         </Button>
       </div>
     </div>

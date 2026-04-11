@@ -1,7 +1,8 @@
 "use client";
 
-import { GraduationCap, BookOpen, TrendingUp, Camera, Loader2, Save } from "lucide-react";
+import { GraduationCap, BookOpen, TrendingUp, Camera, Loader2, Save, Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,11 +12,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getCompletedCredits } from "@/lib/data";
 import { getSupabase } from "@/lib/supabase";
 import { formatDisplayName } from "@/lib/utils";
+import { deleteAccount } from "@/lib/api";
 import { toast } from "sonner";
 
 const TERMS = ["fall", "spring", "summer", "winter"] as const;
@@ -26,6 +37,7 @@ const currentYear = new Date().getFullYear();
 const GRAD_YEARS = Array.from({ length: 12 }, (_, i) => currentYear - 2 + i);
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user } = useAuth();
   const {
     profile,
@@ -49,6 +61,8 @@ export default function ProfilePage() {
   const [gradYear, setGradYear] = useState<number>(profile?.graduation_year ?? currentYear + 2);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const majorChanged = major !== (profile?.major_code ?? "");
@@ -123,6 +137,22 @@ export default function ProfilePage() {
       toast.error("Failed to save profile");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Not signed in");
+      await deleteAccount(token);
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch {
+      toast.error("Failed to delete account — try again");
+      setDeleting(false);
     }
   };
 
@@ -309,6 +339,47 @@ export default function ProfilePage() {
           You&apos;re {Math.round((completedCredits / DEGREE_CREDITS) * 100)}% of the way through your {DEGREE_CREDITS}-credit degree.
         </div>
       )}
+
+      {/* Danger zone */}
+      <div className="rounded-xl border border-destructive/30 bg-card p-5 mt-2">
+        <h2 className="text-sm font-semibold text-destructive mb-1">Danger Zone</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Permanently deletes your account, plan, and all data. This cannot be undone.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground gap-2"
+          onClick={() => setDeleteDialogOpen(true)}
+          disabled={deleting}
+        >
+          {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+          Delete Account
+        </Button>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your plan, profile, and all course data.
+              Your Fiskpath account will be removed and you will be signed out.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3 mt-2">
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Deleting…</> : "Yes, delete my account"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

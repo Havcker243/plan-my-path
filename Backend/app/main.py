@@ -30,6 +30,7 @@ from app.db import (
     get_reviews,
     get_recent_reviews,
     create_review,
+    delete_user_data,
 )
 
 app = FastAPI(title="PlanMyPath API")
@@ -404,3 +405,56 @@ def advise(
         raise HTTPException(status_code=500, detail="Advisor unavailable — try again shortly")
 
     return {"reply": reply}
+
+
+# ---------------------------------------------------------------------------
+# Account deletion
+# ---------------------------------------------------------------------------
+
+def _get_env_val(key: str) -> Optional[str]:
+    """Read a value from os.environ or fallback to .env file."""
+    if os.environ.get(key):
+        return os.environ[key]
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith(f"{key}="):
+                return line.split("=", 1)[1].strip().strip("'\"")
+    return None
+
+
+@app.delete("/api/account")
+def delete_account(user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
+    """
+    Permanently delete the authenticated user's account.
+    Deletes all plan data and profile from Postgres, then removes the
+    Supabase auth user via the Admin API (requires SUPABASE_SERVICE_ROLE_KEY).
+    """
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # 1. Delete all user data from our tables
+    delete_user_data(POOLER_URL, str(user_id))
+
+    # 2. Delete the Supabase auth user (best-effort — DB data is already gone)
+    supabase_url = _get_env_val("SUPABASE_URL")
+    service_role_key = _get_env_val("SUPABASE_SERVICE_ROLE_KEY")
+    if supabase_url and service_role_key:
+        import urllib.request
+        import urllib.error
+        req = urllib.request.Request(
+            f"{supabase_url}/auth/v1/admin/users/{user_id}",
+            method="DELETE",
+            headers={
+                "apikey": service_role_key,
+                "Authorization": f"Bearer {service_role_key}",
+            },
+        )
+        try:
+            urllib.request.urlopen(req)
+        except urllib.error.URLError:
+            pass  # DB rows are gone; auth user will be orphaned but harmless
+
+    return {"data": {"deleted": True}}

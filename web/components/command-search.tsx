@@ -3,14 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BookOpen,
-  LayoutDashboard,
-  Map,
-  ClipboardList,
-  CalendarDays,
-  User,
-} from "lucide-react";
-import {
   CommandDialog,
   CommandInput,
   CommandList,
@@ -21,23 +13,9 @@ import {
 } from "@/components/ui/command";
 import { usePlan } from "@/contexts/plan-context";
 import { cn } from "@/lib/utils";
+import { NAV_ITEMS } from "@/lib/nav";
+import { LABEL_DOT } from "@/lib/data";
 import type { Course } from "@/lib/data";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/planner", label: "Planner", icon: Map },
-  { href: "/requirements", label: "Requirements", icon: ClipboardList },
-  { href: "/courses", label: "Courses", icon: BookOpen },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/profile", label: "Profile", icon: User },
-];
-
-const LABEL_DOT: Record<string, string> = {
-  required: "bg-red-500",
-  group: "bg-orange-500",
-  elective: "bg-indigo-500",
-  general: "bg-slate-400",
-};
 
 interface Props {
   open: boolean;

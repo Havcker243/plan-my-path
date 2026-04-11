@@ -1,0 +1,65 @@
+{
+  "major_code": "BIS-AS",
+  "major_name": "Business Information Systems Concentration",
+  "degree_type": "A.S.",
+  "total_credits_required": 60,
+  "requirement_groups": [
+    {
+      "group_id": "core_requirements",
+      "group_name": "CORE Requirements",
+      "group_type": "all_of",
+      "credits_required": 27,
+      "description": "Associate-level core requirements from the business information systems concentration sheet.",
+      "courses": [
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 220", "course_name": "Creative Arts", "credits": 3 },
+        { "course_code": "MATH 101", "course_name": "College Algebra", "credits": 3 },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 3 },
+        { "course_code": "PSY 180", "course_name": "General Psychology", "credits": 3 },
+        { "course_code": "SOC 100", "course_name": "Introduction to Sociology", "credits": 3, "alternative_for": "PSY 180" },
+        { "course_code": "CORE 240", "course_name": "Natural Science", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 24,
+      "description": "Major requirements listed on the associate balance sheet.",
+      "courses": [
+        { "course_code": "ACC 230", "course_name": "Principles of Accounting I", "credits": 3 },
+        { "course_code": "MGT 280", "course_name": "Management Principles and Practice", "credits": 3 },
+        { "course_code": "BAD 110", "course_name": "Business Information Systems", "credits": 3 },
+        { "course_code": "CSCI 100", "course_name": "Introduction to Computing", "credits": 3, "alternative_for": "BAD 110" },
+        { "course_code": "ECON 230", "course_name": "Microeconomics", "credits": 3 },
+        { "course_code": "BAD 250", "course_name": "Business Communications", "credits": 3 },
+        { "course_code": "MKT 300", "course_name": "Principles of Marketing", "credits": 3 },
+        { "course_code": "ECON 240", "course_name": "Macroeconomics", "credits": 3 },
+        { "course_code": "BAD 260", "course_name": "Applied Statistics", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "bis_concentration",
+      "group_name": "Business Information Systems Concentration",
+      "group_type": "all_of",
+      "credits_required": 9,
+      "description": "Concentration courses listed on the associate balance sheet.",
+      "courses": [
+        { "course_code": "CSCI 100", "course_name": "Introduction to Programming", "credits": 3 },
+        { "course_code": "CSCI 110", "course_name": "Introduction to Computer Science I", "credits": 3, "alternative_for": "CSCI 100" },
+        { "course_code": "CSCI 312", "course_name": "Database Management", "credits": 3 },
+        { "course_code": "CSCI 390", "course_name": "Machine Learning for Social Sciences", "credits": 3 }
+      ],
+      "notes": "The concentration section uses equivalents/or alternatives wording on the source sheet."
+    }
+  ],
+  "metadata": {
+    "source": "20210512-ASBA-Business-information-systems-concentration.pdf",
+    "notes": [
+      "This is an associate-level business administration template, not a 120-credit bachelor's template."
+    ]
+  }
+}

@@ -6,204 +6,19 @@ import { ArrowRight, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import type { BackendSection } from "@/lib/api";
+import {
+  COURSE_COLORS,
+  buildEvents,
+  getConflicts,
+  buildIcs,
+  type CalEvent,
+} from "@/lib/calendar";
 import { toast } from "sonner";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8am–5pm
 const CELL_HEIGHT = 60;
-
-// Parse "HH:MM" → decimal hours (e.g. "09:30" → 9.5)
-function parseTime(t: string | null): number | null {
-  if (!t) return null;
-  const match = t.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
-  if (!match) return null;
-  let h = Number(match[1]);
-  const m = Number(match[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
-  const meridiem = match[3]?.toUpperCase();
-  if (meridiem) {
-    if (h < 1 || h > 12) return null;
-    if (meridiem === "AM") h = h === 12 ? 0 : h;
-    if (meridiem === "PM") h = h === 12 ? 12 : h + 12;
-  } else if (h < 0 || h > 23) {
-    return null;
-  }
-  if (m < 0 || m > 59) return null;
-  return h + m / 60;
-}
-
-// Parse days string like "MWF", "TR", "MW" → array of 0-indexed Mon-Fri indices
-function parseDays(days: string | null): number[] {
-  if (!days) return [];
-  const map: Record<string, number> = { M: 0, T: 1, W: 2, R: 3, F: 4, S: 5, U: 6 };
-  const out: number[] = [];
-  for (const ch of days) {
-    if (map[ch] !== undefined) out.push(map[ch]);
-  }
-  return out;
-}
-
-const COURSE_COLORS = [
-  "bg-indigo-100 border-indigo-300 text-indigo-800",
-  "bg-orange-100 border-orange-300 text-orange-800",
-  "bg-green-100 border-green-300 text-green-800",
-  "bg-purple-100 border-purple-300 text-purple-800",
-  "bg-pink-100 border-pink-300 text-pink-800",
-  "bg-teal-100 border-teal-300 text-teal-800",
-];
-
-interface CalEvent {
-  courseCode: string;
-  day: number;
-  startHour: number;
-  duration: number;
-  color: string;
-  location: string | null;
-}
-
-function buildEvents(
-  sectionsMap: Record<string, BackendSection[]>,
-  courseColors: Record<string, string>,
-  selectedSectionIds: Record<string, string | null>
-): CalEvent[] {
-  const events: CalEvent[] = [];
-  for (const [code, sections] of Object.entries(sectionsMap)) {
-    const color = courseColors[code] ?? COURSE_COLORS[0];
-    const selectedSectionId = selectedSectionIds[code];
-    const chosenSections = selectedSectionId
-      ? sections.filter((section) => section.id === selectedSectionId)
-      : sections.slice(0, 1);
-    const effectiveSections = chosenSections.length > 0 ? chosenSections : sections.slice(0, 1);
-    for (const section of effectiveSections) {
-      for (const mt of section.meeting_times) {
-        const days = parseDays(mt.days);
-        const start = parseTime(mt.start_time);
-        const end = parseTime(mt.end_time);
-        if (start === null || end === null) continue;
-        const duration = end - start;
-        if (!Number.isFinite(duration) || duration <= 0) continue;
-        if (days.length === 0) continue;
-        const location = [mt.location, mt.building, mt.room]
-          .map((value) => value?.trim())
-          .filter(Boolean)
-          .join(" • ") || null;
-        for (const day of days) {
-          events.push({ courseCode: code, day, startHour: start, duration, color, location });
-        }
-      }
-    }
-  }
-  return events;
-}
-
-function getConflicts(events: CalEvent[]): Set<string> {
-  const conflicts = new Set<string>();
-  for (let i = 0; i < events.length; i++) {
-    for (let j = i + 1; j < events.length; j++) {
-      const a = events[i], b = events[j];
-      if (a.day === b.day && a.courseCode !== b.courseCode) {
-        if (a.startHour < b.startHour + b.duration && b.startHour < a.startHour + a.duration) {
-          conflicts.add(a.courseCode);
-          conflicts.add(b.courseCode);
-        }
-      }
-    }
-  }
-  return conflicts;
-}
-
-function escapeIcsText(value: string): string {
-  return value
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
-}
-
-function formatIcsDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`;
-}
-
-function weekdayIcsCode(index: number): string {
-  return ["MO", "TU", "WE", "TH", "FR", "SA", "SU"][index] ?? "MO";
-}
-
-function buildIcs(
-  currentSem: { term: string; year: number; courseIds: string[] },
-  sectionsMap: Record<string, BackendSection[]>,
-  selectedSectionIds: Record<string, string | null>
-): string {
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//GradPath//Planner Calendar//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-  ];
-
-  currentSem.courseIds.forEach((code) => {
-    const sections = sectionsMap[code] ?? [];
-    const selectedSectionId = selectedSectionIds[code];
-    const chosenSection = selectedSectionId
-      ? sections.find((section) => section.id === selectedSectionId)
-      : sections[0];
-    if (!chosenSection) return;
-
-    chosenSection.meeting_times.forEach((meeting, meetingIndex) => {
-      const days = parseDays(meeting.days).sort((a, b) => a - b);
-      const start = parseTime(meeting.start_time);
-      const end = parseTime(meeting.end_time);
-      if (days.length === 0 || start === null || end === null || end <= start) return;
-
-      const baseStartDate = chosenSection.start_date ? new Date(chosenSection.start_date) : null;
-      const baseEndDate = chosenSection.end_date ? new Date(chosenSection.end_date) : null;
-      if (!baseStartDate || Number.isNaN(baseStartDate.getTime())) return;
-
-      const startDate = new Date(baseStartDate);
-      const jsWeekday = startDate.getDay();
-      const currentIndex = jsWeekday === 0 ? 6 : jsWeekday - 1;
-      const delta = (days[0] - currentIndex + 7) % 7;
-      startDate.setDate(startDate.getDate() + delta);
-      startDate.setHours(Math.floor(start), Math.round((start % 1) * 60), 0, 0);
-
-      const endDate = new Date(startDate);
-      endDate.setHours(Math.floor(end), Math.round((end % 1) * 60), 0, 0);
-
-      const byDay = days.map(weekdayIcsCode).join(",");
-      const untilDate = baseEndDate && !Number.isNaN(baseEndDate.getTime()) ? new Date(baseEndDate) : null;
-      if (untilDate) untilDate.setHours(23, 59, 59, 0);
-
-      lines.push("BEGIN:VEVENT");
-      lines.push(`UID:${escapeIcsText(`${code}-${chosenSection.id}-${meetingIndex}@gradpath`)}`);
-      lines.push(`DTSTAMP:${formatIcsDate(new Date())}`);
-      lines.push(`DTSTART:${formatIcsDate(startDate)}`);
-      lines.push(`DTEND:${formatIcsDate(endDate)}`);
-      lines.push(`SUMMARY:${escapeIcsText(`${code} (${chosenSection.section_code})`)}`);
-      const location = [meeting.location, meeting.building, meeting.room]
-        .map((value) => value?.trim())
-        .filter(Boolean)
-        .join(" • ");
-      if (location) lines.push(`LOCATION:${escapeIcsText(location)}`);
-      lines.push(`DESCRIPTION:${escapeIcsText(`Term: ${currentSem.term} ${currentSem.year}`)}`);
-      lines.push(
-        untilDate
-          ? `RRULE:FREQ=WEEKLY;BYDAY=${byDay};UNTIL=${formatIcsDate(untilDate)}`
-          : `RRULE:FREQ=WEEKLY;BYDAY=${byDay}`
-      );
-      lines.push("END:VEVENT");
-    });
-  });
-
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-}
 
 export default function CalendarPage() {
   const { semesters, planCatalog, loadSectionsForCourses } = usePlan();
@@ -332,25 +147,23 @@ export default function CalendarPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {loadingSections && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          )}
+          {conflicts.size > 0 && (
+            <span className="text-[10px] md:text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              {Math.ceil(conflicts.size / 2)} conflict{conflicts.size > 2 ? "s" : ""}
             </span>
           )}
           <button
             type="button"
             onClick={downloadIcs}
             disabled={loadingSections || Object.keys(sectionsMap).length === 0}
-            className="text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+            className="hidden sm:block text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
           >
-            Download .ics
+            .ics
           </button>
-          {conflicts.size > 0 && (
-            <span className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
-              {Math.ceil(conflicts.size / 2)} conflict{conflicts.size > 2 ? "s" : ""}
-            </span>
-          )}
           <Link href="/planner" className="text-xs text-primary hover:underline flex items-center gap-1">
             Planner <ArrowRight className="w-3 h-3" />
           </Link>
@@ -393,8 +206,69 @@ export default function CalendarPage() {
         })}
       </div>
 
-      {/* Weekly grid */}
-      <div className="flex-1 overflow-auto">
+      {/* Mobile list view — hidden on md+ */}
+      <div className="md:hidden flex-1 overflow-y-auto pb-20">
+        {DAY_LABELS.slice(0, 5).map((dayLabel, dayIdx) => {
+          const dayEvents = events.filter((e) => e.day === dayIdx);
+          if (dayEvents.length === 0) return null;
+          return (
+            <div key={dayIdx} className="border-b border-border last:border-0">
+              <div className="px-4 py-2 bg-muted/30">
+                <span className="text-xs font-semibold text-foreground">{dayLabel}</span>
+              </div>
+              <div className="divide-y divide-border/50">
+                {dayEvents
+                  .sort((a, b) => a.startHour - b.startHour)
+                  .map((e, i) => {
+                    const isConflict = conflicts.has(e.courseCode);
+                    const course = planCatalog[e.courseCode];
+                    return (
+                      <div
+                        key={`${e.courseCode}-${i}`}
+                        className={cn(
+                          "flex items-start gap-3 px-4 py-3",
+                          isConflict ? "bg-red-50" : ""
+                        )}
+                      >
+                        <div className={cn("w-1 self-stretch rounded-full flex-shrink-0", e.color.split(" ")[0])} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-foreground font-mono">{e.courseCode}</span>
+                            {course?.title && (
+                              <span className="text-xs text-muted-foreground truncate">{course.title}</span>
+                            )}
+                            {isConflict && (
+                              <span className="text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">Conflict</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                            <span>{formatHour(e.startHour)} – {formatHour(e.startHour + e.duration)}</span>
+                            {e.location && <span>{e.location}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          );
+        })}
+        {weekdayEvents.length === 0 && !loadingSections && (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <p className="text-sm text-muted-foreground mb-1">No scheduled sections found.</p>
+            <p className="text-xs text-muted-foreground">Select sections in the Planner to see them here.</p>
+          </div>
+        )}
+        {loadingSections && (
+          <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Loading schedule…</span>
+          </div>
+        )}
+      </div>
+
+      {/* Weekly grid — desktop only */}
+      <div className="hidden md:block flex-1 overflow-auto">
         <div className="flex min-w-[600px]">
           {/* Time column */}
           <div className="flex-shrink-0 w-14 pt-10 border-r border-border">

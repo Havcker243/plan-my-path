@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   CheckCircle2, Circle, AlertCircle, ChevronDown, ChevronRight, Info, ArrowRight,
@@ -9,6 +9,7 @@ import { cn, formatDisplayName } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LABEL_META, type RequirementLabel } from "@/lib/data";
 import { usePlan } from "@/contexts/plan-context";
+import { buildRequirementsViewModel } from "@/lib/requirements";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_ICON = {
@@ -35,66 +36,10 @@ export default function RequirementsPage() {
   });
   const [auditExpanded, setAuditExpanded] = useState<Record<string, boolean>>({});
 
-  const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
-  const completedIds = new Set(
-    [...planCodes].filter((id) => planCatalog[id]?.status === "completed")
+  const { groups, auditGroups, totalCreditsEarned } = useMemo(
+    () => buildRequirementsViewModel(semesters, planCatalog, labels),
+    [semesters, planCatalog, labels]
   );
-  const plannedIds = new Set(
-    [...planCodes].filter((id) => planCatalog[id]?.status !== "completed")
-  );
-
-  const groups: Record<RequirementLabel, {
-    courses: Array<{ code: string; title: string; credits: number; status: "completed" | "planned" | "missing" }>;
-    completed: number;
-    total: number;
-  }> = {
-    required: { courses: [], completed: 0, total: 0 },
-    group: { courses: [], completed: 0, total: 0 },
-    elective: { courses: [], completed: 0, total: 0 },
-    general: { courses: [], completed: 0, total: 0 },
-  };
-
-  planCodes.forEach((code) => {
-    const course = planCatalog[code];
-    if (!course) return;
-    const status = completedIds.has(code) ? "completed" : "planned";
-    groups[course.label].courses.push({
-      code: course.code,
-      title: course.title,
-      credits: course.credits,
-      status,
-    });
-    groups[course.label].total++;
-    if (status === "completed") groups[course.label].completed++;
-  });
-
-  const mapLabel = (label: string): RequirementLabel => {
-    if (label === "Required") return "required";
-    if (label === "Group Choice") return "group";
-    if (label === "Major Elective") return "elective";
-    return "general";
-  };
-
-  Object.entries(labels).forEach(([code, entry]) => {
-    if (planCodes.has(code)) return;
-    const groupLabel = mapLabel(entry.label);
-    groups[groupLabel].courses.push({
-      code,
-      title: entry.detail || code,
-      credits: entry.credits ?? 0,
-      status: "missing",
-    });
-    groups[groupLabel].total++;
-  });
-
-  (Object.keys(groups) as RequirementLabel[]).forEach((label) => {
-    groups[label].courses.sort((a, b) => a.code.localeCompare(b.code));
-  });
-
-  const totalCreditsEarned = [...planCodes].reduce((acc, id) => {
-    const course = planCatalog[id];
-    return course?.status === "completed" ? acc + course.credits : acc;
-  }, 0);
 
   const majorName = formatDisplayName(
     majors.find((m) => m.code === profile?.major_code)?.name
@@ -109,45 +54,6 @@ export default function RequirementsPage() {
   const toggleAudit = (key: string) => {
     setAuditExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
   };
-
-  // Build per-group audit from labels (groups explicit requirement courses by group_name)
-  const auditGroups: Record<string, {
-    groupType: string;
-    label: RequirementLabel;
-    courses: Array<{ code: string; title: string; credits: number; status: "completed" | "planned" | "missing" }>;
-    completedCredits: number;
-    totalCredits: number;
-  }> = {};
-
-  Object.entries(labels).forEach(([code, entry]) => {
-    const gKey = entry.group_name || "Other";
-    if (!auditGroups[gKey]) {
-      auditGroups[gKey] = {
-        groupType: entry.group_type,
-        label: mapLabel(entry.label),
-        courses: [],
-        completedCredits: 0,
-        totalCredits: 0,
-      };
-    }
-    const status: "completed" | "planned" | "missing" = completedIds.has(code)
-      ? "completed"
-      : plannedIds.has(code)
-      ? "planned"
-      : "missing";
-    const cr = entry.credits ?? 0;
-    auditGroups[gKey].courses.push({ code, title: entry.detail || code, credits: cr, status });
-    auditGroups[gKey].totalCredits += cr;
-    if (status === "completed") auditGroups[gKey].completedCredits += cr;
-  });
-
-  // Sort each audit group's courses alphabetically
-  Object.values(auditGroups).forEach((g) => g.courses.sort((a, b) => a.code.localeCompare(b.code)));
-
-  const auditGroupEntries = Object.entries(auditGroups).sort(([, a], [, b]) => {
-    const order: RequirementLabel[] = ["required", "group", "elective", "general"];
-    return order.indexOf(a.label) - order.indexOf(b.label);
-  });
 
   return (
     <div className="px-4 md:px-8 py-6 pb-20 md:pb-8 max-w-4xl mx-auto">
@@ -204,11 +110,12 @@ export default function RequirementsPage() {
       </div>
 
       {/* Degree Audit — grouped by requirement group */}
-      {auditGroupEntries.length > 0 && (
+      {auditGroups.length > 0 && (
         <div className="mb-8">
           <h2 className="text-sm font-semibold text-foreground mb-3">Degree Audit</h2>
           <div className="space-y-2">
-            {auditGroupEntries.map(([groupName, group]) => {
+            {auditGroups.map((group) => {
+              const { groupName } = group;
               const meta = LABEL_META[group.label];
               const isOpen = auditExpanded[groupName] ?? false;
               const missingCount = group.courses.filter((c) => c.status === "missing").length;

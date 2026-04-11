@@ -61,6 +61,22 @@ export const LABEL_META: Record<RequirementLabel, { label: string; color: string
   general: { label: "Gen. Elective", color: "text-slate-600", bg: "bg-slate-100" },
 };
 
+/** Dot indicator color per requirement label (use as a Tailwind class on a rounded div). */
+export const LABEL_DOT: Record<RequirementLabel, string> = {
+  required: "bg-red-500",
+  group: "bg-orange-500",
+  elective: "bg-indigo-500",
+  general: "bg-slate-400",
+};
+
+/** Pill/badge styles per requirement label. */
+export const LABEL_BADGE: Record<RequirementLabel, string> = {
+  required: "bg-red-50 text-red-700 border-red-100",
+  group: "bg-orange-50 text-orange-700 border-orange-100",
+  elective: "bg-indigo-50 text-indigo-700 border-indigo-100",
+  general: "bg-slate-100 text-slate-600 border-slate-200",
+};
+
 // ─── Utility helpers ──────────────────────────────────────────────────────────
 
 export function getCourseById(
@@ -166,6 +182,28 @@ export function getPrereqWarnings(
       const prereqIdx = semesterIndexForCourse[prereqId];
       if (prereqIdx === undefined || prereqIdx >= semIdx) {
         warnings.push({ courseId, prereqId });
+      }
+    }
+  }
+  return warnings;
+}
+
+/**
+ * Returns courses placed in a semester where they're not typically offered.
+ * Only flags when offeredTerms is non-empty (unknown = no warning).
+ */
+export function getOfferedTermWarnings(
+  semesters: Semester[],
+  catalog: Record<string, Course>
+): Array<{ courseId: string; semesterId: string; semesterTerm: SemesterTerm }> {
+  const warnings: Array<{ courseId: string; semesterId: string; semesterTerm: SemesterTerm }> = [];
+  for (const sem of semesters) {
+    if (sem.isPast) continue;
+    for (const courseId of sem.courseIds) {
+      const course = catalog[courseId];
+      if (!course || course.offeredTerms.length === 0) continue;
+      if (!course.offeredTerms.includes(sem.term)) {
+        warnings.push({ courseId, semesterId: sem.id, semesterTerm: sem.term });
       }
     }
   }

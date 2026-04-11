@@ -1,136 +1,116 @@
-# Plan My Path
+# Fiskpath
 
-Plan My Path is an academic planning app for students who want to map degree progress across semesters, browse courses, understand requirements, and keep a workable graduation path in one place.
+Fiskpath is an academic planning app for university students. It combines degree planning, transcript import, requirement tracking, course search, section scheduling, calendar view, reviews, and advisor-facing balance-sheet work in one product.
 
-The repo currently contains:
-- a FastAPI backend
-- a Next.js frontend in `web/`
+## Current Product
 
-## Current Product Scope
+- Planner: semester-by-semester course planning with autosave
+- Requirements: major requirement tracking and degree audit
+- Transcript Import: PDF transcript parsing into completed and in-progress courses
+- Courses and Explore: catalog browsing, sections, descriptions, and reviews
+- Calendar: section-based weekly schedule with conflict detection and `.ics` export
+- Hub: student reviews plus AI advisor support
+- Balance Sheet: new template-backed advisor sheet feature in progress
 
-Implemented or partially implemented:
-- onboarding flow for major, timeline, and completed courses
-- authenticated profile management with Supabase auth
-- semester-by-semester planner
-- course search and catalog browsing
-- requirement labels for major courses
-- section lookup for course scheduling
-- calendar view based on selected sections
-- profile and plan persistence through the backend
+## Stack
 
-## Architecture
-
-### Backend
-
-Location:
-- `Backend/`
-
-Responsibilities:
-- expose REST endpoints for profile, plan, course, section, subject, term, and label data
-- validate authenticated requests using Supabase JWTs
-- persist profile and plan data to Supabase Postgres
-
-Main backend entrypoints:
-- `Backend/app/main.py`
-- `Backend/app/db.py`
-
-### Frontend
-
-#### Web app (`web/`)
-
-Location:
-- `web/`
-
-Stack:
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind
-- shadcn-ui
-- Supabase auth
-
-Status:
-- active development target
-- connected to the backend for profile, plan, labels, courses, sections, and calendar data
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, Framer Motion |
+| Backend | FastAPI, Python |
+| Database | Supabase Postgres |
+| Auth | Supabase Auth |
+| AI | Gemini |
 
 ## Repo Layout
 
-- `Backend/` FastAPI backend and SQL/scripts
-- `web/` Next.js frontend
-- `data/` local requirement and course artifacts
-- `future plans.md` product roadmap and future implementation notes
-
-## API Surface
-
-The backend exposes these endpoints used by the frontend:
-- `GET /api/majors`
-- `GET /api/subjects`
-- `GET /api/courses`
-- `GET /api/courses/search`
-- `GET /api/sections`
-- `GET /api/course-labels`
-- `GET /api/terms`
-- `GET /api/profile`
-- `PUT /api/profile`
-- `GET /api/plan`
-- `PUT /api/plan`
-
-## Local Development
-
-### 1. Start the backend
-
-```powershell
-cd Backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+```text
+plan-my-path/
+  web/                    Next.js frontend
+  Backend/                FastAPI backend
+  Backend/scripts/        SQL, sync, and seed scripts
+  data/                   Major templates and local source artifacts
+  docs/architecture/      Product architecture guidance
+  future plans.md         Product roadmap notes
 ```
 
-### 2. Start the new frontend
+## Architecture
 
-```powershell
+Architecture guidance now lives here:
+
+- [docs/architecture/README.md](./docs/architecture/README.md)
+
+The current standard is:
+
+- shared core data
+- isolated feature engines
+- thin UI layers
+
+That rule is especially important now that the product includes planner, requirements, transcript import, calendar, reviews, and balance-sheet generation.
+
+## Running Locally
+
+### Frontend
+
+```bash
 cd web
 npm install
 npm run dev
 ```
 
+### Backend
+
+```bash
+cd Backend
+python -m venv .venv
+.venv/Scripts/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
 ## Environment Variables
 
-### Backend (`Backend/.env`)
+### Frontend `web/.env.local`
 
-```
-SUPABASE_POOLER_URL=...
-SUPABASE_JWT_SECRET=...
-```
-
-### New frontend (`web/.env.local`)
-
-```
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-## Migration Status
+### Backend `Backend/.env`
 
-`web/` is wired for:
-- login/signup/forgot-password session handling
-- onboarding (major, timeline, completed courses → creates initial semester scaffold)
-- profile fetch and update
-- plan fetch and save (with debounced autosave)
-- semester drag-drop with add/remove courses
-- course search with subject/level/term filters
-- requirement label loading per major
-- selected section persistence per course
-- calendar rendering from section meeting times with conflict detection
+```env
+SUPABASE_POOLER_URL=...
+SUPABASE_JWT_SECRET=...
+ALLOWED_ORIGINS=http://localhost:3000
+GEMINI_API_KEY=...
+```
 
-Remaining frontend work:
-- requirements correctness validation against actual degree data
-- avatar upload pipeline (currently local preview only)
+## Current Data Direction
+
+- `data/*.json` contains major-specific balance-sheet template data
+- transcript parsing lives in `Backend/app/transcript.py`
+- frontend plan state is coordinated through `web/contexts/plan-context.tsx`
+- balance-sheet rendering logic is being built in `web/lib/balance-sheet.ts`
+
+## Key Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/majors` | list degree programs |
+| GET | `/api/courses` | courses by subject |
+| GET | `/api/courses/search` | course search |
+| GET | `/api/sections` | section data |
+| GET | `/api/course-labels` | requirement labels for a major |
+| GET/PUT | `/api/profile` | student profile |
+| GET/PUT | `/api/plan` | student plan |
+| POST | `/api/transcript` | transcript parse |
+| GET/POST | `/api/reviews` | course reviews |
+| POST | `/api/ai/advise` | AI advisor |
 
 ## Notes
 
-- Supabase is used for auth and Postgres storage.
-- The backend is the source of truth for profile and plan data.
-- `web/` keeps all state backend-backed rather than local-only.
+- The balance-sheet feature is being rebuilt around major-template-driven rendering rather than a single flat course table.
+- Custom uploaded balance sheets are planned after the system-template version is stable.
+- If you are trying to understand current architectural direction, start with the architecture README before reading page-level UI code.

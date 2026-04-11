@@ -314,20 +314,44 @@ export interface AdvisorMessage {
   content: string;
 }
 
+export class AdvisorBusyError extends Error {
+  constructor() { super("ADVISOR_BUSY"); }
+}
+
 export async function callAdvisor(
   token: string,
   message: string,
   history: AdvisorMessage[] = []
 ): Promise<string> {
-  const res = await post<{ reply: string }>(
-    "/api/ai/advise",
-    { message, history },
-    token
-  );
-  return res.reply;
+  const res = await fetch(`${BASE}/api/ai/advise`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message, history }),
+  });
+  if (!res.ok) {
+    if (res.status === 429) throw new AdvisorBusyError();
+    const detail = await res.json().catch(() => ({})) as { detail?: string };
+    throw new Error(detail.detail ?? `POST /api/ai/advise → ${res.status}`);
+  }
+  const data = await res.json() as { reply: string };
+  return data.reply;
 }
 
 // ─── Authenticated endpoints ──────────────────────────────────────────────────
+
+export async function deleteAccount(token: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/account`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({})) as { detail?: string };
+    throw new Error(detail.detail ?? `DELETE /api/account → ${res.status}`);
+  }
+}
 
 export async function fetchProfile(token: string): Promise<BackendProfile | null> {
   const res = await get<{ data: BackendProfile | null }>("/api/profile", token);

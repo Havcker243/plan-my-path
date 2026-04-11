@@ -4,17 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, MessageSquare, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { fetchReviews, type CourseReview } from "@/lib/api";
-
-function timeAgo(iso: string | null): string {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
-}
+import { timeAgo } from "@/lib/utils";
 
 export default function CourseReviews({ courseCode }: { courseCode: string }) {
   const [reviews, setReviews] = useState<CourseReview[]>([]);

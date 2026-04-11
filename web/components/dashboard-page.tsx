@@ -9,6 +9,7 @@ import {
   Upload,
   X,
   CheckCircle2,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import TranscriptUpload, { type TranscriptResult } from "@/components/transcript-upload";
 import { toast } from "sonner";
-import type { OnboardingCourse } from "@/contexts/plan-context";
+import type { OnboardingCourse } from "@/lib/transcript";
 
 
 function CircleProgress({ pct, size = 80, stroke = 7, color = "stroke-primary" }: {
@@ -68,7 +69,7 @@ export default function DashboardPage() {
       const { added, skipped } = await importTranscript(courses, result.gpa);
       setShowTranscriptModal(false);
       toast.success(
-        `Transcript imported — ${added} course${added !== 1 ? "s" : ""} added${skipped > 0 ? `, ${skipped} already in plan` : ""}${result.gpa !== null ? `, GPA updated to ${result.gpa.toFixed(2)}` : ""}`
+        `Transcript imported — ${added} course${added !== 1 ? "s" : ""} added${skipped > 0 ? `, ${skipped} already in plan` : ""}${result.gpa !== null ? `, GPA updated to ${Number(result.gpa).toFixed(2)}` : ""}`
       );
     } catch {
       toast.error("Failed to import transcript");
@@ -317,11 +318,12 @@ export default function DashboardPage() {
       )}
 
       {/* Quick nav */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
           { href: "/planner", label: "Open Planner", desc: "Drag & arrange courses", icon: Map, primary: true },
           { href: "/courses", label: "Browse Courses", desc: "Find your next class", icon: BookOpen, primary: false },
           { href: "/calendar", label: "View Calendar", desc: "Check time conflicts", icon: Calendar, primary: false },
+          { href: "/balance-sheet", label: "Balance Sheet", desc: "Advisor-ready print view", icon: FileSpreadsheet, primary: false },
         ].map(({ href, label, desc, icon: Icon, primary }) => (
           <Link
             key={href}

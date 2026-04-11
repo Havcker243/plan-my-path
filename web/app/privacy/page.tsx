@@ -2,8 +2,8 @@ import Link from "next/link";
 import { GraduationCap, ArrowLeft, Shield } from "lucide-react";
 
 export const metadata = {
-  title: "Privacy Policy — GradPath",
-  description: "Learn how GradPath collects, uses, and protects your personal information.",
+  title: "Privacy Policy — Fiskpath",
+  description: "Learn how Fiskpath collects, uses, and protects your personal information.",
 };
 
 const sections = [
@@ -11,13 +11,13 @@ const sections = [
     number: "01",
     title: "Information We Collect",
     content:
-      "We collect information you provide directly when creating an account or using GradPath, including your name, email address, major, graduation year, GPA, and academic plan data. We also collect limited usage data — such as pages visited and features used — to improve the service. We do not collect sensitive personal data beyond what is necessary to operate GradPath, and we never collect financial information.",
+      "We collect information you provide directly when creating an account or using Fiskpath, including your name, email address, major, graduation year, GPA, and academic plan data. We also collect limited usage data — such as pages visited and features used — to improve the service. We do not collect sensitive personal data beyond what is necessary to operate Fiskpath, and we never collect financial information.",
   },
   {
     number: "02",
     title: "How We Use Your Information",
     content:
-      "Your information is used solely to provide and personalize your GradPath experience: generating your academic plan, tracking degree progress, and sending account-related communications such as password resets. We do not sell your personal data to third parties or use it for targeted advertising. Aggregate, anonymized usage data may be used internally to improve features and course data quality.",
+      "Your information is used solely to provide and personalize your Fiskpath experience: generating your academic plan, tracking degree progress, and sending account-related communications such as password resets. We do not sell your personal data to third parties or use it for targeted advertising. Aggregate, anonymized usage data may be used internally to improve features and course data quality.",
   },
   {
     number: "03",
@@ -29,7 +29,7 @@ const sections = [
     number: "04",
     title: "Cookies",
     content:
-      "GradPath uses cookies and similar technologies solely to maintain your authenticated session and remember your preferences across visits. We do not use tracking cookies for advertising or cross-site tracking purposes. You can configure your browser to refuse cookies, but some features of the service — including staying logged in — may not function correctly without them.",
+      "Fiskpath uses cookies and similar technologies solely to maintain your authenticated session and remember your preferences across visits. We do not use tracking cookies for advertising or cross-site tracking purposes. You can configure your browser to refuse cookies, but some features of the service — including staying logged in — may not function correctly without them.",
   },
   {
     number: "05",
@@ -53,7 +53,7 @@ const sections = [
     number: "08",
     title: "Children's Privacy",
     content:
-      "GradPath is intended for use by college and university students and is not directed at children under 13. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will take steps to delete it promptly. If you believe a minor has submitted data, please contact us immediately.",
+      "Fiskpath is intended for use by college and university students and is not directed at children under 13. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will take steps to delete it promptly. If you believe a minor has submitted data, please contact us immediately.",
   },
   {
     number: "09",
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
             <GraduationCap className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground tracking-tight">GradPath</span>
+          <span className="font-semibold text-foreground tracking-tight">Fiskpath</span>
         </Link>
         <Link
           href="/"
@@ -112,12 +112,12 @@ export default function PrivacyPage() {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   If you have questions about this Privacy Policy or how we handle your data, please contact us at{" "}
                   <a
-                    href="mailto:privacy@gradpath.app"
+                    href="mailto:privacy@fiskpath.app"
                     className="text-primary hover:underline font-medium"
                   >
-                    privacy@gradpath.app
+                    privacy@fiskpath.app
                   </a>
-                  . We take privacy seriously and aim to respond to all inquiries within two business days. You can also reach us by mail at GradPath, Inc., United States.
+                  . We take privacy seriously and aim to respond to all inquiries within two business days. You can also reach us by mail at Fiskpath, Inc., United States.
                 </p>
               </section>
             ) : (
@@ -136,8 +136,8 @@ export default function PrivacyPage() {
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-xs text-muted-foreground">
             This policy was last reviewed and updated on April 4, 2026. If you have a disability and need this policy in an alternative format, please contact{" "}
-            <a href="mailto:privacy@gradpath.app" className="text-primary hover:underline">
-              privacy@gradpath.app
+            <a href="mailto:privacy@fiskpath.app" className="text-primary hover:underline">
+              privacy@fiskpath.app
             </a>
             .
           </p>
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
       <footer className="border-t border-border py-6 px-6 md:px-12 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <GraduationCap className="w-3.5 h-3.5" />
-          <span>GradPath &copy; 2026</span>
+          <span>Fiskpath &copy; 2026</span>
         </div>
         <div className="flex gap-4">
           <Link href="/" className="hover:text-foreground transition-colors">Home</Link>

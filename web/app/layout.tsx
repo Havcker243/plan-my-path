@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const dmMono = DM_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-dm-mono" });
 
 export const metadata: Metadata = {
-  title: 'GradPath: Plan Smarter, Graduate On Time',
+  title: 'Fiskpath: Plan Smarter, Graduate On Time',
   description: 'Build your 4-year graduation plan in minutes. Track requirements, visualize your path, and never miss a prerequisite.',
   generator: 'v0.app',
   icons: {

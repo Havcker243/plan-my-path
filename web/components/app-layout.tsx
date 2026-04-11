@@ -4,39 +4,23 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import {
-  LayoutDashboard,
-  CalendarDays,
-  BookOpen,
-  Map,
-  User,
   Bell,
   Search,
   Menu,
   X,
   GraduationCap,
   CheckCircle,
-  ClipboardList,
   LogOut,
   AlertTriangle,
   Zap,
   BookMarked,
-  Flame,
 } from "lucide-react";
 import { cn, formatDisplayName } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
-import { getPrereqWarnings, getTotalCredits } from "@/lib/data";
+import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings } from "@/lib/data";
 import CommandSearch from "@/components/command-search";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/planner", label: "Planner", icon: Map },
-  { href: "/requirements", label: "Requirements", icon: ClipboardList },
-  { href: "/courses", label: "Courses", icon: BookOpen },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/hub", label: "Hub", icon: Flame },
-  { href: "/profile", label: "Profile", icon: User },
-];
+import { NAV_ITEMS } from "@/lib/nav";
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
@@ -88,6 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // ── Notifications ────────────────────────────────────────────────────────────
   const prereqWarnings = getPrereqWarnings(semesters, planCatalog);
+  const offeredTermWarnings = getOfferedTermWarnings(semesters, planCatalog);
 
   const overloadedSemesters = semesters.filter(
     (s) => !s.isPast && getTotalCredits(s.courseIds, planCatalog) > 18
@@ -98,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     .filter(([code, entry]) => entry.label === "Required" && !scheduledCodes.has(code))
     .map(([code]) => code);
 
-  const totalNotifs = prereqWarnings.length + overloadedSemesters.length + missingRequired.length;
+  const totalNotifs = prereqWarnings.length + offeredTermWarnings.length + overloadedSemesters.length + missingRequired.length;
 
   // Wait for auth AND for at least one full plan-fetch cycle to complete.
   // Without `initialized`, there's a window after auth resolves where planLoading
@@ -172,7 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
             <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px]">GradPath</span>
+          <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px]">Fiskpath</span>
         </div>
 
         {/* Nav */}
@@ -225,7 +210,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-5 py-4 border-b border-sidebar-border">
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-5 h-5 text-primary" />
-                <span className="font-semibold text-sidebar-foreground text-[15px]">GradPath</span>
+                <span className="font-semibold text-sidebar-foreground text-[15px]">Fiskpath</span>
               </div>
               <button onClick={() => setMobileOpen(false)} className="text-sidebar-foreground/60 hover:text-sidebar-foreground">
                 <X className="w-5 h-5" />
@@ -342,6 +327,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                       ))}
 
+                      {offeredTermWarnings.map((w, i) => (
+                        <div key={i} className="flex gap-3 px-4 py-3 items-start">
+                          <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">
+                              {w.courseId} may not be offered in {w.semesterTerm}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Check the catalog before registering
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
                       {missingRequired.slice(0, 5).map((code) => (
                         <div key={code} className="flex gap-3 px-4 py-3 items-start">
                           <BookMarked className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -392,13 +391,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden bg-sidebar border-t border-sidebar-border">
-        {NAV_ITEMS.slice(0, 4).map(({ href, label, icon: Icon }) => (
+      <nav className="fixed bottom-0 left-0 right-0 z-30 flex md:hidden bg-sidebar border-t border-sidebar-border pb-safe">
+        {NAV_ITEMS.slice(0, 5).map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              "flex-1 flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
+              "flex-1 flex flex-col items-center gap-0.5 py-2 text-[9px] font-medium transition-colors",
               pathname === href
                 ? "text-sidebar-primary-foreground"
                 : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80"

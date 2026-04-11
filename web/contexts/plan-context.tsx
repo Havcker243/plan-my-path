@@ -9,409 +9,42 @@ import {
   fetchPlan,
   savePlan as apiSavePlan,
   fetchCourseLabels,
-  fetchCoursesBySubject,
   fetchSections,
   fetchMajors,
   fetchTermCalendar,
   searchCourses as apiSearchCourses,
   type BackendProfile,
-  type BackendPlanCourse,
-  type BackendSemester,
-  type BackendCourse,
   type BackendSection,
-  type BackendSubjectCourse,
   type CourseLabelEntry,
   type ElectiveRule,
   type Major,
   type TermCalendarEntry,
 } from "@/lib/api";
-import type { Course, Semester, RequirementLabel, SemesterTerm } from "@/lib/data";
+import type { Course, Semester, SemesterTerm } from "@/lib/data";
+import { capitalizeTerm, parseCodeParts, resolveLabel } from "@/lib/course-utils";
+import { groupCoursesByTerm, buildCourseEntry, TERM_ORDER, type OnboardingCourse } from "@/lib/transcript";
+import {
+  searchCourseToCourse,
+  buildSemesters,
+  buildInitialSemesters,
+  isSemesterPast,
+  semesterEndDateStr,
+  fetchCatalogMetadataForTranscriptCourses,
+} from "@/lib/api-adapters";
+import {
+  addCourseToSemesterState,
+  buildSavePlanPayload,
+  getTranscriptFallbackSemester,
+  sameCourseCode,
+  syncSemesterIdsFromBackend,
+} from "@/lib/plan-state";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function parseCodeParts(code: string): { subject: string; level: 100 | 200 | 300 | 400 } {
-  const match = code.match(/^([A-Za-z]+)[- ]?(\d+)/);
-  const subject = match?.[1] ?? code;
-  const num = parseInt(match?.[2] ?? "100", 10);
-  const lvl = Math.floor(num / 100) * 100;
-  const level = (lvl >= 100 && lvl <= 400 ? lvl : 100) as 100 | 200 | 300 | 400;
-  return { subject, level };
-}
-
-function normalizeCourseCode(code: string): string {
-  return code.replace(/[-\s]+/g, " ").trim().toUpperCase();
-}
-
-function sameCourseCode(a: string, b: string): boolean {
-  return normalizeCourseCode(a) === normalizeCourseCode(b);
-}
-
-function mapBackendLabel(entry: CourseLabelEntry | undefined): RequirementLabel {
-  if (!entry) return "general";
-  const map: Record<string, RequirementLabel> = {
-    Required: "required",
-    "Group Choice": "group",
-    "Major Elective": "elective",
-    "General Elective": "general",
-  };
-  return map[entry.label] ?? "general";
-}
-
-/**
- * Mirrors the backend get_course_label logic.
- * First checks the explicit labels dict; if not found, walks the elective rules
- * to determine if the course qualifies as a Major Elective by subject+level.
- */
-function resolveLabel(
-  code: string,
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[]
-): RequirementLabel {
-  const normalizedCode = normalizeCourseCode(code);
-
-  for (const [labelCode, entry] of Object.entries(labels)) {
-    if (normalizeCourseCode(labelCode) === normalizedCode) {
-      return mapBackendLabel(entry);
-    }
-  }
-
-  const { subject, level } = parseCodeParts(normalizedCode);
-
-  for (const rule of rules) {
-    if (
-      subject.toUpperCase() === rule.subject_code.toUpperCase() &&
-      level >= rule.min_level &&
-      (rule.max_level == null || level <= rule.max_level) &&
-      !rule.exclude_courses.some((excluded) => normalizeCourseCode(excluded) === normalizedCode)
-    ) {
-      return "elective";
-    }
-  }
-
-  return "general";
-}
-
-function capitalizeTerm(t: string): SemesterTerm {
-  const first = (t ?? "").split(/[\s_-]/)[0].toLowerCase();
-  const map: Record<string, SemesterTerm> = {
-    fall: "Fall",
-    spring: "Spring",
-    summer: "Summer",
-    winter: "Winter",
-  };
-  return map[first] ?? "Fall";
-}
-
-function extractCourseCodes(text: string): string[] {
-  const matches = text.matchAll(/\b([A-Za-z]{2,6})[- ]?(\d+[A-Za-z0-9]*)\b/g);
-  const seen = new Set<string>();
-  const codes: string[] = [];
-
-  for (const match of matches) {
-    const subject = match[1]?.toUpperCase();
-    const number = match[2]?.toUpperCase();
-    if (!subject || !number) continue;
-    const code = `${subject}-${number}`;
-    if (seen.has(code)) continue;
-    seen.add(code);
-    codes.push(code);
-  }
-
-  return codes;
-}
-
-function normalizePrereqs(requisites: unknown): string[] {
-  if (!requisites) return [];
-  if (Array.isArray(requisites)) {
-    const deduped = new Set<string>();
-    requisites.forEach((value) => {
-      extractCourseCodes(String(value)).forEach((code) => deduped.add(code));
-    });
-    return Array.from(deduped);
-  }
-  if (typeof requisites === "string") {
-    return extractCourseCodes(requisites);
-  }
-  return [];
-}
-
-function planCourseToCourse(
-  bc: BackendPlanCourse,
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
-): Course {
-  const { subject, level } = parseCodeParts(bc.code);
-  return {
-    id: bc.code,
-    code: bc.code,
-    title: bc.title,
-    credits: bc.credits,
-    label: resolveLabel(bc.code, labels, rules),
-    status: bc.status,
-    grade: bc.grade,
-    selectedSectionId: bc.selectedSectionId,
-    description: bc.description ?? "",
-    prereqs: bc.prerequisites,
-    offeredTerms: (bc.offeredTerms ?? []).map(capitalizeTerm) as SemesterTerm[],
-    subject,
-    level,
-  };
-}
-
-function searchCourseToCourse(
-  bc: BackendCourse,
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
-): Course {
-  const { subject, level } = parseCodeParts(bc.course_code);
-  const termSet = new Set<SemesterTerm>();
-  (bc.sections ?? []).forEach((s) => {
-    const t = capitalizeTerm(s.term);
-    termSet.add(t);
-  });
-  const offeredTerms =
-    termSet.size > 0 ? Array.from(termSet) : (["Fall", "Spring"] as SemesterTerm[]);
-  return {
-    id: bc.course_code,
-    code: bc.course_code,
-    title: bc.title ?? bc.course_code,
-    credits: bc.credits.min_credits ?? 3,
-    label: resolveLabel(bc.course_code, labels, rules),
-    status: "planned",
-    grade: null,
-    selectedSectionId: null,
-    description: bc.description ?? "",
-    prereqs: normalizePrereqs(bc.requisites),
-    offeredTerms,
-    subject,
-    level,
-  };
-}
-
-function subjectCourseToCourse(
-  bc: BackendSubjectCourse,
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
-): Course {
-  const { subject, level } = parseCodeParts(bc.code);
-  return {
-    id: bc.code,
-    code: bc.code,
-    title: bc.title ?? bc.code,
-    credits: bc.credits ?? 3,
-    label: resolveLabel(bc.code, labels, rules),
-    status: "planned",
-    grade: null,
-    selectedSectionId: null,
-    description: bc.description ?? "",
-    prereqs: normalizePrereqs(bc.prerequisites),
-    offeredTerms: (bc.offeredTerms ?? []).map(capitalizeTerm) as SemesterTerm[],
-    subject,
-    level,
-  };
-}
-
-async function fetchCatalogMetadataForTranscriptCourses(
-  courses: OnboardingCourse[],
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[]
-): Promise<Record<string, Course>> {
-  const subjects = Array.from(
-    new Set(
-      courses
-        .map((course) => parseCodeParts(course.code).subject.toUpperCase())
-        .filter(Boolean)
-    )
-  );
-
-  const subjectResults = await Promise.allSettled(
-    subjects.map(async (subject) => ({
-      subject,
-      rows: await fetchCoursesBySubject(subject),
-    }))
-  );
-
-  const catalogByNormalizedCode: Record<string, Course> = {};
-  subjectResults.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-    result.value.rows.forEach((row) => {
-      const course = subjectCourseToCourse(row, labels, rules);
-      catalogByNormalizedCode[normalizeCourseCode(course.code)] = course;
-    });
-  });
-
-  const metaByRequestedCode: Record<string, Course> = {};
-  courses.forEach((course) => {
-    const matched = catalogByNormalizedCode[normalizeCourseCode(course.code)];
-    if (matched) {
-      metaByRequestedCode[course.code] = matched;
-    }
-  });
-
-  return metaByRequestedCode;
-}
-
-function buildSemesters(
-  backendSemesters: BackendSemester[],
-  labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = [],
-  termCalendar: TermCalendarEntry[] = []
-): { semesters: Semester[]; catalog: Record<string, Course> } {
-  const catalog: Record<string, Course> = {};
-  const today = new Date();
-
-  const semesters: Semester[] = backendSemesters.map((bs) => {
-    const isPast = bs.end_date
-      ? new Date(bs.end_date) < today
-      : (() => {
-          const termLower = (bs.term ?? "fall").toLowerCase().split(/[\s_-]/)[0];
-          // Try real term calendar before estimating
-          const calEntry = termCalendar.find(
-            (t) => t.term.toLowerCase() === termLower && t.year === bs.year
-          );
-          if (calEntry?.end_date) return new Date(calEntry.end_date) < today;
-          // Fall back to estimate
-          const endMonth: Record<string, number> = { spring: 5, summer: 8, fall: 12, winter: 1 };
-          const m = endMonth[termLower] ?? 12;
-          const endYear = termLower === "winter" ? bs.year + 1 : bs.year;
-          return new Date(endYear, m - 1, 15) < today;
-        })();
-
-    bs.courses.forEach((bc) => {
-      catalog[bc.code] = planCourseToCourse(bc, labels, rules);
-    });
-
-    return {
-      id: bs.id,
-      term: capitalizeTerm(bs.term),
-      year: bs.year,
-      courseIds: bs.courses.map((c) => c.code),
-      isPast,
-      isCurrent: false,
-    };
-  });
-
-  // Mark isCurrent = first non-past semester
-  const firstFutureIdx = semesters.findIndex((s) => !s.isPast);
-  if (firstFutureIdx !== -1) {
-    semesters[firstFutureIdx] = { ...semesters[firstFutureIdx], isCurrent: true };
-  }
-
-  return { semesters, catalog };
-}
-
-// Returns the end date string for a given term + year.
-// Uses real backend calendar data when available; falls back to a fixed estimate.
-function semesterEndDateStr(
-  term: SemesterTerm,
-  year: number,
-  termCalendar: TermCalendarEntry[] = []
-): string {
-  const termLower = term.toLowerCase();
-  const calEntry = termCalendar.find(
-    (t) => t.term.toLowerCase() === termLower && t.year === year
-  );
-  if (calEntry?.end_date) return calEntry.end_date;
-  const endMonth: Record<string, number> = { Spring: 5, Summer: 8, Fall: 12, Winter: 1 };
-  const month = endMonth[term] ?? 12;
-  const endYear = term === "Winter" ? year + 1 : year;
-  return `${endYear}-${String(month).padStart(2, "0")}-15`;
-}
-
-// ─── Initial semester scaffold ────────────────────────────────────────────────
-
-function buildInitialSemesters(
-  startTerm: string,
-  startYear: number,
-  gradTerm: string,
-  gradYear: number,
-  termCalendar: TermCalendarEntry[] = []
-): Semester[] {
-  const today = new Date();
-  // Only scaffold Spring and Fall — students almost never take Summer/Winter
-  // by default. Those can be added manually from the planner.
-  const termCycle: SemesterTerm[] = ["Spring", "Fall"];
-  const termEndMonth: Record<string, number> = { spring: 5, summer: 8, fall: 12, winter: 2 };
-
-  const normalizeTerm = (t: string): SemesterTerm => {
-    const first = (t ?? "").toLowerCase().split(/[\s_-]/)[0];
-    const map: Record<string, SemesterTerm> = {
-      spring: "Spring", summer: "Summer", fall: "Fall", winter: "Winter",
-    };
-    return map[first] ?? "Fall";
-  };
-
-  const startTermNorm = normalizeTerm(startTerm);
-  const gradTermNorm = normalizeTerm(gradTerm);
-  const gradTermIdx = termCycle.indexOf(gradTermNorm);
-
-  let termIdx = termCycle.indexOf(startTermNorm);
-  let year = startYear;
-  const semesters: Semester[] = [];
-
-  for (let i = 0; i < 24; i++) {
-    const term = termCycle[termIdx];
-    const termLower = term.toLowerCase();
-
-    // Stop once we've passed the graduation term
-    const afterGrad =
-      year > gradYear ||
-      (year === gradYear && termIdx > gradTermIdx);
-    if (afterGrad) break;
-
-    // isPast: use real calendar data when available, otherwise estimate
-    const calEntry = termCalendar.find(
-      (t) => t.term.toLowerCase() === termLower && t.year === year
-    );
-    const isPast = calEntry?.end_date
-      ? new Date(calEntry.end_date) < today
-      : (() => {
-          const endMonth = termEndMonth[termLower] ?? 12;
-          const endYear = termLower === "winter" ? year + 1 : year;
-          return new Date(endYear, endMonth - 1, 28) < today;
-        })();
-
-    semesters.push({
-      id: `new-${termLower}-${year}`,
-      term,
-      year,
-      courseIds: [],
-      isPast,
-      isCurrent: false,
-    });
-
-    // Advance: Winter(3) → Spring(0) of next year; otherwise stay in same year
-    if (termIdx === termCycle.length - 1) {
-      termIdx = 0;
-      year += 1;
-    } else {
-      termIdx += 1;
-    }
-  }
-
-  // Mark first non-past semester as current
-  const firstFutureIdx = semesters.findIndex((s) => !s.isPast);
-  if (firstFutureIdx !== -1) {
-    semesters[firstFutureIdx] = { ...semesters[firstFutureIdx], isCurrent: true };
-  }
-
-  return semesters;
-}
-
 // ─── Context types ─────────────────────────────────────────────────────────────
 
-export interface OnboardingCourse {
-  code: string;
-  status?: "completed" | "planned";
-  grade: string | null;
-  /** null means "unknown" (manual entry — will be grouped into one pre-start semester) */
-  term: string | null;
-  year: number | null;
-  /** Title from transcript — used as fallback when course isn't in our DB catalog */
-  title?: string;
-  /** Credits from transcript — authoritative; DB value is supplementary */
-  credits?: number;
-}
+// OnboardingCourse is defined in lib/transcript and re-exported from there.
+export type { OnboardingCourse };
 
 export interface OnboardingData {
   majorCode: string;
@@ -460,33 +93,6 @@ interface PlanContextValue {
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
-
-function isSemesterPast(
-  term: SemesterTerm,
-  year: number,
-  termCalendar: TermCalendarEntry[] = []
-): boolean {
-  const today = new Date();
-  const termLower = term.toLowerCase();
-  const calEntry = termCalendar.find(
-    (entry) => entry.term.toLowerCase() === termLower && entry.year === year
-  );
-  if (calEntry?.end_date) return new Date(calEntry.end_date) < today;
-  const endMonth: Record<string, number> = { spring: 5, summer: 8, fall: 12, winter: 1 };
-  const month = endMonth[termLower] ?? 12;
-  const endYear = termLower === "winter" ? year + 1 : year;
-  return new Date(endYear, month - 1, 15) < today;
-}
-
-function previousSemester(term: SemesterTerm, year: number): { term: SemesterTerm; year: number } {
-  const allTerms: SemesterTerm[] = ["Spring", "Summer", "Fall", "Winter"];
-  const index = allTerms.indexOf(term);
-  const prevIndex = (index - 1 + allTerms.length) % allTerms.length;
-  return {
-    term: allTerms[prevIndex],
-    year: prevIndex === allTerms.length - 1 ? year - 1 : year,
-  };
-}
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -650,23 +256,10 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       nextPlanCatalog: Record<string, Course> = planCatalog
     ) => {
       if (!accessToken) return null;
-      const result = await apiSavePlan(accessToken, {
-        semesters: nextSemesters.map((sem) => ({
-        id: sem.id,
-        type: sem.term.toLowerCase(),
-        year: sem.year,
-        label: `${sem.term} ${sem.year}`,
-        startDate: null,
-        endDate: semesterEndDateStr(sem.term, sem.year, termCalendar),
-        courses: sem.courseIds.map((code) => ({
-          code,
-          credits: Number.isFinite(nextPlanCatalog[code]?.credits) ? nextPlanCatalog[code]!.credits : 3,
-          status: nextPlanCatalog[code]?.status ?? "planned",
-          grade: nextPlanCatalog[code]?.grade ?? null,
-          selectedSectionId: nextPlanCatalog[code]?.selectedSectionId ?? null,
-        })),
-        })),
-      });
+      const result = await apiSavePlan(
+        accessToken,
+        buildSavePlanPayload(nextSemesters, nextPlanCatalog, termCalendar)
+      );
       return result;
     },
     [accessToken, planCatalog, termCalendar]
@@ -676,30 +269,15 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     const result = await persistPlan(semesters, planCatalog);
     // Sync IDs that the backend may have assigned (e.g. new semester rows)
     if (result?.semesters?.length) {
-      setSemesters((prev) =>
-        prev.map((sem, i) => {
-          const backendSem = result.semesters[i];
-          return backendSem ? { ...sem, id: backendSem.id } : sem;
-        })
-      );
+      setSemesters((prev) => syncSemesterIdsFromBackend(prev, result.semesters));
     }
   }, [persistPlan, semesters, planCatalog]);
 
   const addCourseToSemester = useCallback(
     async (course: Course, semesterId: string) => {
-      const semesterExists = semesters.some((sem) => sem.id === semesterId);
-      if (!semesterExists) return false;
-
-      const nextPlanCatalog = {
-        ...planCatalog,
-        [course.code]: planCatalog[course.code] ?? course,
-      };
-      const nextSemesters = semesters.map((sem) => {
-        if (sem.id !== semesterId || sem.courseIds.includes(course.code)) {
-          return sem;
-        }
-        return { ...sem, courseIds: [...sem.courseIds, course.code] };
-      });
+      const nextState = addCourseToSemesterState(semesters, planCatalog, course, semesterId);
+      if (!nextState.ok) return false;
+      const { semesters: nextSemesters, planCatalog: nextPlanCatalog } = nextState;
 
       setPlanCatalog(nextPlanCatalog);
       setSemesters(nextSemesters);
@@ -707,12 +285,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       try {
         const result = await persistPlan(nextSemesters, nextPlanCatalog);
         if (result?.semesters?.length) {
-          setSemesters((prev) =>
-            prev.map((sem, i) => {
-              const backendSem = result.semesters[i];
-              return backendSem ? { ...sem, id: backendSem.id } : sem;
-            })
-          );
+          setSemesters((prev) => syncSemesterIdsFromBackend(prev, result.semesters));
         }
         return true;
       } catch (error) {
@@ -832,28 +405,13 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       let skipped = 0;
 
       // Group incoming courses by term/year
-      const TERM_ORDER_MAP: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
-      const groups = new Map<string, { term: SemesterTerm; year: number; courses: OnboardingCourse[] }>();
-      const fallbackSemester = (() => {
-        if (profile?.start_term && profile?.start_year) {
-          const startTerm = capitalizeTerm(profile.start_term);
-          return previousSemester(startTerm, profile.start_year);
-        }
-        const earliestSemester = [...semesters].sort((a, b) =>
-          a.year !== b.year ? a.year - b.year : TERM_ORDER_MAP[a.term] - TERM_ORDER_MAP[b.term]
-        )[0];
-        return earliestSemester
-          ? previousSemester(earliestSemester.term, earliestSemester.year)
-          : { term: "Fall" as SemesterTerm, year: new Date().getFullYear() - 1 };
-      })();
+      const fallbackSemester = getTranscriptFallbackSemester(
+        profile?.start_term,
+        profile?.start_year,
+        semesters
+      );
 
-      for (const oc of courses) {
-        const normTerm = oc.term ? capitalizeTerm(oc.term) as SemesterTerm : fallbackSemester.term;
-        const year = oc.year ?? fallbackSemester.year;
-        const key = `${year}-${TERM_ORDER_MAP[normTerm] ?? 9}-${normTerm}`;
-        if (!groups.has(key)) groups.set(key, { term: normTerm, year, courses: [] });
-        groups.get(key)!.courses.push(oc);
-      }
+      const groups = groupCoursesByTerm(courses, fallbackSemester);
 
       for (const { term, year, courses: groupCourses } of groups.values()) {
         // Find an existing semester for this term/year.
@@ -863,46 +421,22 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
         for (const oc of groupCourses) {
           const meta = metaByCode[oc.code];
-          const plannerCode = meta?.code ?? oc.code;
+          const code = meta?.code ?? oc.code;
 
           // Only truly skip if metadata is already in the catalog.
           // A course may be in sem.courseIds (from onboarding) but missing from
           // planCatalog (if the old key-mismatch bug prevented metadata loading).
           // In that case we still need to populate the catalog.
-          const existingCatalogCode = Object.keys(nextCatalog).find((code) => sameCourseCode(code, plannerCode));
+          const existingCatalogCode = Object.keys(nextCatalog).find((c) => sameCourseCode(c, code));
           const alreadyInSemesters = nextSemesters.some((semester) =>
-            semester.courseIds.some((courseId) => sameCourseCode(courseId, plannerCode))
+            semester.courseIds.some((courseId) => sameCourseCode(courseId, code))
           );
           const alreadyInCatalog = existingCatalogCode !== undefined || alreadyInSemesters;
           if (alreadyInCatalog) { skipped++; continue; }
 
           // Build course entry: DB metadata when available, transcript data as authoritative fallback.
           // Never skip a course just because it isn't in our DB catalog.
-          const { subject, level } = parseCodeParts(plannerCode);
-          const courseStatus = oc.status ?? (oc.grade ? "completed" : "planned");
-          const courseEntry: Course = meta
-            ? {
-                ...meta,
-                status: courseStatus,
-                grade: courseStatus === "completed" ? (oc.grade ?? null) : null,
-                title: oc.title?.trim() ? oc.title : meta.title,
-                credits: Number.isFinite(oc.credits) ? oc.credits! : meta.credits,
-              }
-            : {
-                id: plannerCode,
-                code: plannerCode,
-                title: oc.title ?? plannerCode,
-                credits: Number.isFinite(oc.credits) ? oc.credits! : 3,
-                label: resolveLabel(plannerCode, labels, electiveRules),
-                status: courseStatus,
-                grade: courseStatus === "completed" ? (oc.grade ?? null) : null,
-                selectedSectionId: null,
-                description: "",
-                prereqs: [],
-                offeredTerms: [],
-                subject,
-                level,
-            };
+          const courseEntry = buildCourseEntry(oc, code, meta, labels, electiveRules);
 
           // Lazy-create the semester on the first course we successfully add
           if (!sem) {
@@ -917,11 +451,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             nextSemesters = [...nextSemesters, sem];
           }
 
-          nextCatalog[plannerCode] = courseEntry;
+          nextCatalog[code] = courseEntry;
 
           // Only append to courseIds if not already there (avoids duplicates)
-          if (!sem.courseIds.some((courseId) => sameCourseCode(courseId, plannerCode))) {
-            sem = { ...sem, courseIds: [...sem.courseIds, plannerCode] };
+          if (!sem.courseIds.some((courseId) => sameCourseCode(courseId, code))) {
+            sem = { ...sem, courseIds: [...sem.courseIds, code] };
             nextSemesters = nextSemesters.map((s) => (s.id === sem!.id ? sem! : s));
           }
           added++;
@@ -932,7 +466,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       nextSemesters.sort((a, b) =>
         a.year !== b.year
           ? a.year - b.year
-          : (TERM_ORDER_MAP[a.term] ?? 9) - (TERM_ORDER_MAP[b.term] ?? 9)
+          : (TERM_ORDER[a.term] ?? 9) - (TERM_ORDER[b.term] ?? 9)
       );
 
       if (added === 0) {
@@ -1037,7 +571,6 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       // ── Group completed courses by their actual term/year ──────────────────
       // Courses with known term (from transcript) go into their real semester.
       // Courses with no term (manual entry) go into a single "prev credits" bucket.
-      const TERM_ORDER_MAP: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
       const termGroups = new Map<string, { term: string; year: number; courses: OnboardingCourse[] }>();
 
       for (const { source: oc } of normalizedCourses) {
@@ -1048,7 +581,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         if (oc.term && oc.year) {
           // Known term from transcript
           const normTerm = capitalizeTerm(oc.term);
-          key = `${oc.year}-${TERM_ORDER_MAP[normTerm] ?? 9}-${normTerm}`;
+          key = `${oc.year}-${TERM_ORDER[normTerm] ?? 9}-${normTerm}`;
           term = normTerm;
           year = oc.year;
         } else {

@@ -8,7 +8,7 @@ import { cn, formatDisplayName } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import { useAuth } from "@/contexts/auth-context";
 import type { Course } from "@/lib/data";
-import type { OnboardingCourse } from "@/contexts/plan-context";
+import type { OnboardingCourse } from "@/lib/transcript";
 import { toast } from "sonner";
 import TranscriptUpload, { type TranscriptResult } from "@/components/transcript-upload";
 
@@ -153,7 +153,7 @@ export default function OnboardingPage() {
         credits: c.credits ?? undefined,
       }))
     );
-    if (result.gpa !== null) setTranscriptGpa(result.gpa);
+    if (result.gpa !== null) setTranscriptGpa(Number(result.gpa));
     setTranscriptApplied(true);
     next();
   };
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-lg">
             <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground text-sm">GradPath</span>
+          <span className="font-semibold text-foreground text-sm">Fiskpath</span>
         </div>
         <button
           onClick={() => router.push("/dashboard")}

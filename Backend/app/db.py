@@ -874,6 +874,33 @@ def upsert_profile(pooler_url: str, payload: dict) -> dict:
     return payload
 
 
+def delete_user_data(pooler_url: str, user_id: str) -> None:
+    """Delete all user-owned rows: plan_courses → plan_semesters → plans → profiles."""
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM plan_courses
+                WHERE semester_id IN (
+                    SELECT ps.id FROM plan_semesters ps
+                    JOIN plans p ON ps.plan_id = p.id
+                    WHERE p.user_id = %s
+                )
+                """,
+                (user_id,),
+            )
+            cur.execute(
+                """
+                DELETE FROM plan_semesters
+                WHERE plan_id IN (SELECT id FROM plans WHERE user_id = %s)
+                """,
+                (user_id,),
+            )
+            cur.execute("DELETE FROM plans WHERE user_id = %s", (user_id,))
+            cur.execute("DELETE FROM profiles WHERE user_id = %s", (user_id,))
+        conn.commit()
+
+
 def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
     """
     Fetch course labels for a specific major.

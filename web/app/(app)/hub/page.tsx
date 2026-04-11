@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Loader2, MessageSquare, Send, Flame, X, Sparkles } from "lucide-react";
 import AdvisorChat from "@/components/advisor-chat";
-import { cn } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import {
   fetchRecentReviews,
   fetchReviews,
@@ -19,16 +19,6 @@ const TERMS = ["Fall", "Spring", "Summer", "Winter"] as const;
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 10 }, (_, i) => currentYear - i);
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 30) return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
-}
 
 function ReviewCard({ review }: { review: CourseReview }) {
   return (
@@ -195,12 +185,14 @@ export default function HubPage() {
   );
   const [recentReviews, setRecentReviews] = useState<CourseReview[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(true);
+  const [recentError, setRecentError] = useState(false);
 
   // Course search — pre-fill from ?course= param
   const [query, setQuery] = useState(searchParams.get("course") ?? "");
   const [searchResults, setSearchResults] = useState<CourseReview[]>([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Write review panel
@@ -210,7 +202,7 @@ export default function HubPage() {
   useEffect(() => {
     fetchRecentReviews(30)
       .then(setRecentReviews)
-      .catch(() => setRecentReviews([]))
+      .catch(() => { setRecentError(true); setRecentReviews([]); })
       .finally(() => setLoadingRecent(false));
   }, []);
 
@@ -221,6 +213,7 @@ export default function HubPage() {
     if (!trimmed) {
       setSearchResults([]);
       setSearched(false);
+      setSearchError(false);
       return;
     }
     setSearching(true);
@@ -228,9 +221,11 @@ export default function HubPage() {
       try {
         const results = await fetchReviews(trimmed);
         setSearchResults(results);
+        setSearchError(false);
         setSearched(true);
       } catch {
         setSearchResults([]);
+        setSearchError(true);
         setSearched(true);
       } finally {
         setSearching(false);
@@ -356,6 +351,12 @@ export default function HubPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
+          ) : searchError && searched ? (
+            <div className="text-center py-12 border border-dashed border-border rounded-xl">
+              <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">Couldn&apos;t load reviews</p>
+              <p className="text-xs text-muted-foreground">Try again in a moment.</p>
+            </div>
           ) : searchResults.length === 0 && searched ? (
             <div className="text-center py-12 border border-dashed border-border rounded-xl">
               <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
@@ -389,6 +390,14 @@ export default function HubPage() {
           {loadingRecent ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentError ? (
+            <div className="text-center py-16 border border-dashed border-border rounded-xl">
+              <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm font-semibold text-foreground mb-1">Reviews unavailable</p>
+              <p className="text-xs text-muted-foreground">
+                Couldn&apos;t load reviews right now. Try again in a moment.
+              </p>
             </div>
           ) : recentReviews.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-border rounded-xl">

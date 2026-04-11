@@ -7,6 +7,8 @@ import {
 import { cn } from "@/lib/utils";
 import {
   LABEL_META,
+  LABEL_DOT,
+  LABEL_BADGE,
   type Course,
   type RequirementLabel,
   type SemesterTerm,
@@ -36,19 +38,6 @@ type StatusFilter = "all" | "needed" | "in-plan" | "completed";
 const LEVELS = [100, 200, 300, 400] as const;
 const TERMS: SemesterTerm[] = ["Fall", "Spring", "Summer", "Winter"];
 
-const LABEL_DOT: Record<RequirementLabel, string> = {
-  required: "bg-red-500",
-  group: "bg-orange-500",
-  elective: "bg-indigo-500",
-  general: "bg-slate-400",
-};
-
-const LABEL_BADGE: Record<RequirementLabel, string> = {
-  required: "bg-red-50 text-red-700 border-red-100",
-  group: "bg-orange-50 text-orange-700 border-orange-100",
-  elective: "bg-indigo-50 text-indigo-700 border-indigo-100",
-  general: "bg-slate-100 text-slate-600 border-slate-200",
-};
 
 const TERM_SHORT: Record<SemesterTerm, string> = {
   Fall: "F", Spring: "Sp", Summer: "Su", Winter: "W",
@@ -310,7 +299,7 @@ export default function CoursesPage() {
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-20 md:pb-4">
           {/* Courses You Still Need */}
           {coursesYouNeed.length > 0 && statusFilter === "all" && !search && (
             <div className="mb-6 p-4 rounded-xl border border-yellow-200 bg-yellow-50">

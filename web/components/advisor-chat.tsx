@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, Sparkles, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { callAdvisor, type AdvisorMessage } from "@/lib/api";
+import { callAdvisor, AdvisorBusyError, type AdvisorMessage } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -83,7 +83,10 @@ export default function AdvisorChat() {
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Advisor unavailable — try again");
+      const msg = err instanceof AdvisorBusyError
+        ? "The advisor is busy right now — try again in a moment."
+        : err instanceof Error ? err.message : "Advisor unavailable — try again";
+      toast.error(msg);
       setMessages((prev) => prev.slice(0, -1)); // remove the user message on failure
     } finally {
       setLoading(false);
@@ -93,7 +96,7 @@ export default function AdvisorChat() {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-full min-h-[500px]">
+    <div className="flex flex-col h-full min-h-[400px] md:min-h-[500px]">
 
       {/* Empty state */}
       {isEmpty && (

@@ -8,7 +8,10 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+except ImportError:  # pragma: no cover - optional dependency in local/dev setups
+    genai = None
 
 
 MODEL = "gemini-1.5-flash"  # free tier, fast
@@ -140,6 +143,12 @@ def get_advisor_reply(
     reviews: list[dict],
     history: list[dict] | None = None,
 ) -> str:
+    if genai is None:
+        raise RuntimeError(
+            "Google Generative AI dependency is not installed. "
+            "Run: pip install google-generativeai"
+        )
+
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set in environment")

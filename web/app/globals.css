@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* GradPath Design System — Light mode */
+  /* Fiskpath Design System — Light mode */
   /* Primary: Deep Navy #0F1F3D, Accent: Indigo #3B5BDB, Neutrals: white/slate, Status colors */
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.13 0.028 265);
@@ -138,5 +138,20 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0.65in;
+    size: letter portrait;
+  }
+
+  /* Force collapsed balance-sheet groups to show when printing */
+  .bs-group-body {
+    display: block !important;
+    height: auto !important;
+    opacity: 1 !important;
+    overflow: visible !important;
   }
 }

@@ -1,0 +1,212 @@
+{
+  "major_code": "ACC",
+  "major_name": "Accounting",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "core_fixed",
+      "group_name": "CORE Requirements - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 24,
+      "description": "Required core curriculum courses listed directly on the accounting balance sheet.",
+      "courses": [
+        { "course_code": "CORE 100", "course_name": "New Student Orientation Seminar", "credits": 1 },
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 120", "course_name": "Critical Thinking", "credits": 2 },
+        { "course_code": "MATH 101", "course_name": "College Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 110", "course_name": "Intermediate Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4, "satisfies_requirement": "CORE 131" },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 3 }
+      ],
+      "notes": "Math 100 does not count toward graduation credits. One of MATH 101, MATH 110, or MATH 120 satisfies the CORE 131 requirement."
+    },
+    {
+      "group_id": "core_group_a",
+      "group_name": "CORE - Group A: Cultural Exposure",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group A - Cultural Exposure.",
+      "courses": [
+        { "course_code": "ART 291", "credits": 3 },
+        { "course_code": "ART 292", "credits": 3 },
+        { "course_code": "ENG 275", "credits": 3 },
+        { "course_code": "HIS 180", "credits": 3 },
+        { "course_code": "HIS 270", "credits": 3 },
+        { "course_code": "MUS 200", "credits": 2 },
+        { "course_code": "MUS 206", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_b",
+      "group_name": "CORE - Group B: Analytical Skills",
+      "group_type": "choose_one",
+      "credits_required": 0,
+      "description": "Required cognates satisfy Group B on the accounting balance sheet.",
+      "courses": [
+        { "course_code": "CORE 132", "credits": 3 },
+        { "course_code": "BAD 200", "credits": 3 },
+        { "course_code": "BAD 260", "credits": 3 },
+        { "course_code": "MATH 115", "credits": 3 },
+        { "course_code": "MATH 120", "credits": 4 },
+        { "course_code": "NSCI 360", "credits": 3 },
+        { "course_code": "SSCI 280", "credits": 3 }
+      ],
+      "notes": "The balance sheet marks Group B as fulfilled by the required cognates, so no additional hours are needed here."
+    },
+    {
+      "group_id": "core_group_c",
+      "group_name": "CORE - Group C: The Arts",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group C - The Arts.",
+      "courses": [
+        { "course_code": "CORE 220", "credits": 3 },
+        { "course_code": "MUS 207", "credits": 3 },
+        { "course_code": "MUS 208", "credits": 3 },
+        { "course_code": "MUS 205", "credits": 3 },
+        { "course_code": "ART 207", "credits": 3 },
+        { "course_code": "ART 208", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_d",
+      "group_name": "CORE - Group D: The Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose CORE 240 or one science lecture/lab pairing as listed on the balance sheet.",
+      "courses": [
+        { "course_code": "CORE 240", "credits": 3 },
+        { "course_code": "BIOL 101", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "credits": 1, "corequisite_for": "BIOL 101" },
+        { "course_code": "CHEM 113", "credits": 3, "requires_corequisite": "CHEM 103L" },
+        { "course_code": "CHEM 103L", "credits": 1, "corequisite_for": "CHEM 113" },
+        { "course_code": "PHYS 130", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "credits": 1, "corequisite_for": "PHYS 130" }
+      ]
+    },
+    {
+      "group_id": "core_group_e",
+      "group_name": "CORE - Group E: Social Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one course from Group E - Social Science.",
+      "courses": [
+        { "course_code": "ECON 230", "credits": 3 },
+        { "course_code": "ECON 240", "credits": 3 },
+        { "course_code": "HIS 160", "credits": 3 },
+        { "course_code": "PSCI 122", "credits": 3 },
+        { "course_code": "PSY 180", "credits": 3 },
+        { "course_code": "SOC 100", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "foreign_language",
+      "group_name": "Foreign Language",
+      "group_type": "all_of",
+      "credits_required": 6,
+      "description": "Elementary foreign language sequence; credits vary by placement.",
+      "courses": [
+        { "course_code": "SPAN 101", "course_name": "Elementary Spanish I", "credits": 3 },
+        { "course_code": "SPAN 102", "course_name": "Elementary Spanish II", "credits": 3 },
+        { "course_code": "FREN 101", "course_name": "Elementary French I", "credits": 3 },
+        { "course_code": "FREN 102", "course_name": "Elementary French II", "credits": 3 }
+      ],
+      "notes": "The balance sheet states 6 credits depending on placement scores."
+    },
+    {
+      "group_id": "required_cognates_stats",
+      "group_name": "Required Cognates - Statistics",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one statistics course.",
+      "courses": [
+        { "course_code": "BAD 260", "course_name": "Applied Statistics", "credits": 3 },
+        { "course_code": "SSCI 280", "course_name": "Methods and Statistics for Social Research", "credits": 3 },
+        { "course_code": "NSCI 360", "course_name": "Statistics", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "required_cognates_calculus",
+      "group_name": "Required Cognates - Calculus",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "Choose one calculus course.",
+      "courses": [
+        { "course_code": "BAD 200", "course_name": "Applied Calculus for Business and Economics", "credits": 3 },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4 }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 42,
+      "description": "Required business administration and accounting foundation courses.",
+      "courses": [
+        { "course_code": "ACC 230", "course_name": "Principles of Accounting I", "credits": 3 },
+        { "course_code": "ACC 240", "course_name": "Principles of Accounting II", "credits": 3 },
+        { "course_code": "BAD 110", "course_name": "Business Information Systems", "credits": 3 },
+        { "course_code": "CSCI 100", "course_name": "Introduction to Computing", "credits": 3, "alternative_for": "BAD 110" },
+        { "course_code": "BAD 220", "course_name": "Legal and Ethical Environment of Business", "credits": 3 },
+        { "course_code": "BAD 205", "course_name": "Business Ethics", "credits": 3 },
+        { "course_code": "BAD 250", "course_name": "Business Communications", "credits": 3 },
+        { "course_code": "BAD 320", "course_name": "Marketing", "credits": 3 },
+        { "course_code": "BAD 399", "course_name": "Internship Seminar", "credits": 3 },
+        { "course_code": "BAD 490", "course_name": "Business Policy", "credits": 3 },
+        { "course_code": "ECON 230", "course_name": "Principles of Microeconomics", "credits": 3 },
+        { "course_code": "ECON 240", "course_name": "Principles of Macroeconomics", "credits": 3 },
+        { "course_code": "FIN 320", "course_name": "Business Finance", "credits": 3 },
+        { "course_code": "MGT 280", "course_name": "Management Principles and Practice", "credits": 3 },
+        { "course_code": "MGT 330", "course_name": "Production Operations Management", "credits": 3 }
+      ],
+      "notes": "The balance sheet lists BAD 110 or CSCI 100. One of the two should satisfy that requirement slot."
+    },
+    {
+      "group_id": "accounting_concentration_fixed",
+      "group_name": "Accounting Concentration - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 15,
+      "description": "Required concentration courses for accounting.",
+      "courses": [
+        { "course_code": "ACC 300", "course_name": "Cost Accounting and Control", "credits": 3 },
+        { "course_code": "ACC 310", "course_name": "Intermediate Financial Accounting Theory I", "credits": 3 },
+        { "course_code": "ACC 320", "course_name": "Intermediate Financial Accounting Theory II", "credits": 3 },
+        { "course_code": "ACC 330", "course_name": "Federal Taxation I", "credits": 3 },
+        { "course_code": "ACC 410", "course_name": "Advanced Accounting", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "accounting_concentration_electives",
+      "group_name": "Accounting Concentration - Choose Three",
+      "group_type": "choose_n",
+      "credits_required": 9,
+      "description": "Choose three concentration electives from the balance sheet.",
+      "selection_count": 3,
+      "courses": [
+        { "course_code": "ACC 350", "course_name": "Accounting Information Systems", "credits": 3 },
+        { "course_code": "ACC 420", "course_name": "Accounting Seminar", "credits": 3 },
+        { "course_code": "ACC 430", "course_name": "Federal Taxation II", "credits": 3 },
+        { "course_code": "ACC 440", "course_name": "Auditing", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "general_electives",
+      "group_name": "General Electives",
+      "group_type": "fill_remaining",
+      "credits_required": 9,
+      "description": "General electives listed on the balance sheet."
+    }
+  ],
+  "metadata": {
+    "source": "20210325-BSBA-Accounting-Concentration.pdf",
+    "notes": [
+      "Accounting is represented here as a template built from the Business Administration accounting concentration balance sheet.",
+      "The balance sheet lists major requirements as 42 credits and accounting concentration as 24 credits.",
+      "Some requirement rows on the source sheet are presented as either/or pairs rather than a single fixed course."
+    ]
+  }
+}

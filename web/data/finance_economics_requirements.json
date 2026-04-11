@@ -1,0 +1,66 @@
+{
+  "major_code": "FIN-ECON",
+  "major_name": "Finance / Economics Concentration",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "shared_business_core",
+      "group_name": "Shared Business Core",
+      "group_type": "template_reference",
+      "template_reference": "business_admin_non_concentration_requirements.json",
+      "description": "Uses the shared business administration core structure as the base."
+    },
+    {
+      "group_id": "finance_econ_concentration_fixed",
+      "group_name": "Finance Economics Concentration - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 12,
+      "description": "Fixed concentration courses from the finance/economics balance sheet.",
+      "courses": [
+        { "course_code": "ECON 330", "course_name": "Managerial Economics", "credits": 3 },
+        { "course_code": "ECON 340", "course_name": "Macroeconomics Analysis", "credits": 3 },
+        { "course_code": "FIN 330", "course_name": "Corporate Financial Management", "credits": 3 },
+        { "course_code": "FIN 370", "course_name": "Investments Analysis and Management", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "finance_emphasis",
+      "group_name": "Finance Emphasis Options",
+      "group_type": "choose_n",
+      "credits_required": 12,
+      "selection_count": 4,
+      "description": "Choose four courses from the finance emphasis list.",
+      "courses": [
+        { "course_code": "FIN 310", "course_name": "Financial Statement Analysis", "credits": 3 },
+        { "course_code": "ACC 310", "course_name": "Intermediate Financial Accounting Theory I", "credits": 3, "alternative_for": "FIN 310" },
+        { "course_code": "FIN 350", "course_name": "Financial Markets", "credits": 3 },
+        { "course_code": "FIN 410", "course_name": "International Financial Management", "credits": 3 },
+        { "course_code": "FIN 420", "course_name": "Financial Institutions Management", "credits": 3 },
+        { "course_code": "MGT 350", "course_name": "International Business", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "economics_emphasis",
+      "group_name": "Economics Emphasis Options",
+      "group_type": "choose_n",
+      "credits_required": 12,
+      "selection_count": 4,
+      "description": "Choose four courses from the economics emphasis list.",
+      "courses": [
+        { "course_code": "ECON 350", "course_name": "International Economics", "credits": 3 },
+        { "course_code": "ECON 370", "course_name": "Intro Econometrics", "credits": 3 },
+        { "course_code": "ECON 400", "course_name": "Topics in Economics", "credits": 3 },
+        { "course_code": "ECON 450", "course_name": "Economics of Development", "credits": 3 },
+        { "course_code": "MGT 350", "course_name": "International Business", "credits": 3 }
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "20210325-BSBA-Finance-Economics-Concentration.pdf",
+    "notes": [
+      "This template references the shared business administration base and adds the finance/economics concentration layers.",
+      "The source sheet presents a split between finance emphasis and economics emphasis after four fixed concentration courses."
+    ]
+  }
+}

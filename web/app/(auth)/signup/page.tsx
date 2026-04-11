@@ -51,7 +51,7 @@ export default function SignupPage() {
           <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
             <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sidebar-foreground text-lg tracking-tight">GradPath</span>
+          <span className="font-semibold text-sidebar-foreground text-lg tracking-tight">Fiskpath</span>
         </div>
         <div className="space-y-4">
           <h1 className="text-3xl font-bold text-sidebar-foreground leading-tight">
@@ -62,7 +62,7 @@ export default function SignupPage() {
           </p>
         </div>
         <p className="text-xs text-sidebar-foreground/40">
-          &copy; {new Date().getFullYear()} GradPath. All rights reserved.
+          &copy; {new Date().getFullYear()} Fiskpath. All rights reserved.
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export default function SignupPage() {
             <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-lg">
               <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-foreground text-lg">GradPath</span>
+            <span className="font-semibold text-foreground text-lg">Fiskpath</span>
           </div>
 
           <div className="space-y-2 text-center lg:text-left">

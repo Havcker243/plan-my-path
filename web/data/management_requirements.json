@@ -1,0 +1,38 @@
+{
+  "major_code": "MGT",
+  "major_name": "Management Concentration",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "shared_business_core",
+      "group_name": "Shared Business Core",
+      "group_type": "template_reference",
+      "template_reference": "business_admin_non_concentration_requirements.json",
+      "description": "Uses the shared business administration core structure as the base."
+    },
+    {
+      "group_id": "management_concentration",
+      "group_name": "Management Concentration",
+      "group_type": "all_of",
+      "credits_required": 24,
+      "description": "Management concentration courses from the balance sheet.",
+      "courses": [
+        { "course_code": "ECON 330", "course_name": "Managerial Economics", "credits": 3 },
+        { "course_code": "MGT 320", "course_name": "Human Resource Management", "credits": 3 },
+        { "course_code": "MGT 340", "course_name": "Organizational Behavior", "credits": 3 },
+        { "course_code": "MGT 380", "course_name": "Entrepreneurial Development", "credits": 3 },
+        { "course_code": "MGT 350", "course_name": "International Business", "credits": 3 },
+        { "course_code": "MGT 422", "course_name": "Strategic Marketing", "credits": 3 },
+        { "course_code": "MGT 400", "course_name": "Topics in Management", "credits": 3 },
+        { "course_code": "FIN 410", "course_name": "International Financial Management", "credits": 3 }
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "20210325-BSBA-Management-Concentration.pdf",
+    "notes": [
+      "This template references the shared business administration base and adds the management concentration sequence."
+    ]
+  }
+}

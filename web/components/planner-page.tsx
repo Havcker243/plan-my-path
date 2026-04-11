@@ -12,11 +12,14 @@ import { cn, formatDisplayName } from "@/lib/utils";
 import {
   getTotalCredits,
   getPrereqWarnings,
+  getOfferedTermWarnings,
   getSemesterCreditLoad,
   getSemesterGpa,
   compareSemesters,
   markCurrentSemester,
   LABEL_META,
+  LABEL_DOT,
+  LABEL_BADGE,
   type Course,
   type Semester,
   type RequirementLabel,
@@ -48,21 +51,16 @@ import {
 } from "@/components/ui/select";
 import { usePlan } from "@/contexts/plan-context";
 import type { BackendSection } from "@/lib/api";
+import {
+  getMissingRequired,
+  formatSectionDate,
+  formatSectionTime,
+  formatMeetingTime,
+  formatSeatSummary,
+  getInstructorNames,
+} from "@/lib/planner";
 import { toast } from "sonner";
 
-const LABEL_DOT: Record<RequirementLabel, string> = {
-  required: "bg-red-500",
-  group: "bg-orange-500",
-  elective: "bg-indigo-500",
-  general: "bg-slate-400",
-};
-
-const LABEL_BADGE: Record<RequirementLabel, string> = {
-  required: "bg-red-50 text-red-700 border-red-100",
-  group: "bg-orange-50 text-orange-700 border-orange-100",
-  elective: "bg-indigo-50 text-indigo-700 border-indigo-100",
-  general: "bg-slate-100 text-slate-600 border-slate-200",
-};
 
 const STATUS_COLORS = {
   completed: "bg-green-50 border-green-200",
@@ -70,56 +68,6 @@ const STATUS_COLORS = {
   failed: "bg-red-50 border-red-200",
 };
 
-function formatSectionDate(value: string | null): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatSectionTime(value: string | null): string | null {
-  if (!value) return null;
-  const match = value.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
-  if (!match) return value;
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return value;
-  const meridiem = match[3]?.toUpperCase();
-  if (meridiem) {
-    if (hours < 1 || hours > 12) return value;
-    if (meridiem === "AM") hours = hours === 12 ? 0 : hours;
-    if (meridiem === "PM") hours = hours === 12 ? 12 : hours + 12;
-  }
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function formatMeetingTime(days: string | null, start: string | null, end: string | null): string {
-  const dayText = days?.trim() || "Days TBA";
-  const startText = formatSectionTime(start);
-  const endText = formatSectionTime(end);
-  if (startText && endText) return `${dayText} • ${startText} - ${endText}`;
-  return dayText;
-}
-
-function formatSeatSummary(section: BackendSection): string | null {
-  const available = section.seats?.available;
-  const capacity = section.seats?.capacity;
-  if (!Number.isFinite(available) || !Number.isFinite(capacity)) return null;
-  return `${available}/${capacity} seats open`;
-}
-
-function getInstructorNames(section: BackendSection): string {
-  const names = (section.instructors ?? [])
-    .map((instructor) => instructor.name?.trim())
-    .filter(Boolean);
-  return names.length > 0 ? names.join(", ") : "Instructor TBA";
-}
 
 function SectionOptionCard({
   section,
@@ -249,10 +197,20 @@ export default function PlannerPage() {
   const [newSemesterTerm, setNewSemesterTerm] = useState<SemesterTerm>("Fall");
   const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef(false);
   // Always hold the latest savePlan reference so the debounced timer
   // never closes over a stale version of it.
   const savePlanRef = useRef(savePlan);
   useEffect(() => { savePlanRef.current = savePlan; }, [savePlan]);
+
+  // Warn the user before closing the tab if a save is queued or in flight.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingSaveRef.current || saving) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saving]);
 
   // Search for courses to add
   useEffect(() => {
@@ -278,7 +236,9 @@ export default function PlannerPage() {
 
   const triggerSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    pendingSaveRef.current = true;
     saveTimerRef.current = setTimeout(async () => {
+      pendingSaveRef.current = false;
       setSaving(true);
       try {
         // Use the ref so we always call the latest savePlan, which holds
@@ -294,18 +254,17 @@ export default function PlannerPage() {
   }, []); // no deps — the ref handles currency
 
   const warnings = getPrereqWarnings(semesters, planCatalog);
-  const warnSet = new Set(warnings.map((w) => w.courseId));
+  const offeredTermWarns = getOfferedTermWarnings(semesters, planCatalog);
+  const warnSet = new Set([
+    ...warnings.map((w) => w.courseId),
+    ...offeredTermWarns.map((w) => w.courseId),
+  ]);
   const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
   const LABEL_KEY: Record<string, RequirementLabel> = {
     "Required": "required", "Group Choice": "group",
     "Major Elective": "elective", "General Elective": "general",
   };
-  const missingRequired = Object.entries(labels)
-    .filter(([code, entry]) =>
-      (entry.label === "Required" || entry.label === "Group Choice") && !planCodes.has(code)
-    )
-    .map(([code, entry]) => ({ code, entry }))
-    .sort((a, b) => a.code.localeCompare(b.code));
+  const missingRequired = getMissingRequired(labels, planCodes);
   const selectedCourseSemester = selectedCourse
     ? semesters.find((sem) => sem.courseIds.includes(selectedCourse.code))
     : null;
@@ -546,56 +505,29 @@ export default function PlannerPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-background flex-shrink-0">
-        <div>
+      <div className="flex items-center justify-between px-4 md:px-5 py-3 border-b border-border bg-background flex-shrink-0 gap-2">
+        <div className="min-w-0">
           <h1 className="text-base font-semibold text-foreground">4-Year Planner</h1>
-          <p className="text-xs text-muted-foreground">
-            {majorName}{gradText ? ` · ${gradText} graduation` : ""}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Duplicate adds are blocked. If a class is already in the planner, it will not be added again.
+          <p className="text-xs text-muted-foreground truncate">
+            {majorName}{gradText ? ` · ${gradText}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {missingRequired.length > 0 && (
             <button
               onClick={() => {
                 setReqModalSemId(semesters.find((s) => s.isCurrent)?.id ?? semesters.find((s) => !s.isPast)?.id ?? "");
                 setReqModalOpen(true);
               }}
-              className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
             >
               <ListChecks className="w-3.5 h-3.5" />
-              Missing Reqs
+              <span className="hidden sm:inline">Missing Reqs</span>
               <span className="bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                 {missingRequired.length}
               </span>
             </button>
           )}
-          <button
-            onClick={() => setConfirmAction({ type: "clear-plan" })}
-            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-          >
-            Clear Everything
-          </button>
-          <div className="text-right">
-            <span className={cn(
-              "text-xs flex items-center gap-1.5 transition-colors",
-              saving ? "text-muted-foreground" : lastSaved ? "text-green-600" : "text-muted-foreground"
-            )}>
-              {saving
-                ? <><Clock className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-                : lastSaved
-                ? <><CheckCircle className="w-3.5 h-3.5" /> Saved</>
-                : null
-              }
-            </span>
-            {lastSaved && !saving && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {lastSaved.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            )}
-          </div>
           <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
             <span><span className="font-semibold text-foreground">{totalCompleted}</span> / {degreeCreditTotal} cr</span>
             {gpa !== null && (
@@ -603,16 +535,33 @@ export default function PlannerPage() {
             )}
             {warnings.length > 0 && (
               <span className="flex items-center gap-1 text-yellow-600 font-medium">
-                <AlertTriangle className="w-3 h-3" /> {warnings.length} warnings
+                <AlertTriangle className="w-3 h-3" /> {warnings.length}
               </span>
             )}
           </div>
+          <span className={cn(
+            "text-xs flex items-center gap-1 transition-colors",
+            saving ? "text-muted-foreground" : lastSaved ? "text-green-600" : "text-muted-foreground"
+          )}>
+            {saving
+              ? <><Clock className="w-3.5 h-3.5 animate-spin" /><span className="hidden sm:inline"> Saving…</span></>
+              : lastSaved
+              ? <><CheckCircle className="w-3.5 h-3.5" /><span className="hidden sm:inline"> Saved</span></>
+              : null
+            }
+          </span>
+          <button
+            onClick={() => setConfirmAction({ type: "clear-plan" })}
+            className="hidden md:block text-xs text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
       {/* Semester columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory">
-        <div className="flex gap-3 p-4 h-full" style={{ minWidth: "max-content" }}>
+        <div className="flex gap-3 p-4 pb-20 md:pb-4 h-full" style={{ minWidth: "max-content" }}>
           {semesters.map((sem) => {
             const load = getSemesterCreditLoad(sem, planCatalog);
             const semCredits = getTotalCredits(sem.courseIds, planCatalog);

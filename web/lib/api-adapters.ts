@@ -50,6 +50,9 @@ function extractCourseCodes(text: string): string[] {
 }
 
 export function normalizePrereqs(requisites: unknown): string[] {
+  // Backend requisites may contain prose like "39 credits" or paragraphs. Only
+  // keep course-code-shaped values so prerequisite warnings do not produce fake
+  // requirements such as "39 must come before BIOL-221".
   if (!requisites) return [];
   if (Array.isArray(requisites)) {
     const deduped = new Set<string>();
@@ -69,6 +72,8 @@ export function planCourseToCourse(
   labels: Record<string, CourseLabelEntry>,
   rules: ElectiveRule[] = []
 ): Course {
+  // Used when loading an already-saved plan. Preserve backend state while
+  // re-resolving labels against the current major rules.
   const { subject, level } = parseCodeParts(bc.code);
   return {
     id: bc.code,
@@ -92,6 +97,8 @@ export function searchCourseToCourse(
   labels: Record<string, CourseLabelEntry>,
   rules: ElectiveRule[] = []
 ): Course {
+  // Used for catalog search results before the user adds a course to a plan.
+  // Search results always begin as planned courses.
   const { subject, level } = parseCodeParts(bc.course_code);
   const termSet = new Set<SemesterTerm>();
   (bc.sections ?? []).forEach((s) => termSet.add(capitalizeTerm(s.term)));
@@ -220,7 +227,7 @@ export function buildSemesters(
       id: bs.id,
       term: capitalizeTerm(bs.term),
       year: bs.year,
-      courseIds: bs.courses.map((c) => c.code),
+      courseIds: [...new Set(bs.courses.map((c) => c.code))],
       isPast,
       isCurrent: false,
     };
@@ -323,6 +330,9 @@ export async function fetchCatalogMetadataForTranscriptCourses(
   labels: Record<string, CourseLabelEntry>,
   rules: ElectiveRule[]
 ): Promise<Record<string, Course>> {
+  // Transcript rows may use spaces while the catalog uses hyphens. Match by
+  // normalized code and return catalog metadata keyed by the original
+  // transcript code so callers can preserve transcript row identity.
   const subjects = Array.from(
     new Set(
       courses

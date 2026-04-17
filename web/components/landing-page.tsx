@@ -34,10 +34,10 @@ export default function LandingPage() {
           <Link href="/explore" className="hover:text-foreground transition-colors">Explore Courses</Link>
         </nav>
         <div className="flex items-center gap-3">
-          <Link href="/dashboard">
+          <Link href="/login">
             <Button variant="ghost" size="sm" className="hidden md:inline-flex">Sign in</Button>
           </Link>
-          <Link href="/onboarding">
+          <Link href="/signup">
             <Button size="sm">Start Planning Free</Button>
           </Link>
         </div>
@@ -84,7 +84,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start"
             >
-              <Link href="/onboarding">
+              <Link href="/signup">
                 <Button size="lg" className="w-full sm:w-auto gap-2">
                   Start Planning Free
                   <ArrowRight className="w-4 h-4" />
@@ -277,7 +277,7 @@ export default function LandingPage() {
             Know exactly where you stand before your next advisor meeting.
           </h2>
           <p className="text-muted-foreground mb-8">It takes less than 5 minutes to build your first plan.</p>
-          <Link href="/onboarding">
+          <Link href="/signup">
             <Button size="lg" className="gap-2">
               Start Planning Free <ArrowRight className="w-4 h-4" />
             </Button>

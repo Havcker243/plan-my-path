@@ -125,6 +125,7 @@ export interface BackendProfile {
   phone: string | null;
   avatar_url: string | null;
   major_code: string | null;
+  minor_code: string | null;
   graduation_year: number | null;
   graduation_term: string | null;
   start_year: number | null;
@@ -321,7 +322,8 @@ export class AdvisorBusyError extends Error {
 export async function callAdvisor(
   token: string,
   message: string,
-  history: AdvisorMessage[] = []
+  history: AdvisorMessage[] = [],
+  onChunk?: (chunk: string) => void
 ): Promise<string> {
   const res = await fetch(`${BASE}/api/ai/advise`, {
     method: "POST",
@@ -333,11 +335,38 @@ export async function callAdvisor(
   });
   if (!res.ok) {
     if (res.status === 429) throw new AdvisorBusyError();
-    const detail = await res.json().catch(() => ({})) as { detail?: string };
-    throw new Error(detail.detail ?? `POST /api/ai/advise → ${res.status}`);
+    throw new Error(`POST /api/ai/advise → ${res.status}`);
   }
-  const data = await res.json() as { reply: string };
-  return data.reply;
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const raw = line.slice(6).trim();
+      if (raw === "[DONE]") return full;
+      try {
+        const parsed = JSON.parse(raw) as { chunk?: string; error?: string };
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.chunk) {
+          full += parsed.chunk;
+          onChunk?.(parsed.chunk);
+        }
+      } catch (e) {
+        if (e instanceof SyntaxError) continue;
+        throw e;
+      }
+    }
+  }
+  return full;
 }
 
 // ─── Authenticated endpoints ──────────────────────────────────────────────────

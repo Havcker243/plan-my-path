@@ -1,10 +1,10 @@
 import {
   LayoutDashboard,
-  Map,
+  Route,
   BookOpen,
-  Flame,
+  MessageSquare,
   User,
-  ClipboardList,
+  ClipboardCheck,
   CalendarDays,
   FileSpreadsheet,
 } from "lucide-react";
@@ -18,14 +18,14 @@ import {
  *   - All items  appear in the desktop sidebar and command search
  */
 export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/planner", label: "Planner", icon: Map },
-  { href: "/courses", label: "Courses", icon: BookOpen },
-  { href: "/hub", label: "Hub", icon: Flame },
-  { href: "/profile", label: "Profile", icon: User },
-  { href: "/requirements", label: "Requirements", icon: ClipboardList },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/balance-sheet", label: "Balance Sheet", icon: FileSpreadsheet },
+  { href: "/dashboard",     label: "Home",          icon: LayoutDashboard },
+  { href: "/planner",       label: "Degree Plan",   icon: Route },
+  { href: "/requirements",  label: "Requirements",  icon: ClipboardCheck },
+  { href: "/courses",       label: "Courses",       icon: BookOpen },
+  { href: "/calendar",      label: "Schedule",      icon: CalendarDays },
+  { href: "/hub",           label: "Course Hub",    icon: MessageSquare },
+  { href: "/balance-sheet", label: "Degree Audit",  icon: FileSpreadsheet },
+  { href: "/profile",       label: "Profile",       icon: User },
 ] as const;
 
 export type NavItem = (typeof NAV_ITEMS)[number];

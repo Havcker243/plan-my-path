@@ -184,8 +184,9 @@ export default function CoursesPage() {
             : `${targetCourse.code} added to planner`
         );
       }
-    } catch {
-      toast.error(`Failed to add ${targetCourse.code} to your plan`);
+    } catch (err) {
+      console.error("[CoursesPage] failed to add course:", err);
+      toast.error("Couldn't add that course right now. Please try again.");
     } finally {
       setAdding(false);
     }
@@ -299,7 +300,7 @@ export default function CoursesPage() {
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 pb-20 md:pb-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-4">
           {/* Courses You Still Need */}
           {coursesYouNeed.length > 0 && statusFilter === "all" && !search && (
             <div className="mb-6 p-4 rounded-xl border border-yellow-200 bg-yellow-50">

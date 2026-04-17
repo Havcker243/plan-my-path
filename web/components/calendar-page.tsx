@@ -13,7 +13,6 @@ import {
   buildIcs,
   type CalEvent,
 } from "@/lib/calendar";
-import { toast } from "sonner";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKDAY_INDEXES = [0, 1, 2, 3, 4];
@@ -49,7 +48,7 @@ export default function CalendarPage() {
     const term = `${currentSem.term.toLowerCase()} ${currentSem.year}`;
     loadSectionsForCourses(currentSem.courseIds, term)
       .then(setSectionsMap)
-      .catch(() => toast.error("Failed to load section schedule"))
+      .catch((err) => console.error("[CalendarPage] failed to load sections:", err))
       .finally(() => setLoadingSections(false));
   }, [currentSem?.id, loadSectionsForCourses]);
 
@@ -207,7 +206,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Mobile list view — hidden on md+ */}
-      <div className="md:hidden flex-1 overflow-y-auto pb-20">
+      <div className="md:hidden flex-1 overflow-y-auto pb-4">
         {DAY_LABELS.slice(0, 5).map((dayLabel, dayIdx) => {
           const dayEvents = events.filter((e) => e.day === dayIdx);
           if (dayEvents.length === 0) return null;

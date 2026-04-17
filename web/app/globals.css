@@ -147,11 +147,48 @@
     size: letter portrait;
   }
 
+  /* Hide app chrome: sidebar, header, mobile nav, toasts */
+  nav, header, aside,
+  [data-sonner-toaster],
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Let the main content fill the page */
+  body, html {
+    background: white !important;
+    color: black !important;
+  }
+
+  main, [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .h-screen {
+    height: auto !important;
+  }
+
+  .overflow-hidden,
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
   /* Force collapsed balance-sheet groups to show when printing */
   .bs-group-body {
     display: block !important;
     height: auto !important;
     opacity: 1 !important;
     overflow: visible !important;
+  }
+
+  /* Avoid page breaks inside cards and table rows */
+  .rounded-xl, tr, .page-break-avoid {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

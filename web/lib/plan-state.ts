@@ -35,6 +35,9 @@ export interface SavePlanPayload {
   }[];
 }
 
+// Keep this payload type close to the builder instead of importing a React
+// context type. The backend save payload is intentionally small and stable.
+
 export interface OnboardingPlanInput {
   startYear: number;
   startTerm: string;
@@ -53,6 +56,14 @@ export function sameCourseCode(a: string, b: string): boolean {
   return normalizeCourseCode(a) === normalizeCourseCode(b);
 }
 
+/**
+ * Serializes frontend plan state for /api/plan.
+ *
+ * Important behavior:
+ * - invalid credits fall back to 3 so one bad imported row cannot poison saves
+ * - selectedSectionId is preserved for calendar and ICS generation
+ * - term end dates prefer the real term calendar when available
+ */
 export function buildSavePlanPayload(
   semesters: Semester[],
   planCatalog: Record<string, Course>,
@@ -81,6 +92,9 @@ export function syncSemesterIdsFromBackend(
   semesters: Semester[],
   backendSemesters: BackendPlan["semesters"] | undefined
 ): Semester[] {
+  // The backend may replace temporary client IDs with database IDs. It returns
+  // the same semester sequence it saved, so we preserve order and swap IDs by
+  // index rather than trying to match on labels that may not be unique.
   if (!backendSemesters?.length) return semesters;
   return semesters.map((sem, index) => {
     const backendSem = backendSemesters[index];
@@ -94,6 +108,8 @@ export function addCourseToSemesterState(
   course: Course,
   semesterId: string
 ): { ok: false } | { ok: true; semesters: Semester[]; planCatalog: Record<string, Course> } {
+  // Pure optimistic-update builder used before persistPlan. It has no side
+  // effects, so plan-context can roll back if the network save fails.
   const semesterExists = semesters.some((sem) => sem.id === semesterId);
   if (!semesterExists) return { ok: false };
 
@@ -114,6 +130,9 @@ export function getTranscriptFallbackSemester(
   profileStartYear: number | null | undefined,
   semesters: Semester[]
 ): { term: SemesterTerm; year: number } {
+  // Transfer/manual transcript rows often have no term. Put them immediately
+  // before the student's start term, or before the first known plan semester if
+  // profile start data is missing.
   if (profileStartTerm && profileStartYear) {
     return previousSemester(capitalizeTerm(profileStartTerm), profileStartYear);
   }
@@ -156,6 +175,9 @@ export function buildOnboardingPlanState(
   completedCourseCodes: string[];
   allSemesters: Semester[];
 } {
+  // This mirrors the still-inline onboarding behavior in plan-context. It is
+  // the intended extraction target, but should replace that code only after
+  // careful transcript/onboarding regression testing.
   const normalizedCourses = normalizeOnboardingCourses(data.completedCourses, metaByCode);
   const completedCourseCodes = getCompletedPlannerCodes(normalizedCourses);
   const termGroups = new Map<string, { term: SemesterTerm; year: number; courses: OnboardingCourse[] }>();

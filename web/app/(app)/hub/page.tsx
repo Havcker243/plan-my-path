@@ -9,7 +9,9 @@ import {
   fetchRecentReviews,
   fetchReviews,
   submitReview,
+  searchCourses,
   type CourseReview,
+  type BackendCourse,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
 import { getSupabase } from "@/lib/supabase";
@@ -57,11 +59,57 @@ function SubmitForm({
 }) {
   const { user } = useAuth();
   const [courseCode, setCourseCode] = useState(defaultCourse ?? "");
+  const [courseTitle, setCourseTitle] = useState<string | null>(null);
   const [year, setYear] = useState(currentYear);
   const [term, setTerm] = useState<string>("Fall");
   const [professor, setProfessor] = useState("");
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Course autocomplete
+  const [suggestions, setSuggestions] = useState<BackendCourse[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleCourseInput = (val: string) => {
+    setCourseCode(val.toUpperCase());
+    setCourseTitle(null);
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    const trimmed = val.trim();
+    if (trimmed.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    setSuggestLoading(true);
+    suggestTimer.current = setTimeout(async () => {
+      try {
+        const { data } = await searchCourses(trimmed, undefined, 1, 8);
+        setSuggestions(data);
+        setShowSuggestions(data.length > 0);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestLoading(false);
+      }
+    }, 300);
+  };
+
+  const selectCourse = (course: BackendCourse) => {
+    setCourseCode(course.course_code);
+    setCourseTitle(course.title);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = async () => {
     const code = courseCode.trim().toUpperCase();
@@ -86,11 +134,13 @@ function SubmitForm({
 
       onSubmitted(review);
       setCourseCode(defaultCourse ?? "");
+      setCourseTitle(null);
       setComment("");
       setProfessor("");
       toast.success("Review submitted — thank you!");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to submit review");
+      console.error("[HubPage] submit review error:", err);
+      toast.error("Couldn't submit your review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -103,15 +153,40 @@ function SubmitForm({
         Anonymous — your name is never stored or shown.
       </p>
 
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1">Course Code</label>
-        <input
-          type="text"
-          value={courseCode}
-          onChange={(e) => setCourseCode(e.target.value.toUpperCase())}
-          placeholder="e.g. CSCI-241"
-          className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
-        />
+      <div ref={wrapperRef} className="relative">
+        <label className="text-xs font-medium text-muted-foreground block mb-1">Course</label>
+        <div className="relative">
+          <input
+            type="text"
+            value={courseCode}
+            onChange={(e) => handleCourseInput(e.target.value)}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+            placeholder="Search by code or title…"
+            className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2 pr-8 focus:outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          {suggestLoading && (
+            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          )}
+        </div>
+        {courseTitle && (
+          <p className="text-[11px] text-muted-foreground mt-1 pl-0.5">{courseTitle}</p>
+        )}
+        {showSuggestions && (
+          <ul className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+            {suggestions.map((c) => (
+              <li key={c.course_code}>
+                <button
+                  type="button"
+                  onMouseDown={() => selectCourse(c)}
+                  className="w-full text-left px-3 py-2.5 hover:bg-muted transition-colors flex items-baseline gap-2"
+                >
+                  <span className="text-sm font-mono font-semibold text-foreground shrink-0">{c.course_code}</span>
+                  <span className="text-xs text-muted-foreground truncate">{c.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -246,7 +321,7 @@ export default function HubPage() {
   const isSearching = query.trim().length > 0;
 
   return (
-    <div className="px-4 md:px-8 py-6 pb-20 md:pb-8 max-w-5xl mx-auto">
+    <div className="px-4 md:px-8 py-6 pb-8 max-w-5xl mx-auto">
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

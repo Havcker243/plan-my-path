@@ -56,7 +56,7 @@ export default function RequirementsPage() {
   };
 
   return (
-    <div className="px-4 md:px-8 py-6 pb-20 md:pb-8 max-w-4xl mx-auto">
+    <div className="px-4 md:px-8 py-6 pb-8 max-w-4xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">Degree Requirements</h1>

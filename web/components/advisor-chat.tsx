@@ -77,17 +77,26 @@ export default function AdvisorChat() {
       const token = session?.access_token;
       if (!token) throw new Error("Not signed in");
 
-      // Pass history without the last user message (it's sent as `message`)
-      const history = messages; // previous turns only
-      const reply = await callAdvisor(token, trimmed, history);
+      // Add an empty assistant bubble immediately so the user sees it start filling
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      await callAdvisor(token, trimmed, messages, (chunk) => {
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant") {
+            return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
+          }
+          return prev;
+        });
+      });
     } catch (err) {
+      console.error("[AdvisorChat] error:", err);
       const msg = err instanceof AdvisorBusyError
         ? "The advisor is busy right now — try again in a moment."
-        : err instanceof Error ? err.message : "Advisor unavailable — try again";
+        : "Something went wrong. Please try again.";
       toast.error(msg);
-      setMessages((prev) => prev.slice(0, -1)); // remove the user message on failure
+      // Roll back both the user message and the empty assistant bubble
+      setMessages((prev) => prev.slice(0, -2));
     } finally {
       setLoading(false);
     }

@@ -170,7 +170,6 @@ export default function OnboardingPage() {
         completedCourses,
         gpa: transcriptGpa,
       });
-      toast.success("Onboarding saved");
       router.push("/dashboard");
     } catch {
       toast.error("Failed to complete onboarding");

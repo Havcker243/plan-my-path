@@ -15,7 +15,7 @@ import {
   Zap,
   BookMarked,
 } from "lucide-react";
-import { cn, formatDisplayName } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings } from "@/lib/data";
@@ -36,10 +36,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, semesters, planCatalog, labels, majors, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
+  const { profile, semesters, planCatalog, labels, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved === "true") setSidebarCollapsed(true);
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((v) => {
+      localStorage.setItem("sidebar-collapsed", String(!v));
+      return !v;
+    });
+  };
   const bellRef = useRef<HTMLButtonElement>(null);
   const notifPanelRef = useRef<HTMLDivElement>(null);
 
@@ -137,67 +150,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const userName = profile?.name ?? user.email ?? "";
   const initials = getInitials(profile?.name ?? user.email);
 
-  const majorName = formatDisplayName(
-    majors.find((m) => m.code === profile?.major_code)?.name
-    ?? profile?.major_code
-    ?? null
-  );
-
-  const gradText =
-    profile?.graduation_term && profile?.graduation_year
-      ? `${profile.graduation_term.charAt(0).toUpperCase() + profile.graduation_term.slice(1)} ${profile.graduation_year}`
-      : null;
-
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex flex-col w-56 flex-shrink-0 bg-sidebar border-r border-sidebar-border">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
-          <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
-            <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
+      <aside className={cn(
+        "hidden md:flex flex-col flex-shrink-0 bg-sidebar border-r border-sidebar-border transition-all duration-200 ease-in-out overflow-hidden",
+        sidebarCollapsed ? "w-14" : "w-56"
+      )}>
+        {/* Logo — click to collapse/expand */}
+        <button
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex items-center gap-2.5 border-b border-sidebar-border h-14 flex-shrink-0 px-3 w-full hover:bg-sidebar-accent transition-colors"
+        >
+          <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-lg flex-shrink-0">
+            <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px]">Fiskpath</span>
-        </div>
+          {!sidebarCollapsed && (
+            <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px] truncate">Fiskpath</span>
+          )}
+        </button>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                pathname === href || pathname.startsWith(href + "/")
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
-            </Link>
-          ))}
+        <nav className={cn("flex-1 py-3 space-y-0.5 overflow-hidden", sidebarCollapsed ? "px-2" : "px-2")}>
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={sidebarCollapsed ? label : undefined}
+                className={cn(
+                  "flex items-center rounded-md text-sm font-medium transition-colors",
+                  sidebarCollapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2",
+                  active
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {!sidebarCollapsed && <span className="truncate">{label}</span>}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Bottom: graduation status + sign out */}
-        <div className="px-4 py-4 border-t border-sidebar-border space-y-2">
-          {(majorName || gradText) && (
-            <div className="flex flex-col gap-1 text-xs text-sidebar-foreground/50">
-              {majorName && <span className="font-medium text-sidebar-foreground/70 truncate">{majorName}</span>}
-              {gradText && (
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                  <span>On track · {gradText}</span>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Bottom: sign out */}
+        <div className={cn(
+          "border-t border-sidebar-border",
+          sidebarCollapsed ? "px-2 py-3 flex justify-center" : "px-4 py-3"
+        )}>
           <button
             onClick={() => signOut()}
-            className="flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors w-full"
+            title={sidebarCollapsed ? "Sign out" : undefined}
+            className={cn(
+              "flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
+              sidebarCollapsed ? "justify-center w-8 h-8 rounded-md hover:bg-sidebar-accent" : "w-full"
+            )}
           >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign out
+            <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
+            {!sidebarCollapsed && "Sign out"}
           </button>
         </div>
       </aside>

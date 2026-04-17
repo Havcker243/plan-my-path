@@ -4,13 +4,16 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import json
+
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import resolve_jwt_secret, verify_token
-from app.advisor import get_advisor_reply
+from app.advisor import stream_advisor_reply
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
@@ -59,6 +62,7 @@ app.add_middleware(
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 POOLER_URL = resolve_pooler_url(ENV_PATH)
 JWT_SECRET = resolve_jwt_secret(ENV_PATH)
+
 auth_scheme = HTTPBearer()
 
 
@@ -389,22 +393,29 @@ def advise(
     # Grab recent hub reviews relevant to this major
     reviews = get_recent_reviews(POOLER_URL, limit=50)
 
-    try:
-        reply = get_advisor_reply(
-            message=message,
-            profile=dict(profile),
-            plan=dict(plan) if plan else None,
-            labels=labels_data,
-            total_credits=total_credits,
-            reviews=reviews,
-            history=payload.history,
-        )
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Advisor unavailable — try again shortly")
+    def generate():
+        try:
+            for chunk in stream_advisor_reply(
+                message=message,
+                profile=dict(profile),
+                plan=dict(plan) if plan else None,
+                labels=labels_data,
+                total_credits=total_credits,
+                reviews=reviews,
+                history=payload.history,
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            yield "data: [DONE]\n\n"
+        except RuntimeError as exc:
+            print(f"[Advisor] RuntimeError: {exc}")
+            yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+        except Exception as exc:
+            import traceback
+            print(f"[Advisor] Unexpected error: {exc}")
+            traceback.print_exc()
+            yield f"data: {json.dumps({'error': 'Advisor unavailable — try again shortly'})}\n\n"
 
-    return {"reply": reply}
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 # ---------------------------------------------------------------------------

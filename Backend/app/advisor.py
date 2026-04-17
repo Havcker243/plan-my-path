@@ -6,15 +6,44 @@ their profile, current plan, degree requirements, and Hub reviews.
 from __future__ import annotations
 
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Generator
 
-try:
-    import google.generativeai as genai
-except ImportError:  # pragma: no cover - optional dependency in local/dev setups
-    genai = None
+from google import genai
+
+MODEL = "gemini-2.0-flash"
+
+# Lazy singleton client — created once on first request
+_client: Optional[genai.Client] = None
 
 
-MODEL = "gemini-1.5-flash"  # free tier, fast
+def _load_key_from_env_file() -> Optional[str]:
+    """Fall back to reading .env manually if the key isn't in os.environ."""
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return None
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        if k.strip() in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+            return v.strip().strip("'\"")
+    return None
+
+
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
+        api_key = (
+            os.environ.get("GEMINI_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+            or _load_key_from_env_file()
+        )
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set in .env or environment")
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 def _fmt_course_list(courses: list[dict]) -> str:
@@ -143,19 +172,32 @@ def get_advisor_reply(
     reviews: list[dict],
     history: list[dict] | None = None,
 ) -> str:
-    if genai is None:
-        raise RuntimeError(
-            "Google Generative AI dependency is not installed. "
-            "Run: pip install google-generativeai"
-        )
-
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY is not set in environment")
-
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(MODEL)
-
+    client = _get_client()
     prompt = build_prompt(message, profile, plan, labels, total_credits, reviews, history)
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = client.models.generate_content(model=MODEL, contents=prompt)
+        return response.text
+    except Exception as e:
+        print(f"[Advisor] Gemini API error: {e}")
+        raise
+
+
+def stream_advisor_reply(
+    message: str,
+    profile: dict,
+    plan: dict | None,
+    labels: dict,
+    total_credits: int,
+    reviews: list[dict],
+    history: list[dict] | None = None,
+) -> Generator[str, None, None]:
+    """Yields text chunks from Gemini as they arrive."""
+    client = _get_client()
+    prompt = build_prompt(message, profile, plan, labels, total_credits, reviews, history)
+    try:
+        for chunk in client.models.generate_content_stream(model=MODEL, contents=prompt):
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        print(f"[Advisor] Gemini stream error: {e}")
+        raise

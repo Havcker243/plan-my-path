@@ -61,6 +61,15 @@ import {
 } from "@/lib/planner";
 import { toast } from "sonner";
 
+/**
+ * PlannerPage is still a large orchestration component.
+ *
+ * It currently owns drag/drop, add-course search, course details, section
+ * selection, semester add/remove/clear actions, and debounced saves. The next
+ * safe UI split is to extract SectionOptionCard, CourseCard, SemesterColumn,
+ * AddCourseDialog, and CourseDetailDialog while keeping only page-level wiring
+ * here.
+ */
 
 const STATUS_COLORS = {
   completed: "bg-green-50 border-green-200",
@@ -78,6 +87,8 @@ function SectionOptionCard({
   selected: boolean;
   onClick?: () => void;
 }) {
+  // Shared section display card for both "add course" and "edit selected
+  // section" flows. Keep it display-only; persistence belongs to PlannerPage.
   const meetingSummary =
     section.meeting_times
       ?.map((meeting) =>
@@ -198,6 +209,8 @@ export default function PlannerPage() {
   const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef(false);
+  // Most planner edits update local state immediately and save after a short
+  // delay. This keeps drag/drop responsive without writing on every movement.
   // Always hold the latest savePlan reference so the debounced timer
   // never closes over a stale version of it.
   const savePlanRef = useRef(savePlan);
@@ -307,9 +320,8 @@ export default function PlannerPage() {
         prev ? { ...prev, selectedSectionId: nextValue } : prev
       ));
       await savePlan();
-      toast.success(nextValue ? "Section saved" : "Section cleared");
-    } catch {
-      toast.error("Failed to save section");
+    } catch (err) {
+      console.error("[PlannerPage] failed to save section:", err);
     } finally {
       setSavingSectionSelection(false);
     }
@@ -362,8 +374,7 @@ export default function PlannerPage() {
           setSearchResults([]);
           setPendingCourse(null);
           setPendingSemesterId(null);
-          toast.success(`${course.code} added to ${semester.term} ${semester.year}`);
-        }
+          }
         // If sections exist, the pending-section dialog opens (state already set above)
       })
       .catch(async () => {
@@ -374,7 +385,6 @@ export default function PlannerPage() {
         setSearchResults([]);
         setPendingCourse(null);
         setPendingSemesterId(null);
-        toast.success(`${course.code} added to planner`);
       })
       .finally(() => setPendingSectionsLoading(false));
   };
@@ -398,7 +408,6 @@ export default function PlannerPage() {
     setPendingSemesterId(null);
     setPendingSections([]);
     setPendingSectionId("__none__");
-    toast.success(`${courseToAdd.code} added to ${semester.term} ${semester.year}`);
   };
 
   const removeCourse = (semId: string, courseId: string) => {
@@ -417,7 +426,6 @@ export default function PlannerPage() {
       );
       setConfirmAction(null);
       triggerSave();
-      toast.success(`${removedCode} removed from plan`);
     }
   };
 
@@ -441,7 +449,6 @@ export default function PlannerPage() {
     ]);
     setSemesterDialogOpen(false);
     triggerSave();
-    toast.success(`${newSemesterTerm} ${newSemesterYear} added`);
   };
 
   const removeSemester = (semId: string) => {
@@ -454,9 +461,6 @@ export default function PlannerPage() {
       setSemesters((prev) => markCurrentSemester(prev.filter((s) => s.id !== confirmAction.semId).sort(compareSemesters)));
       setConfirmAction(null);
       triggerSave();
-      if (removedSemester) {
-        toast.success(`${removedSemester.term} ${removedSemester.year} removed`);
-      }
     }
   };
 
@@ -464,8 +468,8 @@ export default function PlannerPage() {
     try {
       await clearPlan();
       setConfirmAction(null);
-      toast.success("Planner cleared");
-    } catch {
+    } catch (err) {
+      console.error("[PlannerPage] failed to clear plan:", err);
       toast.error("Failed to clear planner");
     }
   };
@@ -561,7 +565,7 @@ export default function PlannerPage() {
 
       {/* Semester columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory">
-        <div className="flex gap-3 p-4 pb-20 md:pb-4 h-full" style={{ minWidth: "max-content" }}>
+        <div className="flex gap-3 p-4 pb-4 h-full" style={{ minWidth: "max-content" }}>
           {semesters.map((sem) => {
             const load = getSemesterCreditLoad(sem, planCatalog);
             const semCredits = getTotalCredits(sem.courseIds, planCatalog);
@@ -629,7 +633,7 @@ export default function PlannerPage() {
                     </div>
                   )}
                   <AnimatePresence>
-                  {sem.courseIds.map((cid) => {
+                  {[...new Set(sem.courseIds)].map((cid) => {
                     const course = planCatalog[cid];
                     const hasWarn = warnSet.has(cid);
                     return (
@@ -965,7 +969,6 @@ export default function PlannerPage() {
                           : prev
                       ));
                       triggerSave();
-                      toast.success(`Marked ${selectedCourse.code} as ${nextStatus}`);
                     }}
                   >
                     <SelectTrigger className="w-full">
@@ -990,7 +993,6 @@ export default function PlannerPage() {
                           prev ? { ...prev, grade: value, status: "completed" } : prev
                         ));
                         triggerSave();
-                        toast.success(`Saved grade ${value} for ${selectedCourse.code}`);
                       }}
                     >
                       <SelectTrigger className="w-full">

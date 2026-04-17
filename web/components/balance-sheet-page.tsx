@@ -15,6 +15,7 @@ import {
   AlertCircle,
   FileUp,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,8 @@ import {
   type BalanceSheetRenderableRow,
   type BalanceSheetRow,
 } from "@/lib/balance-sheet";
-import { fillBalanceSheetPdf, downloadPdf } from "@/lib/pdf-fill";
+import { downloadPdf, fillBalanceSheetPdf } from "@/lib/pdf-fill";
+import { toast } from "sonner";
 
 const STATUS_META = {
   completed: {
@@ -68,7 +70,8 @@ export default function BalanceSheetPage() {
   const [source, setSource] = useState<"system" | "custom">("system");
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [customFileUrl, setCustomFileUrl] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [customLoading, setCustomLoading] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const model = useMemo(
@@ -99,12 +102,14 @@ export default function BalanceSheetPage() {
     ? `${profile.graduation_term.charAt(0).toUpperCase()}${profile.graduation_term.slice(1)} ${profile.graduation_year}`
     : null;
 
-  const handleDownloadFilled = async () => {
+  const handleDownloadPdf = async () => {
     if (!model) return;
-    setDownloading(true);
+
+    setExportingPdf(true);
     try {
-      const bytes = await fillBalanceSheetPdf({
+      const pdfBytes = await fillBalanceSheetPdf({
         studentName,
+        majorCode: model.majorCode,
         majorName: majorName ?? model.majorName,
         gpa: profile?.gpa != null ? Number(profile.gpa) : null,
         entryLabel,
@@ -113,13 +118,14 @@ export default function BalanceSheetPage() {
         creditsRequired: model.totalCreditsRequired ?? degreeCreditTotal,
         degreeType: model.degreeType ?? "B.S.",
         groups: model.groups,
+        printNotes: model.printNotes,
         printDate: new Date().toLocaleDateString(),
       });
-      downloadPdf(bytes, `${studentName.replace(/\s+/g, "-").toLowerCase()}-balance-sheet.pdf`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to generate PDF.");
+      downloadPdf(pdfBytes, `${safeFilePart(studentName)}-degree-audit.pdf`);
+    } catch {
+      toast.error("Could not generate the degree audit PDF");
     } finally {
-      setDownloading(false);
+      setExportingPdf(false);
     }
   };
 
@@ -161,7 +167,7 @@ export default function BalanceSheetPage() {
 
   if (!model) {
     return (
-      <div className="px-4 md:px-8 py-6 max-w-5xl mx-auto pb-20 md:pb-8">
+      <div className="px-4 md:px-8 py-6 max-w-5xl mx-auto pb-8">
         <div className="rounded-xl border border-border bg-card p-6">
           <h1 className="text-xl font-bold text-foreground">Balance Sheet</h1>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
@@ -181,7 +187,7 @@ export default function BalanceSheetPage() {
   }
 
   return (
-    <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto pb-20 md:pb-8">
+    <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto pb-8">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">Balance Sheet</h1>
@@ -190,31 +196,23 @@ export default function BalanceSheetPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-2 print:hidden" onClick={() => window.print()}>
-            <Printer className="w-4 h-4" />
-            Print
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="gap-2 print:hidden"
-            onClick={handleDownloadFilled}
-            disabled={downloading}
-          >
-            <Download className="w-4 h-4" />
-            {downloading ? "Generating…" : "Download Filled PDF"}
-          </Button>
           <Button
             variant="outline"
             size="sm"
             className="gap-2 print:hidden"
-            onClick={() => {
-              setSource("custom");
-              fileInputRef.current?.click();
-            }}
+            onClick={handleDownloadPdf}
+            disabled={exportingPdf}
           >
-            <Upload className="w-4 h-4" />
-            Upload Custom Sheet
+            {exportingPdf ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Download PDF
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 print:hidden" onClick={() => window.print()}>
+            <Printer className="w-4 h-4" />
+            Print
           </Button>
         </div>
       </div>
@@ -234,10 +232,7 @@ export default function BalanceSheetPage() {
         </button>
         <button
           type="button"
-          onClick={() => {
-            setSource("custom");
-            if (!customFile) fileInputRef.current?.click();
-          }}
+          onClick={() => setSource("custom")}
           className={cn(
             "rounded-full px-4 py-2 text-sm border transition-colors",
             source === "custom"
@@ -257,7 +252,10 @@ export default function BalanceSheetPage() {
             if (file) {
               setCustomFile(file);
               setSource("custom");
+              setCustomLoading(true);
+              setTimeout(() => setCustomLoading(false), 1500);
             }
+            event.target.value = "";
           }}
         />
       </div>
@@ -572,21 +570,53 @@ export default function BalanceSheetPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.08, ease: "easeOut" }}
           >
-            <p className="text-sm font-semibold text-foreground mb-3">Custom source status</p>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex gap-2 items-start">
-                <FileText className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <span>{customFile ? `Loaded: ${customFile.name}` : "No file loaded yet."}</span>
+            {customLoading ? (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                <p className="text-sm font-medium text-foreground">Processing your balance sheet…</p>
+                <p className="text-xs text-muted-foreground text-center">Getting everything ready</p>
               </div>
-              <div className="flex gap-2 items-start">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span>Source switching is now available between system and custom views.</span>
+            ) : customFile ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{customFile.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {(customFile.size / 1024).toFixed(0)} KB · Ready
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    if (!customFileUrl) return;
+                    const a = document.createElement("a");
+                    a.href = customFileUrl;
+                    a.download = customFile.name;
+                    a.click();
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-4 h-4" />
+                  Replace File
+                </Button>
               </div>
-              <div className="flex gap-2 items-start">
-                <Circle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <span>Next step is persisting uploaded balance sheets per user instead of keeping them local to the current session.</span>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <FileUp className="w-7 h-7 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Upload a file to see options here</p>
               </div>
-            </div>
+            )}
           </motion.div>
         </div>
       )}
@@ -609,6 +639,14 @@ export default function BalanceSheetPage() {
       `}</style>
     </div>
   );
+}
+
+function safeFilePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "student";
 }
 
 function BalanceSheetTableRow({ row }: { row: BalanceSheetRow }) {

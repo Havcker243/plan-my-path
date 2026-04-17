@@ -1,6 +1,6 @@
 "use client";
 
-import { GraduationCap, BookOpen, TrendingUp, Camera, Loader2, Save, Trash2 } from "lucide-react";
+import { Camera, Loader2, Save, Trash2, LogOut, FileDown } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
-import { getCompletedCredits } from "@/lib/data";
 import { getSupabase } from "@/lib/supabase";
 import { formatDisplayName } from "@/lib/utils";
 import { deleteAccount } from "@/lib/api";
@@ -38,18 +37,13 @@ const GRAD_YEARS = Array.from({ length: 12 }, (_, i) => currentYear - 2 + i);
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const {
     profile,
-    semesters,
-    planCatalog,
     majors,
     majorsLoading,
-    degreeCreditTotal,
     doUpdateProfile,
   } = usePlan();
-
-  const DEGREE_CREDITS = degreeCreditTotal;
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [avatar, setAvatar] = useState<string | null>(profile?.avatar_url ?? null);
@@ -57,6 +51,7 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState(() => profile?.name?.split(" ").slice(1).join(" ") ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [major, setMajor] = useState(profile?.major_code ?? "");
+  const [minor, setMinor] = useState(profile?.minor_code ?? "");
   const [gradTerm, setGradTerm] = useState(profile?.graduation_term ?? "spring");
   const [gradYear, setGradYear] = useState<number>(profile?.graduation_year ?? currentYear + 2);
   const [saving, setSaving] = useState(false);
@@ -73,6 +68,7 @@ export default function ProfilePage() {
     setLastName(profile?.name?.split(" ").slice(1).join(" ") ?? "");
     setPhone(profile?.phone ?? "");
     setMajor(profile?.major_code ?? "");
+    setMinor(profile?.minor_code ?? "");
     setGradTerm(profile?.graduation_term ?? "spring");
     setGradYear(profile?.graduation_year ?? currentYear + 2);
   }, [
@@ -80,6 +76,7 @@ export default function ProfilePage() {
     profile?.name,
     profile?.phone,
     profile?.major_code,
+    profile?.minor_code,
     profile?.graduation_term,
     profile?.graduation_year,
   ]);
@@ -125,6 +122,7 @@ export default function ProfilePage() {
         phone: phone || null,
         avatar_url: avatar || null,
         major_code: major,
+        minor_code: minor || null,
         graduation_term: gradTerm,
         graduation_year: year,
       });
@@ -156,13 +154,6 @@ export default function ProfilePage() {
     }
   };
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const completedCredits = getCompletedCredits(semesters, planCatalog);
-  const remainingCredits = Math.max(0, DEGREE_CREDITS - completedCredits);
-  const rawGpa = profile?.gpa;
-  const parsedGpa = rawGpa == null ? null : typeof rawGpa === "number" ? rawGpa : Number(rawGpa);
-  const gpa = parsedGpa != null && Number.isFinite(parsedGpa) ? parsedGpa : null;
-
   const majorName = formatDisplayName(
     majors.find((m) => m.code === profile?.major_code)?.name ?? profile?.major_code
   );
@@ -179,7 +170,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="px-4 md:px-8 py-6 max-w-2xl mx-auto pb-20 md:pb-8">
+    <div className="px-4 md:px-8 py-6 max-w-2xl mx-auto pb-8">
       <h1 className="text-xl font-bold text-foreground mb-6">Profile</h1>
 
       {/* Avatar card */}
@@ -204,7 +195,16 @@ export default function ProfilePage() {
         </div>
         <div>
           <p className="text-base font-semibold text-foreground">{profile?.name ?? user?.email ?? ""}</p>
-          {majorName && <p className="text-sm text-muted-foreground">{majorName}</p>}
+          {majorName && (
+            <p className="text-sm text-muted-foreground">
+              {majorName}
+              {profile?.minor_code && (
+                <span className="text-xs ml-1.5 text-muted-foreground/70">
+                  · Minor: {formatDisplayName(majors.find((m) => m.code === profile.minor_code)?.name ?? profile.minor_code)}
+                </span>
+              )}
+            </p>
+          )}
           {startTerm && startYear && gradTermDisplay && gradYearDisplay && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {capitalize(startTerm)} {startYear} → {capitalize(gradTermDisplay)} {gradYearDisplay}
@@ -212,21 +212,6 @@ export default function ProfilePage() {
           )}
           {user?.email && <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>}
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { label: "Cumulative GPA", value: gpa !== null ? gpa.toFixed(2) : "N/A", icon: TrendingUp },
-          { label: "Credits Completed", value: String(completedCredits), icon: BookOpen },
-          { label: `Credits Remaining`, value: String(remainingCredits), icon: GraduationCap },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2">
-            <Icon className="w-4 h-4 text-muted-foreground" />
-            <p className="text-xl font-bold text-foreground">{value}</p>
-            <p className="text-xs text-muted-foreground">{label}</p>
-          </div>
-        ))}
       </div>
 
       {/* Edit profile — personal + academic in one form */}
@@ -285,6 +270,24 @@ export default function ProfilePage() {
               </Select>
             </div>
 
+            {/* Minor */}
+            <div className="mb-3">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Minor <span className="text-muted-foreground/60">(optional)</span></label>
+              <Select value={minor || "__none__"} onValueChange={(v) => setMinor(v === "__none__" ? "" : v)} disabled={majorsLoading}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="No minor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No minor</SelectItem>
+                  {majors.filter((m) => m.code !== "UNDECLARED").map((m) => (
+                    <SelectItem key={m.code} value={m.code}>
+                      {formatDisplayName(m.name ?? m.code)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Graduation */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Expected Graduation</label>
@@ -329,19 +332,42 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Graduation status */}
-      {gradTermDisplay && gradYearDisplay && (
-        <div className="p-4 rounded-xl border border-border bg-card text-sm text-muted-foreground leading-relaxed">
-          At your current pace, you&apos;ll graduate{" "}
-          <span className="font-semibold text-foreground">
-            {capitalize(gradTermDisplay)} {gradYearDisplay}
-          </span>.{" "}
-          You&apos;re {Math.round((completedCredits / DEGREE_CREDITS) * 100)}% of the way through your {DEGREE_CREDITS}-credit degree.
-        </div>
-      )}
+      {/* Export plan */}
+      <div className="rounded-xl border border-border bg-card p-5 mt-4">
+        <h2 className="text-sm font-semibold text-foreground mb-1">Export</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Download a print-ready PDF of your full academic plan, including semesters, courses, credits, and grades.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => window.open("/plan-export", "_blank")}
+        >
+          <FileDown className="w-3.5 h-3.5" />
+          Export Plan as PDF
+        </Button>
+      </div>
+
+      {/* Account actions */}
+      <div className="rounded-xl border border-border bg-card p-5 mt-4">
+        <h2 className="text-sm font-semibold text-foreground mb-1">Account</h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Signed in as <span className="font-medium text-foreground">{user?.email}</span>
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => signOut()}
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign Out
+        </Button>
+      </div>
 
       {/* Danger zone */}
-      <div className="rounded-xl border border-destructive/30 bg-card p-5 mt-2">
+      <div className="rounded-xl border border-destructive/30 bg-card p-5 mt-4">
         <h2 className="text-sm font-semibold text-destructive mb-1">Danger Zone</h2>
         <p className="text-xs text-muted-foreground mb-4">
           Permanently deletes your account, plan, and all data. This cannot be undone.

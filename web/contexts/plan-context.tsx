@@ -94,6 +94,14 @@ interface PlanContextValue {
 
 const PlanContext = createContext<PlanContextValue | null>(null);
 
+/**
+ * PlanProvider is the app-wide plan data store.
+ *
+ * Keep React state, authenticated reads/writes, and shared request caches here.
+ * Put heavy transformation logic in feature engines such as api-adapters,
+ * plan-state, transcript, planner, calendar, requirements, or balance-sheet.
+ */
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function PlanProvider({ children }: { children: React.ReactNode }) {
@@ -119,6 +127,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const searchQueryCacheRef = useRef<Record<string, Course[]>>({});
   const sectionsCacheRef = useRef<Record<string, BackendSection[]>>({});
 
+  // Term calendar data is needed by loading, saving, onboarding, and transcript
+  // import. The ref + promise cache prevents duplicate /api/terms calls and
+  // avoids app-wide reload loops caused by effect dependencies changing.
   const loadTermCalendar = useCallback(async () => {
     if (termCalendarRef.current.length > 0) return termCalendarRef.current;
     if (!termCalendarPromiseRef.current) {
@@ -157,7 +168,9 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     loadTermCalendar().catch(() => {});
   }, [loadTermCalendar]);
 
-  // Fetch plan data whenever auth token changes
+  // Fetch plan data when the signed-in user changes. Do not depend directly on
+  // accessToken here; Supabase token refreshes can otherwise trigger repeated
+  // profile/plan refetch storms. Requests read the latest token from a ref.
   useEffect(() => {
     if (!user?.id) {
       setProfile(null);
@@ -256,6 +269,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       nextPlanCatalog: Record<string, Course> = planCatalog
     ) => {
       if (!accessToken) return null;
+      // Serialization is delegated to plan-state so this provider does not own
+      // the backend payload shape.
       const result = await apiSavePlan(
         accessToken,
         buildSavePlanPayload(nextSemesters, nextPlanCatalog, termCalendar)
@@ -389,6 +404,12 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
    * Import a parsed transcript into an existing plan.
    * Creates past semesters for each term found, preserving existing plan structure.
    * Skips courses already present in the plan.
+   *
+   * Future extraction target:
+   * this flow handles canonical DB codes, transcript-only fallback rows,
+   * completed-vs-planned status, profile.completed_courses, rollback on save
+   * failure, and preserving existing planner semesters. Refactor only with an
+   * end-to-end transcript import test ready.
    */
   const importTranscript = useCallback(
     async (courses: OnboardingCourse[], gpa: number | null): Promise<{ added: number; skipped: number }> => {

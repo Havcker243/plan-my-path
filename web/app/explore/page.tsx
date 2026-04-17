@@ -15,6 +15,7 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, timeAgo } from "@/lib/utils";
@@ -314,12 +315,19 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-background font-sans">
       {/* Nav */}
       <header className="flex items-center justify-between px-6 md:px-12 h-16 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-20">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
-            <GraduationCap className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="font-semibold text-foreground tracking-tight">Fiskpath</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Home</span>
+          </Link>
+          <div className="w-px h-4 bg-border" />
+          <Link href="/" className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-lg">
+              <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-foreground tracking-tight">Fiskpath</span>
+          </Link>
+        </div>
         <div className="flex items-center gap-3">
           <Link href="/login">
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Sign in</Button>

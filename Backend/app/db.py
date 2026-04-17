@@ -788,6 +788,7 @@ def fetch_profile(pooler_url: str, user_id: str) -> Optional[ProfileRow]:
           phone,
           avatar_url,
           major_code,
+          minor_code,
           graduation_year,
           graduation_term,
           start_year,
@@ -810,12 +811,13 @@ def fetch_profile(pooler_url: str, user_id: str) -> Optional[ProfileRow]:
         "phone": row[3],
         "avatar_url": row[4],
         "major_code": row[5],
-        "graduation_year": row[6],
-        "graduation_term": row[7],
-        "start_year": row[8],
-        "start_term": row[9],
-        "completed_courses": row[10] or [],
-        "gpa": row[11],
+        "minor_code": row[6],
+        "graduation_year": row[7],
+        "graduation_term": row[8],
+        "start_year": row[9],
+        "start_term": row[10],
+        "completed_courses": row[11] or [],
+        "gpa": row[12],
     }
 
 
@@ -828,6 +830,7 @@ def upsert_profile(pooler_url: str, payload: dict) -> dict:
           phone,
           avatar_url,
           major_code,
+          minor_code,
           graduation_year,
           graduation_term,
           start_year,
@@ -835,13 +838,14 @@ def upsert_profile(pooler_url: str, payload: dict) -> dict:
           completed_courses,
           gpa,
           updated_at
-        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())
         on conflict (user_id) do update set
           email = excluded.email,
           name = excluded.name,
           phone = excluded.phone,
           avatar_url = excluded.avatar_url,
           major_code = excluded.major_code,
+          minor_code = excluded.minor_code,
           graduation_year = excluded.graduation_year,
           graduation_term = excluded.graduation_term,
           start_year = excluded.start_year,
@@ -862,6 +866,7 @@ def upsert_profile(pooler_url: str, payload: dict) -> dict:
                     payload.get("phone"),
                     payload.get("avatar_url"),
                     payload.get("major_code"),
+                    payload.get("minor_code"),
                     payload.get("graduation_year"),
                     payload.get("graduation_term"),
                     payload.get("start_year"),
@@ -1073,8 +1078,7 @@ def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, course_code, year_taken, term_taken, professor, comment,
-                       helpful_count, created_at
+                SELECT id, course_code, year_taken, term_taken, professor, comment, created_at
                 FROM course_reviews
                 WHERE course_code = %s
                 ORDER BY created_at DESC
@@ -1091,8 +1095,7 @@ def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
             "term_taken": row[3],
             "professor": row[4],
             "comment": row[5],
-            "helpful_count": row[6],
-            "created_at": row[7].isoformat() if row[7] else None,
+            "created_at": row[6].isoformat() if row[6] else None,
         }
         for row in rows
     ]
@@ -1103,8 +1106,7 @@ def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, course_code, year_taken, term_taken, professor, comment,
-                       helpful_count, created_at
+                SELECT id, course_code, year_taken, term_taken, professor, comment, created_at
                 FROM course_reviews
                 ORDER BY created_at DESC
                 LIMIT %s
@@ -1120,8 +1122,7 @@ def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
             "term_taken": row[3],
             "professor": row[4],
             "comment": row[5],
-            "helpful_count": row[6],
-            "created_at": row[7].isoformat() if row[7] else None,
+            "created_at": row[6].isoformat() if row[6] else None,
         }
         for row in rows
     ]
@@ -1141,8 +1142,7 @@ def create_review(
                 """
                 INSERT INTO course_reviews (course_code, year_taken, term_taken, professor, comment)
                 VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, course_code, year_taken, term_taken, professor, comment,
-                          helpful_count, created_at
+                RETURNING id, course_code, year_taken, term_taken, professor, comment, created_at
                 """,
                 (course_code, year_taken, term_taken, professor, comment),
             )
@@ -1155,6 +1155,5 @@ def create_review(
         "term_taken": row[3],
         "professor": row[4],
         "comment": row[5],
-        "helpful_count": row[6],
-        "created_at": row[7].isoformat() if row[7] else None,
+        "created_at": row[6].isoformat() if row[6] else None,
     }

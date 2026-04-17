@@ -21,6 +21,7 @@ import { usePlan } from "@/contexts/plan-context";
 import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings } from "@/lib/data";
 import CommandSearch from "@/components/command-search";
 import { NAV_ITEMS } from "@/lib/nav";
+import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
 
 function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
@@ -111,12 +112,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/login");
       return;
     }
+    if (!isAllowedSchoolEmail(user.email)) {
+      signOut().finally(() => router.push("/login"));
+      return;
+    }
     // Only redirect to onboarding when the backend successfully confirmed
     // the user has no major set. Never redirect on a fetch failure.
     if (profileLoaded && !profile?.major_code?.trim()) {
       router.push("/onboarding");
     }
-  }, [isLoading, user, profile, router, profileLoaded]);
+  }, [isLoading, user, profile, router, profileLoaded, signOut]);
 
   if (isLoading || !user) {
     return (
@@ -124,6 +129,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-3">
           <GraduationCap className="w-8 h-8 text-primary animate-pulse" />
           <p className="text-sm text-muted-foreground">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAllowedSchoolEmail(user.email)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-center max-w-xs px-4">
+          <GraduationCap className="w-8 h-8 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">Fisk email required</p>
+          <p className="text-xs text-muted-foreground">
+            Sign in with {allowedEmailDomainsText()} to use FiskGrad.
+          </p>
         </div>
       </div>
     );
@@ -167,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           {!sidebarCollapsed && (
-            <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px] truncate">Fiskpath</span>
+            <span className="font-semibold text-sidebar-foreground tracking-tight text-[15px] truncate">FiskGrad</span>
           )}
         </button>
 
@@ -222,7 +241,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-5 py-4 border-b border-sidebar-border">
               <div className="flex items-center gap-2">
                 <GraduationCap className="w-5 h-5 text-primary" />
-                <span className="font-semibold text-sidebar-foreground text-[15px]">Fiskpath</span>
+                <span className="font-semibold text-sidebar-foreground text-[15px]">FiskGrad</span>
               </div>
               <button onClick={() => setMobileOpen(false)} className="text-sidebar-foreground/60 hover:text-sidebar-foreground">
                 <X className="w-5 h-5" />

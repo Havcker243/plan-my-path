@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getSupabase } from "@/lib/supabase";
 import type { User, Session } from "@supabase/supabase-js";
+import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
 
 interface AuthContextValue {
   user: User | null;
@@ -36,12 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!isAllowedSchoolEmail(email)) {
+      return { error: new Error(`Use your Fisk email address (${allowedEmailDomainsText()}).`) };
+    }
     const supabase = getSupabase();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error as Error | null };
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
+    if (!isAllowedSchoolEmail(email)) {
+      return { error: new Error(`Use your Fisk email address (${allowedEmailDomainsText()}).`) };
+    }
     const supabase = getSupabase();
     const { error } = await supabase.auth.signUp({
       email,

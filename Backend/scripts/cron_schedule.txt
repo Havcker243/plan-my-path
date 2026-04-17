@@ -5,22 +5,22 @@
 # Fall window:   Aug 12, 15, 19, 23 at 02:30
 #
 # Assumes:
-# - repo located at /opt/plan-my-path
-# - Python venv at /opt/plan-my-path/Backend/.venv
-# - .env at /opt/plan-my-path/Backend/.env
+# - repo located at /opt/fiskgrad
+# - Python venv at /opt/fiskgrad/Backend/.venv
+# - .env at /opt/fiskgrad/Backend/.env
 #
 # Each run: syncs courses from parse.bot, then re-seeds degree requirements.
 #
 # Minute Hour Day Month DayOfWeek Command
 
 # Spring registration window
-30 2 9  1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 11 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 13 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 15 1 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 9  1 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 11 1 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 13 1 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 15 1 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
 
 # Fall registration window
-30 2 12 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 15 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 19 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
-30 2 23 8 * cd /opt/plan-my-path/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 12 8 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 15 8 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 19 8 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py
+30 2 23 8 * cd /opt/fiskgrad/Backend && .venv/bin/python scripts/sync_supabase.py --seasonal-only && .venv/bin/python scripts/seed_requirements.py

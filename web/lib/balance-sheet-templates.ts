@@ -1,13 +1,17 @@
 import accountingTemplate from "../data/accounting_requirements.json";
+import biochemistryMolecularBiologyTemplate from "../data/biochemistry_molecular_biology_requirements.json";
 import businessAdminNonTemplate from "../data/business_admin_non_concentration_requirements.json";
 import businessInfoSystemsTemplate from "../data/business_information_systems_as_requirements.json";
 import csTemplate from "../data/cs_requirements.json";
+import csJointTemplate from "../data/computer_science_joint_requirements.json";
+import criminalJusticeTemplate from "../data/criminal_justice_requirements.json";
 import financeEconomicsTemplate from "../data/finance_economics_requirements.json";
 import managementTemplate from "../data/management_requirements.json";
 import marketingTemplate from "../data/marketing_requirements.json";
 import mathematicsTemplate from "../data/mathematics_ba_requirements.json";
 import musicBusinessTemplate from "../data/music_business_requirements.json";
 import physicsTemplate from "../data/physics_requirements.json";
+import sociologyJointTemplate from "../data/sociology_joint_requirements.json";
 
 export type TemplateCredits = number | { min?: number | null; max?: number | null } | null;
 
@@ -30,6 +34,12 @@ export interface TemplateRequirementGroup {
   notes?: string;
   selection_count?: number;
   courses?: TemplateCourse[];
+  rules?: {
+    subject_code?: string;
+    min_level?: number;
+    max_level?: number | null;
+    exclude_courses?: string[];
+  };
 }
 
 export interface MajorTemplate {
@@ -134,6 +144,32 @@ export const BALANCE_SHEET_TEMPLATE_CONFIG: Record<string, MajorBalanceSheetConf
     printNotes: ["Review this sheet against the approved BIS A.S. balance sheet for advisor sign-off."],
     editableByMajor: true,
   },
+  BMB: {
+    majorCode: "BMB",
+    template: biochemistryMolecularBiologyTemplate as MajorTemplate,
+    layoutVariant: "standard",
+    sheetTitle: "Biochemistry and Molecular Biology Advisor Balance Sheet",
+    sourceLabel: "Biochemistry and molecular biology template",
+    printNotes: [
+      "Lecture and lab source rows are split into separate course-code rows for transcript matching.",
+      "Credit-threshold elective groups are fulfilled by completed credits, not by completing every listed option.",
+    ],
+    groupOrder: [
+      "core_fixed",
+      "core_group_a",
+      "core_group_b",
+      "core_group_c",
+      "core_group_d",
+      "core_group_e",
+      "foreign_language",
+      "technology_literacy",
+      "major_requirements",
+      "major_electives",
+      "required_cognates",
+      "general_electives",
+    ],
+    editableByMajor: true,
+  },
   CSCI: {
     majorCode: "CSCI",
     template: csTemplate as MajorTemplate,
@@ -164,6 +200,56 @@ export const BALANCE_SHEET_TEMPLATE_CONFIG: Record<string, MajorBalanceSheetConf
       major_electives: { sectionTone: "elective", defaultExpanded: true },
       general_electives: { sectionTone: "general", defaultExpanded: false },
     },
+  },
+  "CSCI-JOINT": {
+    majorCode: "CSCI-JOINT",
+    template: csJointTemplate as MajorTemplate,
+    layoutVariant: "standard",
+    sheetTitle: "Computer Science Joint Major Advisor Balance Sheet",
+    sourceLabel: "Computer science joint template",
+    printNotes: [
+      "This template is separate from standard CSCI because the source sheet includes a joint-major math requirement block.",
+      "CSCI elective groups are fulfilled by completed approved elective credits, not by completing every possible elective.",
+    ],
+    groupOrder: [
+      "core_fixed",
+      "core_group_a",
+      "core_group_c",
+      "core_group_d",
+      "core_group_e",
+      "foreign_language",
+      "cognates",
+      "major_requirements",
+      "major_electives",
+      "joint_major_requirements",
+      "general_electives",
+    ],
+    editableByMajor: true,
+  },
+  CRJ: {
+    majorCode: "CRJ",
+    template: criminalJusticeTemplate as MajorTemplate,
+    layoutVariant: "standard",
+    sheetTitle: "Criminal Justice Advisor Balance Sheet",
+    sourceLabel: "Criminal justice template",
+    printNotes: [
+      "Credit-threshold groups are satisfied by completed credits in the group, not by completing every listed elective option.",
+      "HSS 280 is listed as both a required cognate and the Group B analytical skills satisfaction path on the source sheet.",
+    ],
+    groupOrder: [
+      "core_fixed",
+      "core_group_a",
+      "core_group_b",
+      "core_group_c",
+      "core_group_d",
+      "core_group_e",
+      "foreign_language",
+      "required_cognates",
+      "major_requirements",
+      "major_electives",
+      "general_electives",
+    ],
+    editableByMajor: true,
   },
   "FIN-ECON": {
     majorCode: "FIN-ECON",
@@ -217,6 +303,31 @@ export const BALANCE_SHEET_TEMPLATE_CONFIG: Record<string, MajorBalanceSheetConf
     sheetTitle: "Physics Advisor Balance Sheet",
     sourceLabel: "Physics template",
     printNotes: ["Use the physics source sheet as the advising reference for lecture/lab pairings and elective requirements."],
+    editableByMajor: true,
+  },
+  "SOC-JOINT": {
+    majorCode: "SOC-JOINT",
+    template: sociologyJointTemplate as MajorTemplate,
+    layoutVariant: "standard",
+    sheetTitle: "Sociology Joint Major Advisor Balance Sheet",
+    sourceLabel: "Sociology joint template",
+    printNotes: [
+      "Credit-threshold groups are satisfied by completed credits in the group, not by completing every listed elective option.",
+      "SOC 100 is a major requirement and should not be counted as Group E for Sociology joint majors.",
+    ],
+    groupOrder: [
+      "core_fixed",
+      "core_group_a",
+      "core_group_b",
+      "core_group_c",
+      "core_group_d",
+      "core_group_e",
+      "foreign_language",
+      "required_cognates",
+      "major_requirements",
+      "major_electives",
+      "general_electives",
+    ],
     editableByMajor: true,
   },
 };

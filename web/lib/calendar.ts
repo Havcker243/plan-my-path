@@ -159,7 +159,7 @@ export function buildIcs(
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Fiskpath//Planner Calendar//EN",
+    "PRODID:-//FiskGrad//Planner Calendar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -197,7 +197,7 @@ export function buildIcs(
       if (untilDate) untilDate.setHours(23, 59, 59, 0);
 
       lines.push("BEGIN:VEVENT");
-      lines.push(`UID:${escapeIcsText(`${code}-${chosenSection.id}-${meetingIndex}@fiskpath`)}`);
+      lines.push(`UID:${escapeIcsText(`${code}-${chosenSection.id}-${meetingIndex}@fiskgrad`)}`);
       lines.push(`DTSTAMP:${formatIcsDate(new Date())}`);
       lines.push(`DTSTART:${formatIcsDate(startDate)}`);
       lines.push(`DTEND:${formatIcsDate(endDate)}`);

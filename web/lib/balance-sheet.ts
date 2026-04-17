@@ -65,6 +65,12 @@ export interface BalanceSheetGroupView {
   rows: BalanceSheetRenderableRow[];
   completedCount: number;
   plannedCount: number;
+  completedCredits: number;
+  plannedCredits: number;
+  requiredCredits: number | null;
+  isCreditBased: boolean;
+  isSatisfied: boolean;
+  progressLabel: string;
 }
 
 export interface BalanceSheetViewModel {
@@ -83,6 +89,18 @@ export interface BalanceSheetViewModel {
 
 function normalizeCode(code: string): string {
   return code.replace(/[-\s]+/g, " ").trim().toUpperCase();
+}
+
+function courseMatchesGroupRule(code: string, group: TemplateRequirementGroup): boolean {
+  const rule = group.rules;
+  if (!rule?.subject_code || !rule.min_level) return false;
+  const normalized = normalizeCode(code);
+  if (rule.exclude_courses?.some((excluded) => normalizeCode(excluded) === normalized)) return false;
+  const [subject, rawNumber = ""] = normalized.split(" ");
+  if (subject !== rule.subject_code.toUpperCase()) return false;
+  const level = Number.parseInt(rawNumber.replace(/\D/g, ""), 10);
+  if (!Number.isFinite(level)) return false;
+  return level >= rule.min_level && (rule.max_level == null || level <= rule.max_level);
 }
 
 function shortTermCode(term: string, year: number): string {
@@ -105,6 +123,12 @@ function formatCreditsRequired(value: TemplateCredits): string | null {
   if (min != null) return `${min}+ cr`;
   if (max != null) return `Up to ${max} cr`;
   return null;
+}
+
+function getCreditsRequiredMin(value: TemplateCredits): number | null {
+  if (typeof value === "number") return value;
+  if (!value || typeof value !== "object") return null;
+  return value.min ?? value.max ?? null;
 }
 
 function buildCoursePlacementMap(
@@ -131,8 +155,16 @@ function buildCoursePlacementMap(
 
 function getGroupRenderMode(group: TemplateRequirementGroup): BalanceSheetGroupView["renderMode"] {
   if ((group.courses?.length ?? 0) > 0) return "course_list";
+  if (group.rules) return "course_list";
   if (group.group_type === "credit_threshold" || group.group_type === "fill_remaining") return "bucket";
   return "notes_only";
+}
+
+function formatGroupProgress(groupType: string, completedCredits: number, requiredCredits: number | null, completedCount: number, rowCount: number): string {
+  if ((groupType === "credit_threshold" || groupType === "fill_remaining") && requiredCredits != null) {
+    return `${Math.min(completedCredits, requiredCredits)}/${requiredCredits} cr`;
+  }
+  return `${completedCount}/${rowCount} rows`;
 }
 
 function resolveGroupConfig(group: TemplateRequirementGroup, config?: BalanceSheetGroupConfig): Pick<BalanceSheetGroupView, "displayName" | "sectionTone" | "defaultExpanded" | "hidden"> {
@@ -256,7 +288,17 @@ export function buildBalanceSheetViewModel(
   const groups = template.requirement_groups.map((group) => {
     const groupConfig = resolveGroupConfig(group, config?.groupConfig?.[group.group_id]);
     const renderMode = getGroupRenderMode(group);
-    const courseRows = (group.courses ?? []).map((course) => {
+    const explicitCourses = group.courses ?? [];
+    const explicitCodes = new Set(explicitCourses.map((course) => normalizeCode(course.course_code)));
+    const ruleMatchedCourses = Object.values(planCatalog)
+      .filter((course) => !explicitCodes.has(normalizeCode(course.code)) && courseMatchesGroupRule(course.code, group))
+      .map((course) => ({
+        course_code: course.code,
+        course_name: course.title,
+        credits: course.credits,
+      }));
+
+    const courseRows = [...explicitCourses, ...ruleMatchedCourses].map((course) => {
       const placement = placements[normalizeCode(course.course_code)];
       const annotations = [
         course.alternative_for ? `Alternative for ${course.alternative_for}` : null,
@@ -278,6 +320,21 @@ export function buildBalanceSheetViewModel(
     });
 
     const groupedCourseRows = groupCourseRows(courseRows);
+    const completedCredits = courseRows.reduce(
+      (sum, row) => sum + (row.status === "completed" ? row.actualCredits ?? row.templateCredits ?? 0 : 0),
+      0
+    );
+    const plannedCredits = courseRows.reduce(
+      (sum, row) => sum + (row.status === "planned" ? row.actualCredits ?? row.templateCredits ?? 0 : 0),
+      0
+    );
+    const requiredCredits = getCreditsRequiredMin(group.credits_required ?? null);
+    const isCreditBased = group.group_type === "credit_threshold" || group.group_type === "fill_remaining";
+    const completedCount = courseRows.filter((row) => row.status === "completed").length;
+    const plannedCount = courseRows.filter((row) => row.status === "planned").length;
+    const isSatisfied = isCreditBased && requiredCredits != null
+      ? completedCredits >= requiredCredits
+      : courseRows.length > 0 && courseRows.every((row) => row.status === "completed");
 
     const choiceSummary =
       group.group_type === "choose_n" && group.selection_count
@@ -320,8 +377,14 @@ export function buildBalanceSheetViewModel(
       defaultExpanded: groupConfig.defaultExpanded,
       hidden: groupConfig.hidden,
       rows,
-      completedCount: courseRows.filter((row) => row.status === "completed").length,
-      plannedCount: courseRows.filter((row) => row.status === "planned").length,
+      completedCount,
+      plannedCount,
+      completedCredits,
+      plannedCredits,
+      requiredCredits,
+      isCreditBased,
+      isSatisfied,
+      progressLabel: formatGroupProgress(group.group_type, completedCredits, requiredCredits, completedCount, courseRows.length),
     } satisfies BalanceSheetGroupView;
   });
 

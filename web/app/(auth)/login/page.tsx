@@ -7,6 +7,7 @@ import { Eye, EyeOff, GraduationCap, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
+import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +30,10 @@ export default function LoginPage() {
       setError("Please fill in all fields");
       return;
     }
+    if (!isAllowedSchoolEmail(email)) {
+      setError(`Use your Fisk email address (${allowedEmailDomainsText()}).`);
+      return;
+    }
     setSubmitting(true);
     const { error: authError } = await signIn(email, password);
     setSubmitting(false);
@@ -47,18 +52,18 @@ export default function LoginPage() {
           <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
             <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-sidebar-foreground text-lg tracking-tight">Fiskpath</span>
+          <span className="font-semibold text-sidebar-foreground text-lg tracking-tight">FiskGrad</span>
         </div>
         <div className="space-y-4">
           <h1 className="text-3xl font-bold text-sidebar-foreground leading-tight">
             Plan smarter.<br />Graduate on time.
           </h1>
           <p className="text-sidebar-foreground/60 text-sm max-w-sm leading-relaxed">
-            Join thousands of students who use Fiskpath to track their degree progress and never miss a prerequisite.
+            Join thousands of students who use FiskGrad to track their degree progress and never miss a prerequisite.
           </p>
         </div>
         <p className="text-xs text-sidebar-foreground/40">
-          &copy; {new Date().getFullYear()} Fiskpath. All rights reserved.
+          &copy; {new Date().getFullYear()} FiskGrad. All rights reserved.
         </p>
       </div>
 
@@ -69,7 +74,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-lg">
               <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-foreground text-lg">Fiskpath</span>
+            <span className="font-semibold text-foreground text-lg">FiskGrad</span>
           </div>
 
           <div className="space-y-2 text-center lg:text-left">
@@ -91,7 +96,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@university.edu"
+                  placeholder="you@my.fisk.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-11"

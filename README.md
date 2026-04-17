@@ -1,130 +1,181 @@
-# Fiskpath
+# FiskGrad
 
-Fiskpath is an academic planning product for students who need a clearer path from transcript history to graduation. It brings together degree planning, transcript import, requirement tracking, course search, section scheduling, calendar export, student reviews, AI advisor support, and advisor-facing balance sheets.
+FiskGrad is an academic planning system for Fisk students. It connects transcript history, degree requirements, course planning, section selection, calendar export, course reviews, AI advising support, and advisor-ready balance sheets into one workflow.
 
-The larger goal is not just to make a prettier planner. The goal is to help a student answer the practical questions that usually require jumping between transcripts, catalog pages, advisor PDFs, schedule builders, and manual spreadsheets:
-
-- What have I already completed?
-- What am I currently taking?
-- What still counts toward my major?
-- Which semester should each remaining course go in?
-- Which sections can I actually take?
-- What schedule does that create?
-- What can I print or share with my advisor?
+The purpose is simple: a student should be able to understand where they are, what they still need, and how to finish without having to jump between a transcript PDF, a catalog page, a balance sheet, registration tools, advisor notes, and a spreadsheet.
 
 ## Vision
 
-Fiskpath should become a student-owned academic planning workspace.
+FiskGrad is designed to become a student-owned degree planning workspace for Fisk University students.
 
-Students should be able to upload their transcript, pick their major, see a realistic semester-by-semester plan, choose sections, export their calendar, and print an advisor-ready balance sheet. Advisors should be able to quickly understand what the student has taken, what is planned, what remains, and where the plan may need correction.
+The long-term vision is bigger than a prettier planner. FiskGrad should become a practical academic operating system where a student can:
 
-The product should be useful even without AI. AI should improve explanations, suggestions, and planning support, but the core planner, requirements logic, transcript import, calendar, and balance-sheet output should remain deterministic and inspectable.
+- sign in with a Fisk student email
+- upload an unofficial transcript
+- choose or confirm a major
+- see completed, in-progress, planned, and missing requirements
+- build a semester-by-semester path to graduation
+- choose real course sections
+- export a schedule calendar
+- generate an advisor-ready degree audit or balance sheet
+- get AI-assisted planning explanations without making AI the authority
+
+The core academic logic should remain deterministic and auditable. AI can explain, suggest, and help students ask better questions, but requirement satisfaction, transcript parsing, plan storage, balance-sheet progress, and degree-audit outputs should be driven by transparent rules and source data.
 
 ## Why This Exists
 
 Degree planning is fragmented. Students often have to combine:
 
-- a transcript PDF
-- a course catalog
-- a major balance sheet
+- unofficial transcript PDFs
+- major balance sheets
+- catalog requirements
+- prerequisite rules
 - advisor notes
 - registration sections
 - calendar conflicts
-- unofficial spreadsheets
+- transfer-credit history
+- personal spreadsheets
 
-That causes mistakes:
+That fragmentation causes real problems:
 
-- completed courses may not get counted correctly
-- current in-progress courses may be ignored because they have no grade yet
+- completed courses may not be counted in the right requirement group
+- in-progress courses may be ignored because they do not have final grades yet
+- elective buckets may be treated incorrectly when only a certain number of credits are required
 - transfer credits may be hard to place
-- prerequisite warnings may be noisy or wrong
-- students may not know which requirements are actually satisfied
-- advisors may not receive a clean, printable view
+- students may not know which courses count toward their major
+- advisors may not receive a clean, printable view of the student's plan
+- students may make registration decisions from incomplete information
 
-Fiskpath is designed to reduce that friction by turning those pieces into one connected planning flow.
+FiskGrad exists to reduce those gaps. The system should help students and advisors work from the same picture: what is done, what is planned, what remains, and what needs review.
 
-## Current Product
+## Product Scope
 
-The app currently supports these major areas:
+FiskGrad currently includes these major product areas.
 
-- **Dashboard**: summary of degree progress, plan status, and quick links.
-- **Onboarding**: collects major, start term, graduation target, and completed courses.
-- **Transcript Import**: parses PDF transcript data into completed and in-progress course rows.
-- **Planner**: semester-by-semester course planning, drag/drop, add/remove courses, add/remove semesters, section selection, autosave, GPA/credit display, and warnings.
-- **Requirements**: major requirement tracking and degree-audit style progress.
-- **Courses**: authenticated catalog browsing, course details, sections, and reviews.
-- **Explore**: public course search/browsing entry point.
-- **Calendar**: selected-section weekly schedule with location display and `.ics` download.
-- **Hub / Reviews**: student course feedback and review surfaces.
-- **AI Advisor**: Gemini-backed advisor endpoint, optional and guarded so the backend can boot without AI dependencies.
-- **Balance Sheet**: major-template-backed advisor balance sheet with print support and local custom-sheet preview.
+| Area | What it does |
+|---|---|
+| Authentication | Restricts access to Fisk student emails ending in `@my.fisk.edu`. |
+| Dashboard | Gives students a quick view of progress, plan status, transcript import, and next actions. |
+| Onboarding | Collects major, start term, graduation target, and completed course information. |
+| Transcript Import | Parses unofficial transcript PDFs into completed and in-progress courses. |
+| Planner | Provides semester-by-semester course planning with add, remove, drag/drop, warnings, credits, GPA, and section selection. |
+| Requirements | Tracks major requirements using the active plan and template data. |
+| Balance Sheet | Builds advisor-facing degree-audit views from supported major templates and student plan data. |
+| Custom Sheet Upload | Allows students to preview a local PDF, Word document, or image balance sheet alongside their planning work. |
+| Courses | Provides catalog browsing, course search, sections, and course detail views. |
+| Calendar | Turns selected sections into a weekly schedule and `.ics` export. |
+| Reviews | Lets students create and browse course reviews with backend validation and rate limits. |
+| AI Advisor | Offers optional AI planning support through the backend when configured. |
+| Profile | Supports account profile, avatar upload, plan export, and account deletion. |
 
-## Product Principles
+## Supported Balance-Sheet Templates
 
-These principles should guide future work:
+The balance-sheet system now supports 14 templates:
 
-- **Transcript truth matters**: completed courses, grades, credits, term, and year should be preserved when possible.
-- **In-progress is not missing**: courses without grades should usually be treated as planned/current, not skipped.
-- **Advisor output matters**: the app should produce printable, understandable artifacts, not only interactive UI.
-- **Major sheets vary**: balance sheets should be handled per major, not forced into one universal flat table.
-- **AI is assistive, not authoritative**: deterministic rules should own core planning logic; AI can explain and recommend.
-- **Performance matters**: switching tabs and opening course details should not refetch everything unnecessarily.
-- **Features must stand alone**: planner, requirements, calendar, transcript import, and balance sheet should share source data but not depend on each other's UI assumptions.
+| Code | Program |
+|---|---|
+| `ACC` | Accounting |
+| `BAD-NON` | Business Administration, Non-Concentration |
+| `BIS-AS` | Business Information Systems A.S. |
+| `BMB` | Biochemistry and Molecular Biology |
+| `CSCI` | Computer Science |
+| `CSCI-JOINT` | Computer Science Joint Major |
+| `CRJ` | Criminal Justice |
+| `FIN-ECON` | Finance/Economics |
+| `MGT` | Management |
+| `MKT` | Marketing |
+| `MATH` | Mathematics B.A. |
+| `MUSIC-BIZ` | Music Business |
+| `PHYS` | Physics |
+| `SOC-JOINT` | Sociology Joint Major |
 
-## Architecture Standard
+Template JSON source files live in both:
 
-The project architecture guide lives here:
+- `data/`
+- `web/data/`
 
-- [docs/architecture/README.md](./docs/architecture/README.md)
+This duplication is intentional for now. The frontend is rooted in `web`, so the Next.js app imports template JSON from `web/data`. The root `data` directory remains the source workspace for transcript samples, extracted balance sheets, and template-building artifacts.
 
-The short version:
+## Requirement Logic
+
+FiskGrad now handles more than fixed course checklists. Requirement groups can be satisfied by:
+
+- specific required courses
+- course choices
+- credit thresholds
+- a required number of courses
+- rule-based buckets such as approved electives
+
+This matters for degree audits and balance sheets. Some Fisk balance sheets list a group of possible courses where the student only needs a certain number of credits before the group is fulfilled. FiskGrad tracks those groups by progress toward the required credits instead of incorrectly requiring every course in the list.
+
+Important implementation files:
+
+- `web/lib/requirements.ts`
+- `web/lib/balance-sheet.ts`
+- `web/lib/balance-sheet-templates.ts`
+- `Backend/app/db.py`
+
+## Architecture
+
+The project follows this structure:
 
 ```text
-shared core data -> isolated feature engines -> thin UI layers
+shared academic data -> feature engines -> thin UI layers
 ```
 
-Shared core data includes:
+Shared data includes:
 
-- auth/session
-- profile
-- plan semesters and course catalog
-- course catalog and sections
-- major template data
+- authenticated user profile
+- saved academic plan
+- plan semesters and courses
+- course catalog
+- course sections
+- major requirement labels
+- balance-sheet templates
 - transcript parse results
 
-Feature engines live in `web/lib/*` and should handle transformations without UI concerns.
+Feature engines live mainly in `web/lib/*`. They should transform data without depending on React UI state.
 
 Important frontend modules:
 
-- `web/lib/api.ts`: API client and backend types
-- `web/lib/api-adapters.ts`: backend-to-frontend adapters
-- `web/lib/plan-state.ts`: pure plan state and save-payload builders
-- `web/lib/course-utils.ts`: course code, term, and label utilities
-- `web/lib/transcript.ts`: frontend transcript/onboarding helpers
-- `web/lib/planner.ts`: planner helpers
-- `web/lib/calendar.ts`: calendar helpers
-- `web/lib/requirements.ts`: requirements helpers
-- `web/lib/balance-sheet.ts`: balance-sheet view-model builder
-- `web/lib/balance-sheet-templates.ts`: supported major template registry
-- `web/lib/nav.ts`: navigation source of truth
+| File | Responsibility |
+|---|---|
+| `web/lib/api.ts` | API client and backend-facing types. |
+| `web/lib/api-adapters.ts` | Backend-to-frontend data adapters. |
+| `web/lib/plan-state.ts` | Pure plan state and save payload helpers. |
+| `web/lib/course-utils.ts` | Course-code, term, and label utilities. |
+| `web/lib/transcript.ts` | Frontend transcript and onboarding helpers. |
+| `web/lib/planner.ts` | Planner-specific helpers. |
+| `web/lib/requirements.ts` | Requirement progress and satisfaction logic. |
+| `web/lib/balance-sheet.ts` | Balance-sheet view-model builder. |
+| `web/lib/balance-sheet-templates.ts` | Supported template registry. |
+| `web/lib/calendar.ts` | Calendar and `.ics` generation helpers. |
+| `web/lib/email-access.ts` | Allowed Fisk student email-domain checks. |
+| `web/lib/nav.ts` | Navigation source of truth. |
+
+Architecture notes live in:
+
+- `docs/architecture/README.md`
 
 ## Repo Layout
 
 ```text
-plan-my-path/
+fiskgrad/
   Backend/                  FastAPI backend
   Backend/app/              API, auth, DB, transcript parser, AI advisor
-  Backend/scripts/          SQL, sync, and seed scripts
-  data/                     source balance sheets, transcript samples, root template data
-  docs/architecture/        architecture README and engineering guidance
+  Backend/scripts/          SQL, sync, seed, and deployment helper scripts
+  data/                     source templates, balance sheets, transcript samples
+  docs/architecture/        architecture guidance
   web/                      Next.js frontend
-  web/app/                  Next.js App Router routes
-  web/components/           page and UI components
+  web/app/                  App Router pages and layouts
+  web/components/           product and UI components
   web/contexts/             auth and plan providers
-  web/data/                 frontend-owned balance-sheet template JSON
-  web/lib/                  feature engines, API client, utilities
-  future plans.md           future-facing roadmap notes
+  web/data/                 frontend balance-sheet template JSON
+  web/lib/                  feature engines, API client, utility logic
+  web/public/               static assets and optional PDF templates
 ```
+
+The intended GitHub repository and deployed product name is `fiskgrad`. The current local folder may still be named `plan-my-path` if the directory could not be renamed while files were open.
 
 ## Stack
 
@@ -134,9 +185,10 @@ plan-my-path/
 | Backend | FastAPI, Python |
 | Database | Supabase Postgres |
 | Auth | Supabase Auth |
-| AI | Gemini via `google-generativeai` |
+| AI | Gemini through the backend |
 | Transcript Parsing | Python PDF parsing |
-| Calendar Export | Frontend-generated `.ics` |
+| Calendar Export | Frontend-generated `.ics` files |
+| Deployment | Vercel frontend, Render backend |
 
 ## Backend API
 
@@ -144,187 +196,98 @@ Key endpoints:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/health` | backend health |
-| GET | `/api/subjects` | course subject acronyms |
-| GET | `/api/majors` | degree programs |
-| GET | `/api/courses` | courses by subject |
-| GET | `/api/courses/search` | catalog search |
-| GET | `/api/sections` | sections for course codes |
-| GET | `/api/course-labels` | requirement labels and elective rules for a major |
-| GET/PUT | `/api/profile` | student profile |
-| GET/PUT | `/api/plan` | saved academic plan |
-| POST | `/api/transcript` | parse transcript PDF |
-| GET/POST | `/api/reviews` | course reviews |
-| GET | `/api/reviews/recent` | recent review feed |
-| POST | `/api/ai/advise` | AI advisor reply |
-| DELETE | `/api/account` | account and plan deletion |
+| `GET` | `/api/health` | Backend health check. |
+| `GET` | `/api/subjects` | Course subject acronyms. |
+| `GET` | `/api/majors` | Degree programs. |
+| `GET` | `/api/courses` | Courses by subject. |
+| `GET` | `/api/courses/search` | Catalog search. |
+| `GET` | `/api/sections` | Sections for course codes. |
+| `GET` | `/api/course-labels` | Requirement labels and elective rules for a major. |
+| `GET/PUT` | `/api/profile` | Student profile. |
+| `GET/PUT` | `/api/plan` | Saved academic plan. |
+| `POST` | `/api/transcript` | Parse an authenticated student's transcript PDF. |
+| `GET/POST` | `/api/reviews` | Course reviews. |
+| `GET` | `/api/reviews/recent` | Recent review feed. |
+| `POST` | `/api/ai/advise` | AI advisor response. |
+| `DELETE` | `/api/account` | Account and plan deletion. |
 
-## Transcript Import Direction
+## Security Model
 
-Transcript import is a core feature.
+FiskGrad handles student academic information, so security is part of the core product and not a later add-on.
 
-Expected behavior:
+Current protections:
 
-- preserve completed courses
-- preserve grades, credits, term, and year when available
-- keep in-progress courses even when they have no final grade
-- treat no-grade current courses as planned/current, not failed imports
-- show unmatched courses for verification instead of silently dropping them
-- support transfer-credit sections before normal term headers
-- avoid prerequisite warnings for already-completed transcript courses
+- Frontend sign-up and login reject emails outside `@my.fisk.edu`.
+- Backend authenticated routes also reject non-Fisk student emails.
+- Supabase hardening SQL includes an Auth trigger to enforce `@my.fisk.edu` at the database/auth layer.
+- Backend JWT validation requires signed Supabase tokens and no longer falls back to unsafe unsigned decoding.
+- Sensitive routes have basic IP-based rate limits.
+- Transcript uploads require authentication.
+- Transcript uploads are limited to PDF, checked by filename, content type, size, and PDF magic bytes.
+- Profile image uploads are limited by MIME type and size.
+- Review inputs are validated and course codes are normalized.
+- AI advisor request size and history length are capped.
+- Security headers are added by the backend.
+- Service-role Supabase credentials are intended for backend use only.
+- Transcript PDFs are parsed in memory and are not stored by the transcript endpoint.
 
-Backend parser:
+Important files:
 
-- `Backend/app/transcript.py`
+- `web/lib/email-access.ts`
+- `web/contexts/auth-context.tsx`
+- `web/app/(auth)/login/page.tsx`
+- `web/app/(auth)/signup/page.tsx`
+- `web/components/app-layout.tsx`
+- `Backend/app/auth.py`
+- `Backend/app/main.py`
+- `Backend/scripts/security_hardening.sql`
 
-Frontend transcript helpers:
+Before production, run and verify the SQL in:
 
-- `web/lib/transcript.ts`
-
-Transcript import still has sensitive logic in:
-
-- `web/contexts/plan-context.tsx`
-
-That area should be refactored carefully only after testing transcript import end to end.
-
-## Planner Direction
-
-The planner is the main interactive workspace.
-
-It currently supports:
-
-- semester columns
-- add/remove semesters
-- add/remove courses
-- drag/drop between semesters
-- course search
-- course detail modal
-- section selection
-- explicit section save
-- GPA and credit display
-- prerequisite/offered-term warnings
-- clear-all action
-- autosave/debounced save
-
-The largest remaining planner file is:
-
-- `web/components/planner-page.tsx`
-
-Future split order:
-
-1. `SectionOptionCard`
-2. `CourseCard`
-3. `SemesterColumn`
-4. `AddCourseDialog`
-5. `CourseDetailDialog`
-6. keep only page-level state and save orchestration in `PlannerPage`
-
-## Calendar Direction
-
-The calendar should show what the student's selected sections actually create.
-
-Current behavior:
-
-- reads selected sections
-- shows Monday through Friday grid
-- parses AM/PM correctly
-- shows meeting location
-- supports `.ics` download
-- skips malformed meeting times instead of crashing
-
-Future decisions:
-
-- whether weekend classes should appear visually or only export to `.ics`
-- whether to add conflict explanations directly in the calendar UI
-
-## Balance Sheet Direction
-
-Balance sheets are advisor-facing documents. They should not be treated like a generic course table.
-
-Current behavior:
-
-- system templates are supported for selected majors
-- unsupported majors show an unavailable state
-- completed rows show mark, grade, term, and credits
-- planned rows show planned term
-- print flow exists
-- local custom PDF/image preview exists
-
-Supported frontend templates currently live in:
-
-- `web/data/`
-
-The original source/template artifacts live in:
-
-- `data/`
-
-This duplication exists because the Next/Turbopack frontend is rooted at `web`, so frontend imports cannot reliably import JSON from repo-level `data/`.
-
-Current supported template majors include:
-
-- Accounting
-- Business Administration Non-Concentration
-- Business Information Systems A.S.
-- Computer Science
-- Finance Economics
-- Management
-- Marketing
-- Mathematics B.A.
-- Music Business
-- Physics
-
-Important product rule:
-
-Each major should be able to have its own balance-sheet structure. Do not force all majors into one universal layout. When a real balance sheet is provided for a major, support that major's sheet directly.
-
-Future balance-sheet work:
-
-- polish print layout to look closer to real institutional sheets
-- persist uploaded custom sheets per user
-- add templates for remaining majors only when real source sheets exist
-- eventually add an editor for per-major balance-sheet structures if needed
-
-## Performance Direction
-
-Several performance issues have already been addressed:
-
-- term calendar is cached
-- repeated profile/plan reloads from auth token churn were reduced
-- section data is cached through `PlanProvider`
-- course search results are cached
-- subject acronym loading is cached
-- planner and calendar share section loading
-
-Performance rules going forward:
-
-- do not refetch public data on every route change
-- do not make access-token refresh trigger full app reloads
-- keep expensive transformations in `web/lib/*`
-- memoize or cache repeated search/section/template operations
-
-## Known Technical Debt
-
-Current known issues and cleanup targets:
-
-- `planner-page.tsx` is still large and should be split into smaller components.
-- `plan-context.tsx` is smaller than before but still owns onboarding/transcript import behavior.
-- prerequisite parsing needs a deeper cleanup pass.
-- some files contain encoding artifacts such as `â€”` or `â€¢` in comments/text.
-- balance-sheet templates currently exist in both `data/` and `web/data/`.
-- custom uploaded balance sheets are local-preview only and not persisted.
-- `plan-context.tsx` has a Fast Refresh warning because it exports both provider/hook style items.
-
-## Running Locally
-
-### Frontend
-
-```bash
-cd web
-npm install
-npm run dev
+```text
+Backend/scripts/security_hardening.sql
 ```
 
-### Backend
+That script adds Supabase-side email enforcement, row-level security policies, and storage policies. Review it against the actual Supabase schema before applying it to production.
+
+## Privacy Direction
+
+FiskGrad should minimize how much student data it stores and make stored data easy to explain.
+
+Current data categories include:
+
+- student account email
+- student profile details
+- major and graduation target
+- saved academic plan
+- completed and planned courses
+- selected sections
+- course reviews
+- optional profile avatar
+
+Important privacy expectations:
+
+- Do not expose service-role keys to the frontend.
+- Do not store transcript files unless the product explicitly adds secure transcript storage later.
+- Do not use AI responses as official degree audits.
+- Keep advisor-facing exports clear that students must verify final requirements with Fisk advisors or official university records.
+- Avoid logging sensitive transcript contents in production.
+
+## Local Development
+
+Install frontend dependencies:
+
+```bash
+npm --prefix web install
+```
+
+Run the frontend:
+
+```bash
+npm --prefix web run dev
+```
+
+Create and activate a backend environment on Windows:
 
 ```bash
 cd Backend
@@ -334,21 +297,32 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+The root package also proxies common frontend commands:
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+```
+
 ## Environment Variables
 
-### Frontend `web/.env.local`
+Frontend environment, usually `web/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=my.fisk.edu
 ```
 
-### Backend `Backend/.env`
+Backend environment, usually `Backend/.env`:
 
 ```env
 SUPABASE_POOLER_URL=...
 SUPABASE_JWT_SECRET=...
+ALLOWED_EMAIL_DOMAINS=my.fisk.edu
 ALLOWED_ORIGINS=http://localhost:3000
 GEMINI_API_KEY=...
 SUPABASE_URL=...
@@ -357,61 +331,152 @@ SUPABASE_SERVICE_ROLE_KEY=...
 
 Notes:
 
-- `GEMINI_API_KEY` is only required for AI advisor functionality.
-- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for full Supabase auth-user deletion.
-- The backend can now boot even if the Gemini package is missing, but the advisor endpoint needs `google-generativeai`.
+- `GEMINI_API_KEY` is required only for the AI advisor endpoint.
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for full backend account deletion.
+- `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` and `ALLOWED_EMAIL_DOMAINS` should stay aligned.
+- In production, `ALLOWED_ORIGINS` should include the deployed Vercel domain and should not be left as a wildcard.
 
-## Validation Commands
+## Database And Template Seeding
 
-Frontend:
-
-```bash
-cd web
-npx tsc --noEmit
-npx eslint .
-```
-
-Backend:
+Requirement labels and templates can be seeded from backend scripts:
 
 ```bash
-python -m py_compile Backend/app/main.py Backend/app/advisor.py Backend/app/transcript.py
+cd Backend
+python scripts/seed_requirements.py --all
 ```
 
-## Recommended Next Steps
+Apply production hardening in Supabase after reviewing the SQL:
 
-1. Smoke test the full app:
-   - login
-   - onboarding
-   - transcript import
-   - dashboard
-   - planner
-   - section selection
-   - calendar
-   - `.ics` export
-   - course search
-   - balance sheet
+```text
+Backend/scripts/security_hardening.sql
+```
 
-2. Split the planner UI:
-   - start with section cards and course cards
-   - then semester columns
-   - then dialogs
+## Deployment
 
-3. Stabilize transcript/onboarding:
-   - test current import behavior
-   - only then extract the remaining heavy logic from `plan-context.tsx`
+The intended deployment split is:
 
-4. Improve balance-sheet output:
-   - make print view closer to advisor sheets
-   - add remaining majors only from real source sheets
-   - decide how to handle custom-sheet persistence
+- Vercel for the Next.js frontend
+- Render for the FastAPI backend
+- Supabase for database and auth
+- A cron monitor that calls the backend health route to keep the Render service warm
 
-5. Clean up technical debt:
-   - encoding artifacts
-   - deeper prerequisite parsing
-   - template source-of-truth duplication
+### Vercel
 
-## Project Status
+Recommended settings:
 
-Fiskpath is in feature-integration and stabilization mode.
+| Setting | Value |
+|---|---|
+| Root directory | `web` |
+| Build command | `npm run build` |
+| Output | Next.js default |
 
-The core product is present. The next work should focus on correctness, testing, UI splitting, advisor-ready output polish, and making sure each feature can stand on its own without slowing or destabilizing the rest of the app.
+Required frontend environment variables:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://your-render-service.onrender.com
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=my.fisk.edu
+```
+
+### Render
+
+Recommended backend settings:
+
+| Setting | Value |
+|---|---|
+| Root directory | `Backend` |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+
+Required backend environment variables:
+
+```env
+SUPABASE_POOLER_URL=...
+SUPABASE_JWT_SECRET=...
+ALLOWED_EMAIL_DOMAINS=my.fisk.edu
+ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app
+GEMINI_API_KEY=...
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+### Keep-Alive Cron
+
+Use a cron service to call:
+
+```text
+GET https://your-render-service.onrender.com/api/health
+```
+
+A 10-minute interval is usually enough for keeping a free or low-cost Render service responsive. This should only hit the health route and should not call authenticated or expensive endpoints.
+
+## Validation
+
+Backend syntax check:
+
+```bash
+python -m py_compile Backend/app/auth.py Backend/app/main.py Backend/app/db.py
+```
+
+Frontend type check:
+
+```bash
+npx --prefix web tsc --noEmit
+```
+
+Frontend production build:
+
+```bash
+npm --prefix web run build
+```
+
+The production build may require network access because Next.js can fetch configured fonts during build.
+
+## Current Status
+
+FiskGrad is best described as a deployable MVP or beta candidate, not a finished production system.
+
+The main product logic is in place:
+
+- Fisk-only student access checks
+- transcript PDF import
+- planning workflow
+- requirement tracking
+- credit-threshold requirement groups
+- advisor-ready balance sheets
+- 14 supported major templates
+- custom PDF, Word, and image sheet preview
+- course search and sections
+- calendar export
+- reviews
+- AI advisor endpoint
+- Supabase security hardening script
+- Vercel and Render deployment path
+
+Before treating it as production-ready, the remaining work should focus on:
+
+- running the Supabase hardening SQL in the real project
+- testing real Fisk student sign-up and login flows
+- testing transcript imports with multiple real transcript formats
+- verifying each balance-sheet template against the official source document
+- adding end-to-end tests for transcript import, planner save, requirements, and balance sheet
+- confirming production CORS, headers, and environment variables
+- validating account deletion and data removal behavior
+- reviewing privacy language with the final product policy
+
+## Product Direction
+
+FiskGrad can grow into a real system or startup if it stays focused on trust.
+
+The strongest wedge is not generic AI advising. The strongest wedge is accurate, student-owned degree progress:
+
+- transcript-aware
+- major-aware
+- advisor-readable
+- schedule-aware
+- secure enough for student academic records
+
+If the system becomes the place where students can reliably answer "what do I need to graduate and what should I take next?", it can expand into advisor dashboards, department analytics, official degree-audit integrations, transfer evaluation support, and registration planning.
+
+The product should keep one principle clear: FiskGrad helps students understand and prepare, while official academic decisions still belong to Fisk University advisors, departments, and registrar records.

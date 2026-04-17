@@ -1,0 +1,225 @@
+{
+  "major_code": "BMB",
+  "major_name": "Biochemistry and Molecular Biology",
+  "degree_type": "B.S.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "core_fixed",
+      "group_name": "CORE Requirements - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": { "min": 23, "max": 24 },
+      "description": "Fixed core rows from the BMB balance sheet.",
+      "courses": [
+        { "course_code": "CORE 100", "course_name": "New Student Orientation Seminar", "credits": 1 },
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 120", "course_name": "Critical Thinking", "credits": 2 },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 121", "course_name": "Biocalculus", "credits": 4, "satisfies_requirement": "CORE 131" },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 3 }
+      ],
+      "notes": "BMB majors satisfy CORE 131 through MATH 120 or MATH 121."
+    },
+    {
+      "group_id": "core_group_a",
+      "group_name": "CORE - Group A: Cultural Exposure",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "courses": [
+        { "course_code": "ART 291", "credits": 3 },
+        { "course_code": "ART 292", "credits": 3 },
+        { "course_code": "ENG 275", "credits": 3 },
+        { "course_code": "HIS 180", "credits": 3 },
+        { "course_code": "HIS 270", "credits": 3 },
+        { "course_code": "MUS 200", "credits": 3 },
+        { "course_code": "MUS 206", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_b",
+      "group_name": "CORE - Group B: Analytical Skills",
+      "group_type": "choose_one",
+      "credits_required": { "min": 3, "max": 4 },
+      "description": "Satisfied through Calculus II, Statistics, Biostatistics, or Mathematical Modeling.",
+      "courses": [
+        { "course_code": "MATH 130", "course_name": "Calculus II", "credits": 4, "satisfies_requirement": "CORE Group B" },
+        { "course_code": "MATH 280", "course_name": "Mathematical Modeling", "credits": 3, "satisfies_requirement": "CORE Group B" },
+        { "course_code": "NSCI 360", "course_name": "Statistics", "credits": 3, "satisfies_requirement": "CORE Group B" },
+        { "course_code": "MATH 390B", "course_name": "Biostatistics", "credits": 3, "satisfies_requirement": "CORE Group B" }
+      ]
+    },
+    {
+      "group_id": "core_group_c",
+      "group_name": "CORE - Group C: The Arts",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "courses": [
+        { "course_code": "CORE 220", "credits": 3 },
+        { "course_code": "MUS 207", "credits": 3 },
+        { "course_code": "MUS 208", "credits": 3 },
+        { "course_code": "MUS 205", "credits": 3 },
+        { "course_code": "ART 207", "credits": 3 },
+        { "course_code": "ART 208", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_d",
+      "group_name": "CORE - Group D: Science",
+      "group_type": "all_of",
+      "credits_required": 4,
+      "description": "BIOL 101 and lab satisfy the BMB science core requirement and also count as cognates.",
+      "courses": [
+        { "course_code": "BIOL 101", "course_name": "General Biology I", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "course_name": "General Biology I Lab", "credits": 1, "corequisite_for": "BIOL 101" }
+      ]
+    },
+    {
+      "group_id": "core_group_e",
+      "group_name": "CORE - Group E: Social Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "description": "PSY 180 is recommended; SOC 100 may be accepted with approval.",
+      "courses": [
+        { "course_code": "PSY 180", "course_name": "General Psychology", "credits": 3 },
+        { "course_code": "SOC 100", "course_name": "Introduction to Sociology", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "foreign_language",
+      "group_name": "Foreign Language",
+      "group_type": "all_of",
+      "credits_required": 6,
+      "description": "Placement determines language requirement.",
+      "courses": [
+        { "course_code": "SPAN 101", "course_name": "Elementary Spanish I", "credits": 3 },
+        { "course_code": "SPAN 102", "course_name": "Elementary Spanish II", "credits": 3 },
+        { "course_code": "FREN 101", "course_name": "Elementary French I", "credits": 3 },
+        { "course_code": "FREN 102", "course_name": "Elementary French II", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "technology_literacy",
+      "group_name": "Technology Literacy",
+      "group_type": "choose_one",
+      "credits_required": { "min": 3, "max": 4 },
+      "description": "Take CSCI 100 or CSCI 110 with lab.",
+      "courses": [
+        { "course_code": "CSCI 100", "course_name": "Introduction to Computing", "credits": 3, "satisfies_requirement": "Technology Literacy" },
+        { "course_code": "CSCI 110", "course_name": "Introduction to Computer Science I", "credits": 3, "requires_corequisite": "CSCI 110L", "satisfies_requirement": "Technology Literacy" },
+        { "course_code": "CSCI 110L", "course_name": "Introduction to Computer Science I Lab", "credits": 1, "corequisite_for": "CSCI 110" }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 34,
+      "description": "Major requirements from the BMB balance sheet.",
+      "courses": [
+        { "course_code": "NSCI 361", "course_name": "Biochemistry I", "credits": 3, "requires_corequisite": "NSCI 361L" },
+        { "course_code": "NSCI 361L", "course_name": "Biochemistry I Lab", "credits": 1, "corequisite_for": "NSCI 361" },
+        { "course_code": "NSCI 362", "course_name": "Biochemistry II", "credits": 3, "requires_corequisite": "NSCI 362L" },
+        { "course_code": "NSCI 362L", "course_name": "Biochemistry II Lab", "credits": 1, "corequisite_for": "NSCI 362" },
+        { "course_code": "BIOL 360", "course_name": "Molecular Cell Biology", "credits": 3, "requires_corequisite": "BIOL 360L" },
+        { "course_code": "BIOL 360L", "course_name": "Molecular Cell Biology Lab", "credits": 1, "corequisite_for": "BIOL 360" },
+        { "course_code": "BIOL 410", "course_name": "Molecular Methods", "credits": 3, "requires_corequisite": "BIOL 410L" },
+        { "course_code": "BIOL 410L", "course_name": "Molecular Methods Lab", "credits": 1, "corequisite_for": "BIOL 410" },
+        { "course_code": "CHEM 341", "course_name": "Physical Chemistry", "credits": 3, "requires_corequisite": "CHEM 341L" },
+        { "course_code": "CHEM 341L", "course_name": "Physical Chemistry Lab", "credits": 1, "corequisite_for": "CHEM 341" },
+        { "course_code": "NSCI 285", "course_name": "Bioinformatics", "credits": 3, "requires_corequisite": "NSCI 285L" },
+        { "course_code": "NSCI 285L", "course_name": "Bioinformatics Lab", "credits": 1, "corequisite_for": "NSCI 285" },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4, "satisfies_requirement": "Calculus or Biocalculus I" },
+        { "course_code": "MATH 121", "course_name": "Biocalculus", "credits": 4, "satisfies_requirement": "Calculus or Biocalculus I" },
+        { "course_code": "MATH 130", "course_name": "Calculus II", "credits": 4, "satisfies_requirement": "Calculus II or approved substitute" },
+        { "course_code": "MATH 280", "course_name": "Mathematical Modeling", "credits": 3, "satisfies_requirement": "Calculus II or approved substitute" },
+        { "course_code": "NSCI 360", "course_name": "Statistics", "credits": 3, "satisfies_requirement": "Calculus II or approved substitute" },
+        { "course_code": "MATH 390B", "course_name": "Biostatistics", "credits": 3, "satisfies_requirement": "Calculus II or approved substitute" },
+        { "course_code": "NSCI 390", "course_name": "Junior Seminar I", "credits": 1 },
+        { "course_code": "NSCI 391", "course_name": "Junior Seminar II", "credits": 1 }
+      ],
+      "notes": "All required major courses and cognates must be completed with a grade of C or better."
+    },
+    {
+      "group_id": "major_electives",
+      "group_name": "Major Recommended Electives",
+      "group_type": "credit_threshold",
+      "credits_required": 8,
+      "description": "Minimum 8 credits from recommended BMB electives.",
+      "courses": [
+        { "course_code": "BIOL 270", "course_name": "Microbiology", "credits": 3, "requires_corequisite": "BIOL 270L" },
+        { "course_code": "BIOL 270L", "course_name": "Microbiology Lab", "credits": 1, "corequisite_for": "BIOL 270" },
+        { "course_code": "BIOL 370", "course_name": "Cancer Biology", "credits": 3, "requires_corequisite": "BIOL 370L" },
+        { "course_code": "BIOL 370L", "course_name": "Cancer Biology Lab", "credits": 1, "corequisite_for": "BIOL 370" },
+        { "course_code": "BIOL 440", "course_name": "Developmental Biology", "credits": 3, "requires_corequisite": "BIOL 440L" },
+        { "course_code": "BIOL 440L", "course_name": "Developmental Biology Lab", "credits": 1, "corequisite_for": "BIOL 440" },
+        { "course_code": "BIOL 420", "course_name": "Introduction to Neurobiology", "credits": 4 },
+        { "course_code": "BIOL 350", "course_name": "Genetics", "credits": 3, "requires_corequisite": "BIOL 350L" },
+        { "course_code": "BIOL 350L", "course_name": "Genetics Lab", "credits": 1, "corequisite_for": "BIOL 350" },
+        { "course_code": "BIOL 221", "course_name": "Anatomy and Physiology I", "credits": 3, "requires_corequisite": "BIOL 221L" },
+        { "course_code": "BIOL 221L", "course_name": "Anatomy and Physiology I Lab", "credits": 1, "corequisite_for": "BIOL 221" },
+        { "course_code": "BIOL 222", "course_name": "Anatomy and Physiology II", "credits": 3, "requires_corequisite": "BIOL 222L" },
+        { "course_code": "BIOL 222L", "course_name": "Anatomy and Physiology II Lab", "credits": 1, "corequisite_for": "BIOL 222" },
+        { "course_code": "CHEM 470", "course_name": "Analytical Chemistry", "credits": 3, "requires_corequisite": "CHEM 470L" },
+        { "course_code": "CHEM 470L", "course_name": "Analytical Chemistry Lab", "credits": 1, "corequisite_for": "CHEM 470" },
+        { "course_code": "CHEM 582B", "course_name": "Polymer Chemistry and Laboratory", "credits": 4 },
+        { "course_code": "MATH 270", "course_name": "Ordinary Differential Equations", "credits": 3 }
+      ],
+      "rules": {
+        "subject_code": "CSCI",
+        "min_level": 120,
+        "exclude_courses": ["CSCI 100", "CSCI 110", "CSCI 110L"]
+      },
+      "notes": "The source sheet also allows CS courses above CSCI 110."
+    },
+    {
+      "group_id": "required_cognates",
+      "group_name": "Required Cognates",
+      "group_type": "all_of",
+      "credits_required": 32,
+      "description": "Required cognates; BIOL 101/101L overlaps with CORE science.",
+      "courses": [
+        { "course_code": "BIOL 101", "course_name": "General Biology I", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "course_name": "General Biology I Lab", "credits": 1, "corequisite_for": "BIOL 101" },
+        { "course_code": "BIOL 102", "course_name": "General Biology II", "credits": 3, "requires_corequisite": "BIOL 102L" },
+        { "course_code": "BIOL 102L", "course_name": "General Biology II Lab", "credits": 1, "corequisite_for": "BIOL 102" },
+        { "course_code": "CHEM 113", "course_name": "General Chemistry I", "credits": 3, "requires_corequisite": "CHEM 103L" },
+        { "course_code": "CHEM 103L", "course_name": "General Chemistry I Lab", "credits": 1, "corequisite_for": "CHEM 113" },
+        { "course_code": "CHEM 114", "course_name": "General Chemistry II", "credits": 3, "requires_corequisite": "CHEM 104L" },
+        { "course_code": "CHEM 104L", "course_name": "General Chemistry II Lab", "credits": 1, "corequisite_for": "CHEM 114" },
+        { "course_code": "CHEM 233", "course_name": "Organic Chemistry I", "credits": 3, "requires_corequisite": "CHEM 203L" },
+        { "course_code": "CHEM 203L", "course_name": "Organic Chemistry I Lab", "credits": 1, "corequisite_for": "CHEM 233" },
+        { "course_code": "CHEM 234", "course_name": "Organic Chemistry II", "credits": 3, "requires_corequisite": "CHEM 204L" },
+        { "course_code": "CHEM 204L", "course_name": "Organic Chemistry II Lab", "credits": 1, "corequisite_for": "CHEM 234" },
+        { "course_code": "PHYS 130", "course_name": "University Physics I", "credits": 3, "requires_corequisite": "PHYS 130L", "satisfies_requirement": "Physics I" },
+        { "course_code": "PHYS 130L", "course_name": "University Physics I Lab", "credits": 1, "corequisite_for": "PHYS 130" },
+        { "course_code": "PHYS 117", "course_name": "Physics for Life Sciences I", "credits": 3, "requires_corequisite": "PHYS 117L", "satisfies_requirement": "Physics I" },
+        { "course_code": "PHYS 117L", "course_name": "Physics for Life Sciences I Lab", "credits": 1, "corequisite_for": "PHYS 117" },
+        { "course_code": "PHYS 140", "course_name": "University Physics II", "credits": 3, "requires_corequisite": "PHYS 140L", "satisfies_requirement": "Physics II" },
+        { "course_code": "PHYS 140L", "course_name": "University Physics II Lab", "credits": 1, "corequisite_for": "PHYS 140" },
+        { "course_code": "PHYS 118", "course_name": "Physics for Life Sciences II", "credits": 3, "requires_corequisite": "PHYS 118L", "satisfies_requirement": "Physics II" },
+        { "course_code": "PHYS 118L", "course_name": "Physics for Life Sciences II Lab", "credits": 1, "corequisite_for": "PHYS 118" }
+      ]
+    },
+    {
+      "group_id": "general_electives",
+      "group_name": "General Electives",
+      "group_type": "fill_remaining",
+      "credits_required": { "min": 12 },
+      "description": "General electives to reach the minimum degree total.",
+      "courses": [
+        { "course_code": "MATH 110", "course_name": "Precalculus", "credits": 3 }
+      ],
+      "notes": "Undergraduate research is encouraged, but no more than 12 hours of undergraduate research can count for academic credit."
+    }
+  ],
+  "metadata": {
+    "source": "Balance Sheet - BS Biochemistry and Molecular Biology - 2023-2024 BLANK A.pdf",
+    "notes": [
+      "First-pass template built from the BMB balance sheets in data/.",
+      "Combined lecture/lab source rows are split into course-code rows so transcript and plan matching can work."
+    ]
+  }
+}

@@ -118,8 +118,7 @@ export default function RequirementsPage() {
               const { groupName } = group;
               const meta = LABEL_META[group.label];
               const isOpen = auditExpanded[groupName] ?? false;
-              const missingCount = group.courses.filter((c) => c.status === "missing").length;
-              const completedCount = group.courses.filter((c) => c.status === "completed").length;
+              const missingCount = group.isSatisfied ? 0 : group.courses.filter((c) => c.status === "missing").length;
               const pct = group.totalCredits > 0
                 ? (group.completedCredits / group.totalCredits) * 100
                 : 0;
@@ -140,15 +139,15 @@ export default function RequirementsPage() {
                       <span className="text-sm font-medium text-foreground truncate">{groupName}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      {missingCount > 0 && (
+                      {missingCount > 0 && !group.isCreditBased && (
                         <span className="text-xs text-destructive font-medium">{missingCount} missing</span>
                       )}
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {completedCount}/{group.courses.length}
+                        {group.progressLabel}
                       </span>
                       <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className={cn("h-full transition-all", pct >= 100 ? "bg-green-500" : "bg-primary")}
+                          className={cn("h-full transition-all", group.isSatisfied ? "bg-green-500" : "bg-primary")}
                           style={{ width: `${Math.min(pct, 100)}%` }}
                         />
                       </div>

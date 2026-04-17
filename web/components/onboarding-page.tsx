@@ -185,7 +185,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-lg">
             <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground text-sm">Fiskpath</span>
+          <span className="font-semibold text-foreground text-sm">FiskGrad</span>
         </div>
         <button
           onClick={() => router.push("/dashboard")}

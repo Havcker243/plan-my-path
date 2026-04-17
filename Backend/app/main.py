@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import os
+import re
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import json
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.auth import resolve_jwt_secret, verify_token
+from app.auth import require_allowed_email, resolve_allowed_email_domains, resolve_jwt_secret, verify_token
 from app.advisor import stream_advisor_reply
 from app.db import (
     CourseLabelsData,
@@ -36,7 +39,7 @@ from app.db import (
     delete_user_data,
 )
 
-app = FastAPI(title="PlanMyPath API")
+app = FastAPI(title="FiskGrad API")
 
 # Build allowed origins: always include localhost dev ports, plus any
 # production frontend URL set via ALLOWED_ORIGINS env var (comma-separated).
@@ -59,9 +62,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_rate_limit_hits: dict[str, deque[float]] = defaultdict(deque)
+_RATE_LIMITS = {
+    ("POST", "/api/transcript"): (5, 15 * 60),
+    ("POST", "/api/ai/advise"): (20, 15 * 60),
+    ("POST", "/api/reviews"): (10, 15 * 60),
+}
+
+
+def _client_ip(request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
+@app.middleware("http")
+async def rate_limit_sensitive_routes(request, call_next):
+    limit = _RATE_LIMITS.get((request.method.upper(), request.url.path))
+    if not limit:
+        return await call_next(request)
+
+    max_requests, window_seconds = limit
+    now = time.monotonic()
+    key = f"{request.method.upper()}:{request.url.path}:{_client_ip(request)}"
+    hits = _rate_limit_hits[key]
+    while hits and now - hits[0] > window_seconds:
+        hits.popleft()
+    if len(hits) >= max_requests:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Try again later."},
+        )
+    hits.append(now)
+    return await call_next(request)
+
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 POOLER_URL = resolve_pooler_url(ENV_PATH)
 JWT_SECRET = resolve_jwt_secret(ENV_PATH)
+ALLOWED_EMAIL_DOMAINS = resolve_allowed_email_domains(ENV_PATH)
 
 auth_scheme = HTTPBearer()
 
@@ -215,6 +265,7 @@ def get_current_user(
 ) -> Dict[str, object]:
     token = credentials.credentials
     payload = verify_token(token, JWT_SECRET)
+    require_allowed_email(payload, ALLOWED_EMAIL_DOMAINS)
     return payload
 
 
@@ -244,17 +295,27 @@ def list_terms() -> Dict[str, object]:
 
 
 @app.post("/api/transcript")
-async def parse_transcript_endpoint(file: UploadFile = File(...)) -> Dict[str, object]:
+async def parse_transcript_endpoint(
+    file: UploadFile = File(...),
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
     """
     Parse an uploaded transcript PDF and return extracted courses + GPA.
     No auth required — the transcript is processed in memory and never stored.
     """
+    if not user.get("sub"):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if file.content_type and file.content_type not in {"application/pdf", "application/x-pdf"}:
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:  # 10 MB guard
         raise HTTPException(status_code=400, detail="File too large (max 10 MB).")
+    if not contents.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF.")
 
     try:
         from app.transcript import parse_transcript
@@ -321,15 +382,20 @@ class ReviewPayload(BaseModel):
     comment: str
 
 
+RE_COURSE_CODE = re.compile(r"^[A-Z]{2,6}[-\s]?\d+[A-Z0-9]*$")
+
+
 @app.get("/api/reviews/recent")
 def list_recent_reviews(limit: int = 20) -> Dict[str, object]:
+    limit = max(1, min(limit, 50))
     reviews = get_recent_reviews(POOLER_URL, limit)
     return {"data": reviews}
 
 
 @app.get("/api/reviews")
 def list_reviews(course_code: str) -> Dict[str, object]:
-    if not course_code:
+    course_code = course_code.strip().upper()
+    if not course_code or not RE_COURSE_CODE.match(course_code):
         raise HTTPException(status_code=400, detail="course_code is required")
     reviews = get_reviews(POOLER_URL, course_code)
     return {"data": reviews}
@@ -340,6 +406,9 @@ def post_review(
     payload: ReviewPayload,
     user: Dict[str, object] = Depends(get_current_user),
 ) -> Dict[str, object]:
+    course_code = payload.course_code.strip().upper()
+    if not RE_COURSE_CODE.match(course_code):
+        raise HTTPException(status_code=400, detail="valid course_code is required")
     comment = (payload.comment or "").strip()
     if not comment:
         raise HTTPException(status_code=400, detail="comment is required")
@@ -347,7 +416,7 @@ def post_review(
         raise HTTPException(status_code=400, detail="comment must be 2000 characters or fewer")
     review = create_review(
         POOLER_URL,
-        payload.course_code,
+        course_code,
         payload.year_taken,
         payload.term_taken,
         (payload.professor or "").strip() or None,
@@ -377,6 +446,11 @@ def advise(
     message = (payload.message or "").strip()
     if not message:
         raise HTTPException(status_code=400, detail="message is required")
+    if len(message) > 4000:
+        raise HTTPException(status_code=400, detail="message must be 4000 characters or fewer")
+    history = payload.history or []
+    if len(history) > 20:
+        raise HTTPException(status_code=400, detail="history must include 20 messages or fewer")
 
     # Fetch student data
     profile = fetch_profile(POOLER_URL, str(user_id)) or {}
@@ -402,7 +476,7 @@ def advise(
                 labels=labels_data,
                 total_credits=total_credits,
                 reviews=reviews,
-                history=payload.history,
+                history=history,
             ):
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
             yield "data: [DONE]\n\n"

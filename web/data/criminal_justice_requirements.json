@@ -1,0 +1,176 @@
+{
+  "major_code": "CRJ",
+  "major_name": "Criminal Justice",
+  "degree_type": "B.A.",
+  "total_credits_required": 120,
+  "requirement_groups": [
+    {
+      "group_id": "core_fixed",
+      "group_name": "CORE Requirements - Fixed Courses",
+      "group_type": "all_of",
+      "credits_required": 21,
+      "description": "Fixed core courses from the Criminal Justice balance sheet.",
+      "courses": [
+        { "course_code": "CORE 100", "course_name": "New Student Orientation Seminar", "credits": 1 },
+        { "course_code": "CORE 150", "course_name": "Composition I", "credits": 3 },
+        { "course_code": "CORE 160", "course_name": "Composition II and Oral Communication", "credits": 3 },
+        { "course_code": "CORE 120", "course_name": "Critical Thinking", "credits": 2 },
+        { "course_code": "CORE 131", "course_name": "Mathematics I", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 101", "course_name": "College Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 110", "course_name": "Intermediate Algebra", "credits": 3, "satisfies_requirement": "CORE 131" },
+        { "course_code": "MATH 120", "course_name": "Calculus I", "credits": 4, "satisfies_requirement": "CORE 131" },
+        { "course_code": "CORE 201", "course_name": "Introduction to Business and Entrepreneurship", "credits": 3 },
+        { "course_code": "CORE 260", "course_name": "Humanities", "credits": 3 },
+        { "course_code": "CORE 360", "course_name": "The World and Its Peoples", "credits": 3 }
+      ],
+      "notes": "MATH 100 does not count toward graduation credits."
+    },
+    {
+      "group_id": "core_group_a",
+      "group_name": "CORE - Group A: Cultural Exposure",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "courses": [
+        { "course_code": "ART 291", "credits": 3 },
+        { "course_code": "ART 292", "credits": 3 },
+        { "course_code": "ENG 275", "credits": 3 },
+        { "course_code": "HIS 180", "credits": 3 },
+        { "course_code": "HIS 270", "credits": 3 },
+        { "course_code": "MUS 200", "credits": 3 },
+        { "course_code": "MUS 206", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_b",
+      "group_name": "CORE - Group B: Analytical Skills",
+      "group_type": "choose_one",
+      "credits_required": 0,
+      "description": "Met with HSS 280, which is also a required cognate.",
+      "courses": [
+        { "course_code": "HSS 280", "course_name": "Social Research Methods", "credits": 3, "satisfies_requirement": "CORE Group B" }
+      ]
+    },
+    {
+      "group_id": "core_group_c",
+      "group_name": "CORE - Group C: The Arts",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "courses": [
+        { "course_code": "CORE 220", "credits": 3 },
+        { "course_code": "MUS 207", "credits": 3 },
+        { "course_code": "MUS 208", "credits": 3 },
+        { "course_code": "MUS 205", "credits": 3 },
+        { "course_code": "ART 207", "credits": 3 },
+        { "course_code": "ART 208", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "core_group_d",
+      "group_name": "CORE - Group D: Natural Science",
+      "group_type": "choose_one",
+      "credits_required": { "min": 3, "max": 4 },
+      "courses": [
+        { "course_code": "CORE 240", "credits": 3 },
+        { "course_code": "BIOL 101", "credits": 3, "requires_corequisite": "BIOL 101L" },
+        { "course_code": "BIOL 101L", "credits": 1, "corequisite_for": "BIOL 101" },
+        { "course_code": "CHEM 113", "credits": 3, "requires_corequisite": "CHEM 103L" },
+        { "course_code": "CHEM 103L", "credits": 1, "corequisite_for": "CHEM 113" },
+        { "course_code": "PHYS 130", "credits": 3, "requires_corequisite": "PHYS 130L" },
+        { "course_code": "PHYS 130L", "credits": 1, "corequisite_for": "PHYS 130" }
+      ]
+    },
+    {
+      "group_id": "core_group_e",
+      "group_name": "CORE - Group E: Social Science",
+      "group_type": "choose_one",
+      "credits_required": 3,
+      "courses": [
+        { "course_code": "ECON 230", "credits": 3 },
+        { "course_code": "ECON 240", "credits": 3 },
+        { "course_code": "HIS 160", "credits": 3 },
+        { "course_code": "PSCI 122", "credits": 3 },
+        { "course_code": "PSY 180", "credits": 3 },
+        { "course_code": "SOC 100", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "foreign_language",
+      "group_name": "Foreign Language",
+      "group_type": "all_of",
+      "credits_required": { "min": 0, "max": 12 },
+      "description": "Placement determines language requirement.",
+      "courses": [
+        { "course_code": "SPAN 101", "course_name": "Elementary Spanish I", "credits": 3 },
+        { "course_code": "SPAN 102", "course_name": "Elementary Spanish II", "credits": 3 },
+        { "course_code": "SPAN 200", "course_name": "Intermediate Spanish", "credits": 3 },
+        { "course_code": "FREN 101", "course_name": "Elementary French I", "credits": 3 },
+        { "course_code": "FREN 102", "course_name": "Elementary French II", "credits": 3 },
+        { "course_code": "FREN 200", "course_name": "Intermediate French", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "required_cognates",
+      "group_name": "Required Cognates",
+      "group_type": "all_of",
+      "credits_required": 12,
+      "courses": [
+        { "course_code": "HSS 280", "course_name": "Social Research Methods", "credits": 3 },
+        { "course_code": "HSS 290", "course_name": "Statistics for Social Sciences", "credits": 3 },
+        { "course_code": "SOC 118", "course_name": "Social Problems", "credits": 3 },
+        { "course_code": "SOC 376", "course_name": "Race and Ethnicity", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "major_requirements",
+      "group_name": "Major Requirements",
+      "group_type": "all_of",
+      "credits_required": 33,
+      "courses": [
+        { "course_code": "CRJ 200", "course_name": "Introduction to Criminal Justice", "credits": 3 },
+        { "course_code": "CRJ 210", "course_name": "Police and Society", "credits": 3 },
+        { "course_code": "CRJ 220", "course_name": "Corrections", "credits": 3 },
+        { "course_code": "CRJ 300", "course_name": "Research and Technology in Criminal Justice", "credits": 3 },
+        { "course_code": "PSCI 252", "course_name": "Judicial Process", "credits": 3, "satisfies_requirement": "Judicial Process or Constitutional Law" },
+        { "course_code": "PSCI 305", "course_name": "American Constitutional Law", "credits": 3, "satisfies_requirement": "Judicial Process or Constitutional Law" },
+        { "course_code": "PSY 348", "course_name": "Abnormal Psychology", "credits": 3 },
+        { "course_code": "SOC 351", "course_name": "Criminology", "credits": 3 },
+        { "course_code": "SOC 370", "course_name": "Practicum I", "credits": 3 },
+        { "course_code": "SOC 390", "course_name": "Practicum II", "credits": 3 },
+        { "course_code": "BAD 220", "course_name": "Business Ethics", "credits": 3 },
+        { "course_code": "SOC 499", "course_name": "Senior Seminar", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "major_electives",
+      "group_name": "Required Electives",
+      "group_type": "credit_threshold",
+      "credits_required": { "min": 12 },
+      "courses": [
+        { "course_code": "SOC 254", "course_name": "Deviance and Social Control", "credits": 3 },
+        { "course_code": "CRJ 260", "course_name": "Women and Crime", "credits": 3, "satisfies_requirement": "Women and Crime" },
+        { "course_code": "SOC 260", "course_name": "Women and Crime", "credits": 3, "satisfies_requirement": "Women and Crime" },
+        { "course_code": "CRJ 342", "course_name": "Crime Victims", "credits": 3 },
+        { "course_code": "SOC 355", "course_name": "Juvenile Delinquency", "credits": 3 },
+        { "course_code": "SOC 358", "course_name": "Law and Society", "credits": 3 },
+        { "course_code": "SOC 360", "course_name": "Special Topics", "credits": 3 },
+        { "course_code": "CRJ 365", "course_name": "Comparative Criminal Justice", "credits": 3 },
+        { "course_code": "CRJ 385", "course_name": "White Collar Crime", "credits": 3 },
+        { "course_code": "SOC 385", "course_name": "Social Dimensions of Disaster", "credits": 3 }
+      ]
+    },
+    {
+      "group_id": "general_electives",
+      "group_name": "General Electives",
+      "group_type": "fill_remaining",
+      "credits_required": { "min": 10, "max": 29 },
+      "description": "General electives to reach 120 credits.",
+      "courses": [
+        { "course_code": "CSCI 100", "course_name": "Introduction to Computing", "credits": 3 }
+      ]
+    }
+  ],
+  "metadata": {
+    "source": "BA CRIMINAL JUSTICE Balance Sheet 2024 1.pdf",
+    "notes": ["First-pass template built from the March 2022 Criminal Justice balance sheet."]
+  }
+}

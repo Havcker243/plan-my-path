@@ -26,7 +26,7 @@ export default function LandingPage() {
           <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
             <GraduationCap className="w-4 h-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground tracking-tight">Fiskpath</span>
+          <span className="font-semibold text-foreground tracking-tight">FiskGrad</span>
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
           <a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a>
@@ -237,7 +237,7 @@ export default function LandingPage() {
           {[
             { quote: "I finally understand what I need to take next semester. Brought this printout to my advisor and she loved it.", name: "Maya R.", major: "Biology, Junior" },
             { quote: "The prerequisite warnings saved me from registering for a class I wasn't ready for. It caught something my advisor missed.", name: "Tomas C.", major: "CS, Sophomore" },
-            { quote: "I switched my major and Fiskpath rebuilt my whole plan in seconds. Would have been hours on a spreadsheet.", name: "Priya S.", major: "Economics to Data Science" },
+            { quote: "I switched my major and FiskGrad rebuilt my whole plan in seconds. Would have been hours on a spreadsheet.", name: "Priya S.", major: "Economics to Data Science" },
           ].map(({ quote, name, major }, index) => (
             <motion.div
               key={name}
@@ -288,7 +288,7 @@ export default function LandingPage() {
       <footer className="border-t border-border py-6 px-6 md:px-12 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <GraduationCap className="w-3.5 h-3.5" />
-          <span>Fiskpath &copy; 2026</span>
+          <span>FiskGrad &copy; 2026</span>
         </div>
         <div className="flex gap-4">
           <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
@@ -334,7 +334,7 @@ function PlannerPreview() {
         <span className="w-3 h-3 rounded-full bg-red-400" />
         <span className="w-3 h-3 rounded-full bg-yellow-400" />
         <span className="w-3 h-3 rounded-full bg-green-400" />
-        <span className="ml-3 text-xs text-muted-foreground">Fiskpath · Planner</span>
+        <span className="ml-3 text-xs text-muted-foreground">FiskGrad · Planner</span>
         <span className="ml-auto text-[10px] text-green-600 font-medium flex items-center gap-1">
           <CheckCircle className="w-3 h-3" /> Autosaved
         </span>

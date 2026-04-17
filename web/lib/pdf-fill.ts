@@ -379,7 +379,7 @@ function drawFooter(page: PDFPage, fonts: PdfFonts, input: PdfFillInput, pageNum
   drawText(page, fonts.bold, "Date:", MARGIN + 320, 42, 9);
   drawLine(page, MARGIN + 348, 40, MARGIN + 448, 40);
   drawText(page, fonts.regular, `Page ${pageNumber}`, PAGE_WIDTH - MARGIN - 42, 42, 8);
-  drawText(page, fonts.regular, `Fiskpath degree audit - ${input.printDate}`, MARGIN, 24, 7);
+  drawText(page, fonts.regular, `FiskGrad degree audit - ${input.printDate}`, MARGIN, 24, 7);
 }
 
 function flattenRows(groups: BalanceSheetGroupView[]): GeneratedRow[] {

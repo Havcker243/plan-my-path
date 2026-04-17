@@ -47,7 +47,7 @@ function VerifyEmailContent() {
           <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
             <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-foreground text-lg tracking-tight">Fiskpath</span>
+          <span className="font-semibold text-foreground text-lg tracking-tight">FiskGrad</span>
         </div>
 
         {/* Email icon */}

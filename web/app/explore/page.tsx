@@ -325,7 +325,7 @@ export default function ExplorePage() {
             <div className="flex items-center justify-center w-7 h-7 bg-primary rounded-lg">
               <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-foreground tracking-tight">Fiskpath</span>
+            <span className="font-semibold text-foreground tracking-tight">FiskGrad</span>
           </Link>
         </div>
         <div className="flex items-center gap-3">
@@ -471,7 +471,7 @@ export default function ExplorePage() {
       <footer className="border-t border-border py-6 px-6 md:px-12 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <GraduationCap className="w-3.5 h-3.5" />
-          <span>Fiskpath &copy; 2026</span>
+          <span>FiskGrad &copy; 2026</span>
         </div>
         <div className="flex gap-4">
           <Link href="/" className="hover:text-foreground transition-colors">Home</Link>

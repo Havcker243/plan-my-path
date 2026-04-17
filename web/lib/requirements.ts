@@ -36,7 +36,13 @@ export interface AuditGroup {
   label: RequirementLabel;
   courses: RequirementCourseRow[];
   completedCredits: number;
+  plannedCredits: number;
   totalCredits: number;
+  requiredCredits: number | null;
+  requiredCourses: number | null;
+  isCreditBased: boolean;
+  isSatisfied: boolean;
+  progressLabel: string;
 }
 
 export interface RequirementsViewModel {
@@ -54,6 +60,25 @@ function mapLabel(label: string): RequirementLabel {
   if (label === "Group Choice") return "group";
   if (label === "Major Elective") return "elective";
   return "general";
+}
+
+function isCreditBasedGroup(groupType: string): boolean {
+  return groupType === "credit_threshold" || groupType === "fill_remaining";
+}
+
+function getRequiredCredits(entry: CourseLabelEntry): number | null {
+  return entry.credits_required_min ?? entry.credits_required_max ?? null;
+}
+
+function formatProgressLabel(group: Pick<AuditGroup, "completedCredits" | "plannedCredits" | "totalCredits" | "requiredCredits" | "requiredCourses" | "isCreditBased" | "courses">): string {
+  if (group.isCreditBased && group.requiredCredits != null) {
+    return `${Math.min(group.completedCredits, group.requiredCredits)}/${group.requiredCredits} cr`;
+  }
+  if (group.requiredCourses != null) {
+    const completed = group.courses.filter((course) => course.status === "completed").length;
+    return `${Math.min(completed, group.requiredCourses)}/${group.requiredCourses} courses`;
+  }
+  return `${group.completedCredits}/${group.totalCredits} cr`;
 }
 
 // ─── Engine ───────────────────────────────────────────────────────────────────
@@ -126,7 +151,13 @@ export function buildRequirementsViewModel(
         label: mapLabel(entry.label),
         courses: [],
         completedCredits: 0,
+        plannedCredits: 0,
         totalCredits: 0,
+        requiredCredits: getRequiredCredits(entry),
+        requiredCourses: entry.courses_required ?? null,
+        isCreditBased: isCreditBasedGroup(entry.group_type),
+        isSatisfied: false,
+        progressLabel: "",
       };
     }
     const status: CourseStatus = completedIds.has(code)
@@ -134,14 +165,27 @@ export function buildRequirementsViewModel(
       : plannedIds.has(code)
       ? "planned"
       : "missing";
-    const cr = entry.credits ?? 0;
+    const cr = planCatalog[code]?.credits ?? entry.credits ?? 0;
     auditMap[gKey].courses.push({ code, title: entry.detail || code, credits: cr, status, prereqs: [] });
     auditMap[gKey].totalCredits += cr;
     if (status === "completed") auditMap[gKey].completedCredits += cr;
+    if (status === "planned") auditMap[gKey].plannedCredits += cr;
   });
 
   // Sort courses within each audit group
-  Object.values(auditMap).forEach((g) => g.courses.sort((a, b) => a.code.localeCompare(b.code)));
+  Object.values(auditMap).forEach((g) => {
+    g.courses.sort((a, b) => a.code.localeCompare(b.code));
+    const completedCourses = g.courses.filter((course) => course.status === "completed").length;
+    if (g.isCreditBased && g.requiredCredits != null) {
+      g.totalCredits = g.requiredCredits;
+      g.isSatisfied = g.completedCredits >= g.requiredCredits;
+    } else if (g.requiredCourses != null) {
+      g.isSatisfied = completedCourses >= g.requiredCourses;
+    } else {
+      g.isSatisfied = g.courses.length > 0 && g.courses.every((course) => course.status === "completed");
+    }
+    g.progressLabel = formatProgressLabel(g);
+  });
 
   // Sort audit groups by label priority
   const labelOrder: RequirementLabel[] = ["required", "group", "elective", "general"];

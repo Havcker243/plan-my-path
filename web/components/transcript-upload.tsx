@@ -67,6 +67,14 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
       setState({ phase: "error", message: "Please upload a PDF file." });
       return;
     }
+    if (file.type && file.type !== "application/pdf") {
+      setState({ phase: "error", message: "Please upload a valid PDF file." });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setState({ phase: "error", message: "Transcript PDFs must be 10 MB or smaller." });
+      return;
+    }
 
     setState({ phase: "parsing" });
 

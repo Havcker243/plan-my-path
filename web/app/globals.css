@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Fiskpath Design System — Light mode */
+  /* FiskGrad Design System — Light mode */
   /* Primary: Deep Navy #0F1F3D, Accent: Indigo #3B5BDB, Neutrals: white/slate, Status colors */
   --background: oklch(0.99 0 0);
   --foreground: oklch(0.13 0.028 265);

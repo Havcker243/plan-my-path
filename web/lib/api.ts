@@ -140,6 +140,9 @@ export interface CourseLabelEntry {
   group_type: string;
   detail: string;
   credits: number | null;
+  credits_required_min?: number | null;
+  credits_required_max?: number | null;
+  courses_required?: number | null;
 }
 
 export interface ElectiveRule {

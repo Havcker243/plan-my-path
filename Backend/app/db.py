@@ -155,6 +155,9 @@ class CourseLabelEntry(TypedDict):
     group_type: str
     detail: str
     credits: Optional[float]
+    credits_required_min: Optional[int]
+    credits_required_max: Optional[int]
+    courses_required: Optional[int]
 
 
 class ElectiveRule(TypedDict):
@@ -938,7 +941,10 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                     rg.group_id,
                     rg.group_name,
                     rg.group_type,
-                    rg.description
+                    rg.description,
+                    rg.credits_required_min,
+                    rg.credits_required_max,
+                    rg.courses_required
                 FROM requirement_courses rc
                 JOIN requirement_groups rg ON rg.id = rc.group_id
                 JOIN majors m ON m.id = rg.major_id
@@ -952,7 +958,19 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
             labels: dict[str, CourseLabelEntry] = {}
 
             for row in rows:
-                course_code, course_name, credits, is_required, group_id, group_name, group_type, description = row
+                (
+                    course_code,
+                    course_name,
+                    credits,
+                    is_required,
+                    group_id,
+                    group_name,
+                    group_type,
+                    description,
+                    credits_required_min,
+                    credits_required_max,
+                    courses_required,
+                ) = row
 
                 # Determine label based on group type
                 if group_type == 'all_of':
@@ -979,6 +997,9 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                         'group_type': group_type,
                         'detail': detail,
                         'credits': credits,
+                        'credits_required_min': credits_required_min,
+                        'credits_required_max': credits_required_max,
+                        'courses_required': courses_required,
                     }
 
             # Get major electives rules
@@ -1055,6 +1076,9 @@ def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseL
                                     'group_type': 'credit_threshold',
                                     'detail': f"{subject_code} {min_level}+ level",
                                     'credits': None,
+                                    'credits_required_min': None,
+                                    'credits_required_max': None,
+                                    'courses_required': None,
                                 }
             except (ValueError, IndexError):
                 pass
@@ -1066,6 +1090,9 @@ def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseL
         'group_type': 'fill_remaining',
         'detail': 'Counts toward 120 total credits',
         'credits': None,
+        'credits_required_min': None,
+        'credits_required_max': None,
+        'courses_required': None,
     }
 
 

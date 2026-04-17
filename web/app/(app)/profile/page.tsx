@@ -84,6 +84,17 @@ export default function ProfilePage() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      toast.error("Upload a JPG, PNG, or WebP image");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Profile picture must be 2 MB or smaller");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => setAvatar(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -92,11 +103,11 @@ export default function ProfilePage() {
       const supabase = getSupabase();
       const userId = user?.id;
       if (!userId) throw new Error("Not authenticated");
-      const ext = file.name.split(".").pop() ?? "jpg";
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${userId}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("ProfilePictures")
-        .upload(path, file, { upsert: true });
+        .upload(path, file, { contentType: file.type, upsert: true });
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from("ProfilePictures").getPublicUrl(path);
       setAvatar(data.publicUrl);
@@ -390,7 +401,7 @@ export default function ProfilePage() {
             <AlertDialogTitle>Delete your account?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete your plan, profile, and all course data.
-              Your Fiskpath account will be removed and you will be signed out.
+              Your FiskGrad account will be removed and you will be signed out.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

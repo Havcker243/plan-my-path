@@ -536,55 +536,57 @@ export async function fillCustomBalanceSheetPdf(input: {
     });
   });
 
+  // Group matches by page so we can estimate column positions per page.
+  const byPage = new Map<number, { match: BalanceSheetPdfMatch; row: BalanceSheetRow }[]>();
   input.matches.forEach((match) => {
     const row = rows.get(normalizePdfCourseCode(match.course_code));
     if (!row) return;
-    const page = doc.getPages()[match.page];
+    const bucket = byPage.get(match.page) ?? [];
+    bucket.push({ match, row });
+    byPage.set(match.page, bucket);
+  });
+
+  byPage.forEach((entries, pageIndex) => {
+    const page = doc.getPages()[pageIndex];
     if (!page) return;
 
-    const size = Math.max(8, Math.min(10, match.font_size || 9));
-    const mark = row.status === "completed" ? "X" : row.status === "planned" ? "N" : "";
-    const grade = row.grade ?? (row.status === "planned" ? "N" : "");
-    const term = row.termCode ?? "";
-    const credits = row.actualCredits ?? row.templateCredits;
-    const y = match.y - 1;
+    const { width: pageWidth } = page.getSize();
 
-    if (mark) {
-      page.drawText(mark, {
-        x: Math.max(10, match.x - 20),
-        y,
-        size,
-        font: bold,
-        color: rgb(0, 0, 0),
-      });
-    }
-    if (grade) {
-      page.drawText(grade, {
-        x: match.x + 190,
-        y,
-        size,
-        font: regular,
-        color: rgb(0, 0, 0),
-      });
-    }
-    if (term) {
-      page.drawText(term, {
-        x: match.x + 230,
-        y,
-        size,
-        font: regular,
-        color: rgb(0, 0, 0),
-      });
-    }
-    if (credits != null) {
-      page.drawText(String(credits), {
-        x: match.x + 278,
-        y,
-        size,
-        font: regular,
-        color: rgb(0, 0, 0),
-      });
-    }
+    // Estimate where the course-code column starts (median x of all matches).
+    const xValues = entries.map(({ match }) => match.x).sort((a, b) => a - b);
+    const courseCodeX = xValues[Math.floor(xValues.length / 2)] ?? 60;
+
+    // Place the mark just to the left of the course code column.
+    const markX = Math.max(8, courseCodeX - 16);
+
+    // Place grade/term/credits in the right portion of the page, away from content.
+    // These land in the last ~180 pts of the page (standard letter: 612 pts wide).
+    const rightEdge = pageWidth - 12;
+    const creditsX = rightEdge - 24;
+    const termX = creditsX - 44;
+    const gradeX = termX - 32;
+
+    entries.forEach(({ match, row }) => {
+      const size = Math.max(8, Math.min(10, match.font_size || 9));
+      const mark = row.status === "completed" ? "X" : row.status === "planned" ? "·" : "";
+      const grade = row.grade ?? "";
+      const term = row.termCode ?? "";
+      const credits = row.actualCredits ?? row.templateCredits;
+      const y = match.y - 1;
+
+      if (mark) {
+        page.drawText(mark, { x: markX, y, size, font: bold, color: rgb(0, 0, 0) });
+      }
+      if (grade) {
+        page.drawText(grade, { x: gradeX, y, size, font: regular, color: rgb(0, 0, 0) });
+      }
+      if (term) {
+        page.drawText(term, { x: termX, y, size, font: regular, color: rgb(0, 0, 0) });
+      }
+      if (credits != null) {
+        page.drawText(String(credits), { x: creditsX, y, size, font: regular, color: rgb(0, 0, 0) });
+      }
+    });
   });
 
   return doc.save();

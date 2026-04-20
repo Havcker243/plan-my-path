@@ -780,22 +780,7 @@ export default function BalanceSheetPage() {
                     ) : (
                       <Download className="w-4 h-4" />
                     )}
-                    Export Filled Source
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => {
-                      if (!customFileUrl) return;
-                      const a = document.createElement("a");
-                      a.href = customFileUrl;
-                      a.download = customFile.name;
-                      a.click();
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Download Source
+                    Download Filled Balance Sheet
                   </Button>
                   <Button
                     variant="outline"
@@ -808,9 +793,11 @@ export default function BalanceSheetPage() {
                   </Button>
                   <span className="basis-full text-[11px] text-muted-foreground">
                     {customScanLoading
-                      ? "Scanning course rows..."
+                      ? "Scanning for course codes in your balance sheet..."
                       : customScanMethod
-                        ? `${customMatches.length} rows matched${customScanMethod === "ocr" ? ` by OCR (${Math.round(customScanConfidence * 100)}% confidence)` : customScanMethod === "docx" ? " from Word document" : " from PDF text"}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}`
+                        ? customMatches.length === 0
+                          ? "No course codes from your plan were found in this file. Check that the file contains readable text."
+                          : `${customMatches.length} course${customMatches.length === 1 ? "" : "s"} matched from your plan${customScanMethod === "ocr" ? ` via OCR (${Math.round(customScanConfidence * 100)}% confidence)` : customScanMethod === "docx" ? " in Word document" : " in PDF"}${customUnmatchedCount > 0 ? ` · ${customUnmatchedCount} not found in file` : ""} — click Download to get the filled version.`
                         : "Upload a PDF or Word (.docx) balance sheet to auto-fill from your plan."}
                   </span>
                 </>

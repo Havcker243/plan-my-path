@@ -265,25 +265,41 @@ def fill_balance_sheet_docx(file_bytes: bytes, rows: Iterable[dict]) -> bytes:
     }
     applied: set[str] = set()
 
+    def _matched_row(text: str) -> tuple[str, dict] | None:
+        for match in RE_COURSE_CODE.finditer(text or ""):
+            code = normalize_code(f"{match.group(1)} {match.group(2)}")
+            row = row_map.get(code)
+            if row and code not in applied:
+                return code, row
+        return None
+
     def _fill_text_container(paragraphs) -> None:
         for paragraph in paragraphs:
             text = paragraph.text or ""
-            for match in RE_COURSE_CODE.finditer(text):
-                code = normalize_code(f"{match.group(1)} {match.group(2)}")
-                row = row_map.get(code)
-                if not row or code in applied:
-                    continue
-                marker = _docx_marker(row)
-                if marker:
-                    run = paragraph.add_run(f"  {marker}")
-                    run.bold = True
-                applied.add(code)
+            match = _matched_row(text)
+            if not match:
+                continue
+            code, row = match
+            marker = _docx_marker(row)
+            if marker:
+                run = paragraph.add_run(f"  {marker}")
+                run.bold = True
+            applied.add(code)
 
     _fill_text_container(doc.paragraphs)
 
     seen_cells: set[int] = set()
     for table in doc.tables:
+        header_map = _docx_table_header_map(table)
         for table_row in table.rows:
+            row_text = " | ".join(" ".join(cell.text.split()) for cell in table_row.cells if cell.text.strip())
+            match = _matched_row(row_text)
+            if match:
+                code, row = match
+                if _fill_docx_table_row(table_row, row, header_map):
+                    applied.add(code)
+                    continue
+
             for cell in table_row.cells:
                 cell_id = id(cell._tc)
                 if cell_id in seen_cells:
@@ -294,6 +310,119 @@ def fill_balance_sheet_docx(file_bytes: bytes, rows: Iterable[dict]) -> bytes:
     output = io.BytesIO()
     doc.save(output)
     return output.getvalue()
+
+
+def _docx_table_header_map(table) -> dict[str, int]:
+    header_map: dict[str, int] = {}
+    for table_row in table.rows[:6]:
+        for index, cell in enumerate(table_row.cells):
+            text = " ".join(cell.text.lower().split())
+            if not text:
+                continue
+            if "grade" in text and "grade" not in header_map:
+                header_map["grade"] = index
+            if (
+                ("semester earned" in text or "term" in text or text == "semester")
+                and "term" not in header_map
+            ):
+                header_map["term"] = index
+            if ("comment" in text or "note" in text or "status" in text) and "status" not in header_map:
+                header_map["status"] = index
+            if (
+                ("credit hour" in text or text in {"credits", "credit", "hours"})
+                and "credits" not in header_map
+            ):
+                header_map["credits"] = index
+    return header_map
+
+
+def _fill_docx_table_row(table_row, row: dict, header_map: dict[str, int]) -> bool:
+    cells = table_row.cells
+    if not cells:
+        return False
+
+    code_cell_index = 0
+    for index, cell in enumerate(cells):
+        if RE_COURSE_CODE.search(cell.text or ""):
+            code_cell_index = index
+            break
+
+    wrote = False
+
+    def write_mapped(field: str, value: str) -> bool:
+        if not value:
+            return False
+        index = header_map.get(field)
+        if index is None or index >= len(cells) or index == code_cell_index:
+            return False
+        return _write_docx_cell(cells[index], value, append=field == "status")
+
+    grade = str(row.get("grade") or "").strip()
+    term = str(row.get("term") or "").strip()
+    credits = str(row.get("credits") or "").strip()
+    status = _docx_status_label(row)
+
+    wrote = write_mapped("grade", grade) or wrote
+    wrote = write_mapped("term", term) or wrote
+    wrote = write_mapped("status", status) or wrote
+
+    # Only fill credits when the mapped cell is blank. Most balance sheets
+    # already contain official credit-hour values that should stay untouched.
+    credits_index = header_map.get("credits")
+    if credits and credits_index is not None and credits_index < len(cells):
+        credit_cell = cells[credits_index]
+        if not credit_cell.text.strip():
+            wrote = _write_docx_cell(credit_cell, credits) or wrote
+
+    if wrote:
+        return True
+
+    fallback_values = [value for value in [grade, term, status] if value]
+    for cell in cells[code_cell_index + 1:]:
+        if not fallback_values:
+            break
+        if cell.text.strip():
+            continue
+        wrote = _write_docx_cell(cell, fallback_values.pop(0)) or wrote
+
+    if wrote:
+        return True
+
+    marker = _docx_marker(row)
+    if marker:
+        return _append_docx_cell(cells[code_cell_index], marker)
+    return False
+
+
+def _write_docx_cell(cell, value: str, append: bool = False) -> bool:
+    value = value.strip()
+    if not value:
+        return False
+    if cell.text.strip():
+        if not append:
+            return False
+        return _append_docx_cell(cell, value)
+    cell.text = value
+    return True
+
+
+def _append_docx_cell(cell, value: str) -> bool:
+    value = value.strip()
+    if not value:
+        return False
+    paragraph = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph()
+    run = paragraph.add_run(f" {value}")
+    run.bold = True
+    return True
+
+
+def _docx_status_label(row: dict) -> str:
+    status = str(row.get("status") or "").strip().lower()
+    if status == "completed":
+        return "Completed"
+    if status == "planned":
+        return "Planned"
+    return ""
 
 
 def _docx_marker(row: dict) -> str:

@@ -12,3 +12,4 @@ openai
 PyMuPDF
 pytesseract
 Pillow
+python-docx

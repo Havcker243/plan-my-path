@@ -83,7 +83,7 @@ export default function BalanceSheetPage() {
   const [customScanLoading, setCustomScanLoading] = useState(false);
   const [customMatches, setCustomMatches] = useState<BalanceSheetPdfMatch[]>([]);
   const [customUnmatchedCount, setCustomUnmatchedCount] = useState(0);
-  const [customScanMethod, setCustomScanMethod] = useState<"text" | "ocr" | null>(null);
+  const [customScanMethod, setCustomScanMethod] = useState<"text" | "ocr" | "docx" | null>(null);
   const [customScanConfidence, setCustomScanConfidence] = useState(0);
   const [rowOverrides, setRowOverrides] = useState<RowOverrideMap>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -155,27 +155,52 @@ export default function BalanceSheetPage() {
     }
   };
 
+  const isDocxFile = (f: File) =>
+    f.name.toLowerCase().endsWith(".docx") ||
+    f.name.toLowerCase().endsWith(".doc") ||
+    f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    f.type === "application/msword";
+
   const handleDownloadFilledCustomPdf = async () => {
     if (!customFile || !workingModel) return;
-    if (customFile.type !== "application/pdf") {
-      toast.error("Custom fill currently supports searchable PDFs. Word and image OCR are next.");
-      return;
-    }
+
     if (customMatches.length === 0) {
-      toast.error("No course rows were found to fill on this PDF.");
+      toast.error("No course codes were found in that file. Nothing to export.");
       return;
     }
 
     setExportingCustomPdf(true);
     try {
-      const pdfBytes = await fillCustomBalanceSheetPdf({
-        file: customFile,
-        matches: customMatches,
-        groups: workingModel.groups,
-      });
-      downloadPdf(pdfBytes, `${safeFilePart(studentName)}-custom-balance-sheet-filled.pdf`);
+      let pdfBytes: Uint8Array;
+
+      if (isDocxFile(customFile)) {
+        // Word doc: generate a fresh FiskGrad-formatted PDF with matched data
+        pdfBytes = await fillBalanceSheetPdf({
+          studentName,
+          majorCode: workingModel.majorCode,
+          majorName: majorName ?? workingModel.majorName,
+          gpa: profile?.gpa != null ? Number(profile.gpa) : null,
+          entryLabel,
+          gradLabel,
+          creditsEarned: workingCreditsEarned,
+          creditsRequired: workingModel.totalCreditsRequired ?? degreeCreditTotal,
+          degreeType: workingModel.degreeType ?? "B.S.",
+          groups: workingModel.groups,
+          printNotes: workingModel.printNotes,
+          printDate: new Date().toLocaleDateString(),
+        });
+      } else {
+        // PDF: write marks directly into the original file
+        pdfBytes = await fillCustomBalanceSheetPdf({
+          file: customFile,
+          matches: customMatches,
+          groups: workingModel.groups,
+        });
+      }
+
+      downloadPdf(pdfBytes, `${safeFilePart(studentName)}-balance-sheet-filled.pdf`);
     } catch {
-      toast.error("Could not export the filled custom balance sheet");
+      toast.error("Could not export the filled balance sheet");
     } finally {
       setExportingCustomPdf(false);
     }
@@ -206,7 +231,15 @@ export default function BalanceSheetPage() {
   }, [customFile]);
 
   useEffect(() => {
-    if (!customFile || customFile.type !== "application/pdf" || !accessToken || templateCourseCodes.length === 0) {
+    const isScannable = customFile && (
+      customFile.type === "application/pdf" ||
+      customFile.name.toLowerCase().endsWith(".pdf") ||
+      customFile.name.toLowerCase().endsWith(".docx") ||
+      customFile.name.toLowerCase().endsWith(".doc") ||
+      customFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      customFile.type === "application/msword"
+    );
+    if (!isScannable || !accessToken || templateCourseCodes.length === 0) {
       setCustomMatches([]);
       setCustomUnmatchedCount(0);
       setCustomScanMethod(null);
@@ -752,11 +785,11 @@ export default function BalanceSheetPage() {
                     Replace File
                   </Button>
                   <span className="basis-full text-[11px] text-muted-foreground">
-                    {customFile.type === "application/pdf"
-                      ? customScanLoading
-                        ? "Scanning course rows..."
-                        : `${customMatches.length} rows matched by ${customScanMethod === "ocr" ? "OCR" : "PDF text"}${customScanMethod === "ocr" ? ` (${Math.round(customScanConfidence * 100)}% confidence)` : ""}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}`
-                      : "Searchable PDF fill is supported now. Word/image OCR comes next."}
+                    {customScanLoading
+                      ? "Scanning course rows..."
+                      : customScanMethod
+                        ? `${customMatches.length} rows matched${customScanMethod === "ocr" ? ` by OCR (${Math.round(customScanConfidence * 100)}% confidence)` : customScanMethod === "docx" ? " from Word document" : " from PDF text"}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}${customScanMethod === "docx" ? " · Export generates a new FiskGrad PDF" : ""}`
+                        : "Upload a PDF or Word (.docx) balance sheet to auto-fill from your plan."}
                   </span>
                 </>
               ) : (

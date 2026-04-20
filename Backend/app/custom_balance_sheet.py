@@ -174,6 +174,72 @@ def _scan_with_ocr(file_bytes: bytes, wanted: set[str]) -> dict | None:
     }
 
 
+def scan_balance_sheet_docx(file_bytes: bytes, course_codes: Iterable[str]) -> dict:
+    """
+    Extract course codes from a Word (.docx) balance sheet.
+    Returns matches in the same shape as scan_balance_sheet_pdf but with
+    placeholder coordinates (x=0, y=0) since we generate a new PDF on export.
+    """
+    try:
+        from docx import Document
+    except ImportError:
+        return {
+            "method": "docx",
+            "confidence": 0,
+            "matches": [],
+            "unmatched_codes": sorted(course_codes),
+            "warning": "python-docx is not installed on this server.",
+        }
+
+    wanted = {normalize_code(code) for code in course_codes if code.strip()}
+    if not wanted:
+        return {"method": "docx", "confidence": 0, "matches": [], "unmatched_codes": []}
+
+    try:
+        doc = Document(io.BytesIO(file_bytes))
+    except Exception:
+        return {
+            "method": "docx",
+            "confidence": 0,
+            "matches": [],
+            "unmatched_codes": sorted(wanted),
+            "warning": "Could not open the Word document.",
+        }
+
+    found: set[str] = set()
+    matches: list[dict] = []
+
+    def _scan_text(text: str) -> None:
+        for match in RE_COURSE_CODE.finditer(text):
+            code = normalize_code(f"{match.group(1)} {match.group(2)}")
+            if code in wanted and code not in found:
+                found.add(code)
+                matches.append({
+                    "course_code": code,
+                    "page": 0,
+                    "x": 0,
+                    "y": 0,
+                    "font_size": 9,
+                    "line_text": text[:240],
+                    "confidence": 1,
+                })
+
+    for para in doc.paragraphs:
+        _scan_text(para.text)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                _scan_text(cell.text)
+
+    return {
+        "method": "docx",
+        "confidence": 1 if matches else 0,
+        "matches": matches,
+        "unmatched_codes": sorted(wanted - found),
+    }
+
+
 def _ocr_course_candidate(data: dict, index: int, count: int) -> dict | None:
     word = str(data["text"][index] or "").strip().upper()
     next_word = str(data["text"][index + 1] or "").strip().upper() if index + 1 < count else ""

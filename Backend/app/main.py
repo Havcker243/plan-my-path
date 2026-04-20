@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import require_allowed_email, resolve_allowed_email_domains, resolve_jwt_secret, verify_token
 from app.advisor import stream_advisor_reply
-from app.custom_balance_sheet import scan_balance_sheet_pdf
+from app.custom_balance_sheet import scan_balance_sheet_pdf, scan_balance_sheet_docx
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
@@ -405,19 +405,30 @@ async def scan_custom_balance_sheet(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid scan payload")
 
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only searchable PDF balance sheets can be scanned right now.")
-    if file.content_type and file.content_type not in {"application/pdf", "application/x-pdf"}:
-        raise HTTPException(status_code=400, detail="Only searchable PDF balance sheets can be scanned right now.")
+    DOCX_TYPES = {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+    }
+    filename_lower = (file.filename or "").lower()
+    is_pdf = filename_lower.endswith(".pdf") or (file.content_type or "").startswith("application/pdf")
+    is_docx = filename_lower.endswith(".docx") or filename_lower.endswith(".doc") or file.content_type in DOCX_TYPES
+
+    if not is_pdf and not is_docx:
+        raise HTTPException(status_code=400, detail="Only PDF or Word (.docx) balance sheets are supported.")
 
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10 MB).")
-    if not contents.startswith(b"%PDF-"):
-        raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF.")
 
     try:
-        result = scan_balance_sheet_pdf(contents, payload.course_codes)
+        if is_docx:
+            result = scan_balance_sheet_docx(contents, payload.course_codes)
+        else:
+            if not contents.startswith(b"%PDF-"):
+                raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF.")
+            result = scan_balance_sheet_pdf(contents, payload.course_codes)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not scan balance sheet: {exc}")
 

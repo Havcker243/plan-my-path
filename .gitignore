@@ -18,6 +18,8 @@ dist-ssr
 .ennv
 Backend/.env
 Frontend/.env
+!Backend/.env.example
+!web/.env.example
 
 # Python
 __pycache__/

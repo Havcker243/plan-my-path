@@ -4,6 +4,7 @@ import {
   type BalanceSheetGroupConfig,
   type MajorTemplate,
   type TemplateCredits,
+  type TemplateCourse,
   type TemplateRequirementGroup,
 } from "@/lib/balance-sheet-templates";
 
@@ -290,7 +291,7 @@ export function buildBalanceSheetViewModel(
     const renderMode = getGroupRenderMode(group);
     const explicitCourses = group.courses ?? [];
     const explicitCodes = new Set(explicitCourses.map((course) => normalizeCode(course.course_code)));
-    const ruleMatchedCourses = Object.values(planCatalog)
+    const ruleMatchedCourses: TemplateCourse[] = Object.values(planCatalog)
       .filter((course) => !explicitCodes.has(normalizeCode(course.code)) && courseMatchesGroupRule(course.code, group))
       .map((course) => ({
         course_code: course.code,

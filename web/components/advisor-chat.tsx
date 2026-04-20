@@ -46,7 +46,16 @@ function MessageBubble({ msg }: { msg: AdvisorMessage }) {
             : "bg-muted text-foreground rounded-tl-sm"
         )}
       >
-        {isUser ? msg.content : renderContent(msg.content)}
+        {isUser ? (
+          msg.content
+        ) : msg.content ? (
+          renderContent(msg.content)
+        ) : (
+          <span className="inline-flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Thinking...
+          </span>
+        )}
       </div>
     </div>
   );
@@ -80,15 +89,29 @@ export default function AdvisorChat() {
       // Add an empty assistant bubble immediately so the user sees it start filling
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-      await callAdvisor(token, trimmed, messages, (chunk) => {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
-          }
-          return prev;
-        });
-      });
+      await callAdvisor(
+        token,
+        trimmed,
+        messages,
+        (chunk) => {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return [...prev.slice(0, -1), { ...last, content: last.content + chunk }];
+            }
+            return prev;
+          });
+        },
+        (reasoningDetails) => {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return [...prev.slice(0, -1), { ...last, reasoning_details: reasoningDetails }];
+            }
+            return prev;
+          });
+        }
+      );
     } catch (err) {
       console.error("[AdvisorChat] error:", err);
       const msg = err instanceof AdvisorBusyError
@@ -140,7 +163,7 @@ export default function AdvisorChat() {
           {messages.map((msg, i) => (
             <MessageBubble key={i} msg={msg} />
           ))}
-          {loading && (
+          {false && loading && (
             <div className="flex gap-3">
               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-4 h-4 text-primary" />

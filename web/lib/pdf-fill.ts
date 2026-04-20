@@ -12,6 +12,7 @@ import type {
   BalanceSheetRenderableRow,
   BalanceSheetRow,
 } from "@/lib/balance-sheet";
+import type { BalanceSheetPdfMatch } from "@/lib/api";
 
 export interface PdfFillInput {
   studentName: string;
@@ -512,4 +513,87 @@ export function downloadPdf(bytes: Uint8Array, filename: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+export async function fillCustomBalanceSheetPdf(input: {
+  file: File;
+  matches: BalanceSheetPdfMatch[];
+  groups: BalanceSheetGroupView[];
+}): Promise<Uint8Array> {
+  const bytes = await input.file.arrayBuffer();
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const regular = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const rows = new Map<string, BalanceSheetRow>();
+
+  input.groups.forEach((group) => {
+    flattenRowsToCourses(group.rows).forEach((row) => {
+      rows.set(normalizePdfCourseCode(row.code), row);
+    });
+  });
+
+  input.matches.forEach((match) => {
+    const row = rows.get(normalizePdfCourseCode(match.course_code));
+    if (!row) return;
+    const page = doc.getPages()[match.page];
+    if (!page) return;
+
+    const size = Math.max(8, Math.min(10, match.font_size || 9));
+    const mark = row.status === "completed" ? "X" : row.status === "planned" ? "N" : "";
+    const grade = row.grade ?? (row.status === "planned" ? "N" : "");
+    const term = row.termCode ?? "";
+    const credits = row.actualCredits ?? row.templateCredits;
+    const y = match.y - 1;
+
+    if (mark) {
+      page.drawText(mark, {
+        x: Math.max(10, match.x - 20),
+        y,
+        size,
+        font: bold,
+        color: rgb(0, 0, 0),
+      });
+    }
+    if (grade) {
+      page.drawText(grade, {
+        x: match.x + 190,
+        y,
+        size,
+        font: regular,
+        color: rgb(0, 0, 0),
+      });
+    }
+    if (term) {
+      page.drawText(term, {
+        x: match.x + 230,
+        y,
+        size,
+        font: regular,
+        color: rgb(0, 0, 0),
+      });
+    }
+    if (credits != null) {
+      page.drawText(String(credits), {
+        x: match.x + 278,
+        y,
+        size,
+        font: regular,
+        color: rgb(0, 0, 0),
+      });
+    }
+  });
+
+  return doc.save();
+}
+
+function flattenRowsToCourses(rows: BalanceSheetRenderableRow[]): BalanceSheetRow[] {
+  return rows.flatMap((row) => {
+    if (row.kind === "course") return [row];
+    if (row.kind === "course_pair") return row.courses;
+    return [];
+  });
+}
+
+function normalizePdfCourseCode(code: string): string {
+  return code.replace(/[-\s]+/g, " ").trim().toUpperCase();
 }

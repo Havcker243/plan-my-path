@@ -9,6 +9,7 @@ import {
   parseTranscriptPDF,
   type ParsedTranscriptCourse,
 } from "@/lib/api";
+import { getSupabase } from "@/lib/supabase";
 
 export interface TranscriptResult {
   courses: ParsedTranscriptCourse[];
@@ -79,7 +80,15 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
     setState({ phase: "parsing" });
 
     try {
-      const parsed = await parseTranscriptPDF(file);
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setState({ phase: "error", message: "Please sign in before uploading your transcript." });
+        return;
+      }
+
+      const parsed = await parseTranscriptPDF(file, token);
       if (parsed.courses.length === 0) {
         setState({
           phase: "error",

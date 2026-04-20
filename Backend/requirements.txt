@@ -8,4 +8,7 @@ uvicorn
 python-jose
 pypdf
 python-multipart
-google-generativeai
+openai
+PyMuPDF
+pytesseract
+Pillow

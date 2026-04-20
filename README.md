@@ -185,7 +185,7 @@ The intended GitHub repository and deployed product name is `fiskgrad`. The curr
 | Backend | FastAPI, Python |
 | Database | Supabase Postgres |
 | Auth | Supabase Auth |
-| AI | Gemini through the backend |
+| AI | OpenRouter through the OpenAI-compatible backend client |
 | Transcript Parsing | Python PDF parsing |
 | Calendar Export | Frontend-generated `.ics` files |
 | Deployment | Vercel frontend, Render backend |
@@ -324,14 +324,18 @@ SUPABASE_POOLER_URL=...
 SUPABASE_JWT_SECRET=...
 ALLOWED_EMAIL_DOMAINS=my.fisk.edu
 ALLOWED_ORIGINS=http://localhost:3000
-GEMINI_API_KEY=...
+OPENROUTER_API_KEY=...
+OPENROUTER_MODEL=openai/gpt-oss-120b:free
+OPENROUTER_SITE_URL=http://localhost:3000
+OPENROUTER_APP_NAME=FiskGrad
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
 Notes:
 
-- `GEMINI_API_KEY` is required only for the AI advisor endpoint.
+- `OPENROUTER_API_KEY` is required only for the AI advisor endpoint. The backend also accepts `OPENAI_API_KEY` as a fallback when using OpenRouter's OpenAI-compatible client, and it can read the old `GEMINI_API_KEY` name as a temporary legacy fallback.
+- `OPENROUTER_MODEL` defaults to `openai/gpt-oss-120b:free`.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for full backend account deletion.
 - `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` and `ALLOWED_EMAIL_DOMAINS` should stay aligned.
 - In production, `ALLOWED_ORIGINS` should include the deployed Vercel domain and should not be left as a wildcard.
@@ -396,7 +400,10 @@ SUPABASE_POOLER_URL=...
 SUPABASE_JWT_SECRET=...
 ALLOWED_EMAIL_DOMAINS=my.fisk.edu
 ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app
-GEMINI_API_KEY=...
+OPENROUTER_API_KEY=...
+OPENROUTER_MODEL=openai/gpt-oss-120b:free
+OPENROUTER_SITE_URL=https://your-vercel-domain.vercel.app
+OPENROUTER_APP_NAME=FiskGrad
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
@@ -435,7 +442,7 @@ The production build may require network access because Next.js can fetch config
 
 ## Current Status
 
-FiskGrad is best described as a deployable MVP or beta candidate, not a finished production system.
+FiskGrad is best described as a feature-complete MVP or beta candidate. Apart from testing, deployment, and production setup, the planned MVP product work is in place.
 
 The main product logic is in place:
 
@@ -445,7 +452,7 @@ The main product logic is in place:
 - requirement tracking
 - credit-threshold requirement groups
 - advisor-ready balance sheets
-- 14 supported major templates
+- 14 student-provided working major templates
 - custom PDF, Word, and image sheet preview
 - course search and sections
 - calendar export
@@ -459,7 +466,7 @@ Before treating it as production-ready, the remaining work should focus on:
 - running the Supabase hardening SQL in the real project
 - testing real Fisk student sign-up and login flows
 - testing transcript imports with multiple real transcript formats
-- verifying each balance-sheet template against the official source document
+- testing the student-provided balance-sheet templates inside the app with real student plans
 - adding end-to-end tests for transcript import, planner save, requirements, and balance sheet
 - confirming production CORS, headers, and environment variables
 - validating account deletion and data removal behavior

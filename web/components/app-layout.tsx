@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
-import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings } from "@/lib/data";
+import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings, getCompletedCredits } from "@/lib/data";
 import CommandSearch from "@/components/command-search";
 import { NAV_ITEMS } from "@/lib/nav";
 import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, semesters, planCatalog, labels, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
+  const { profile, semesters, planCatalog, labels, degreeCreditTotal, loading: planLoading, initialized, initError, profileLoaded } = usePlan();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -213,6 +213,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Graduation thread — only when expanded + data loaded */}
+        {!sidebarCollapsed && !planLoading && profile && degreeCreditTotal > 0 && (() => {
+          const done = getCompletedCredits(semesters, planCatalog);
+          const pct = Math.min(Math.round((done / degreeCreditTotal) * 100), 100);
+          const gradText = profile.graduation_term && profile.graduation_year
+            ? `${(profile.graduation_term as string).charAt(0).toUpperCase() + (profile.graduation_term as string).slice(1)} ${profile.graduation_year}`
+            : null;
+          return (
+            <div className="mx-3 mb-2 rounded-xl bg-sidebar-accent/60 border border-sidebar-border px-3 py-2.5">
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-sidebar-foreground/50 font-medium">Progress</span>
+                <span className="text-sidebar-foreground/80 font-bold tabular-nums">{done}/{degreeCreditTotal}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-sidebar-border overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber-400 transition-all duration-700"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              {gradText && (
+                <p className="text-[10px] text-amber-400 font-semibold flex items-center gap-1 mt-1.5">
+                  <GraduationCap className="w-3 h-3 flex-shrink-0" />
+                  {gradText}
+                </p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Bottom: sign out */}
         <div className={cn(

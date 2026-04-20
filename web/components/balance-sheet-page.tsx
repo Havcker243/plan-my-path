@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
   FileSpreadsheet,
   Printer,
@@ -14,7 +14,6 @@ import {
   Circle,
   AlertCircle,
   FileUp,
-  FileText,
   Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,11 +22,15 @@ import { cn, formatDisplayName } from "@/lib/utils";
 import { usePlan } from "@/contexts/plan-context";
 import {
   buildBalanceSheetViewModel,
+  type BalanceSheetGroupView,
   type BalanceSheetCoursePairRow,
   type BalanceSheetRenderableRow,
   type BalanceSheetRow,
+  type BalanceSheetViewModel,
 } from "@/lib/balance-sheet";
-import { downloadPdf, fillBalanceSheetPdf } from "@/lib/pdf-fill";
+import { scanCustomBalanceSheetPDF, type BalanceSheetPdfMatch } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
+import { downloadPdf, fillBalanceSheetPdf, fillCustomBalanceSheetPdf } from "@/lib/pdf-fill";
 import { toast } from "sonner";
 
 const STATUS_META = {
@@ -64,7 +67,11 @@ const GROUP_TONE_STYLES = {
   general: "bg-muted text-muted-foreground border-border",
 } as const;
 
+type RowOverride = Partial<Pick<BalanceSheetRow, "status" | "grade" | "termCode" | "actualCredits">>;
+type RowOverrideMap = Record<string, RowOverride>;
+
 export default function BalanceSheetPage() {
+  const { accessToken } = useAuth();
   const { profile, semesters, planCatalog, majors, degreeCreditTotal, loading } = usePlan();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [source, setSource] = useState<"system" | "custom">("system");
@@ -72,11 +79,26 @@ export default function BalanceSheetPage() {
   const [customFileUrl, setCustomFileUrl] = useState<string | null>(null);
   const [customLoading, setCustomLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingCustomPdf, setExportingCustomPdf] = useState(false);
+  const [customScanLoading, setCustomScanLoading] = useState(false);
+  const [customMatches, setCustomMatches] = useState<BalanceSheetPdfMatch[]>([]);
+  const [customUnmatchedCount, setCustomUnmatchedCount] = useState(0);
+  const [customScanMethod, setCustomScanMethod] = useState<"text" | "ocr" | null>(null);
+  const [customScanConfidence, setCustomScanConfidence] = useState(0);
+  const [rowOverrides, setRowOverrides] = useState<RowOverrideMap>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const model = useMemo(
     () => buildBalanceSheetViewModel(profile?.major_code, semesters, planCatalog),
     [profile?.major_code, semesters, planCatalog]
+  );
+  const workingModel = useMemo(
+    () => applyBalanceSheetOverrides(model, rowOverrides),
+    [model, rowOverrides]
+  );
+  const templateCourseCodes = useMemo(
+    () => getTemplateCourseCodes(model?.groups ?? []),
+    [model?.groups]
   );
 
   const majorName = formatDisplayName(
@@ -94,6 +116,10 @@ export default function BalanceSheetPage() {
     }, 0),
     [semesters, planCatalog]
   );
+  const workingCreditsEarned = useMemo(
+    () => getUniqueCompletedCredits(workingModel?.groups ?? []) ?? creditsEarned,
+    [workingModel?.groups, creditsEarned]
+  );
 
   const entryLabel = profile?.start_term && profile?.start_year
     ? `${profile.start_term.charAt(0).toUpperCase()}${profile.start_term.slice(1)} ${profile.start_year}`
@@ -103,22 +129,22 @@ export default function BalanceSheetPage() {
     : null;
 
   const handleDownloadPdf = async () => {
-    if (!model) return;
+    if (!workingModel) return;
 
     setExportingPdf(true);
     try {
       const pdfBytes = await fillBalanceSheetPdf({
         studentName,
-        majorCode: model.majorCode,
-        majorName: majorName ?? model.majorName,
+        majorCode: workingModel.majorCode,
+        majorName: majorName ?? workingModel.majorName,
         gpa: profile?.gpa != null ? Number(profile.gpa) : null,
         entryLabel,
         gradLabel,
-        creditsEarned,
-        creditsRequired: model.totalCreditsRequired ?? degreeCreditTotal,
-        degreeType: model.degreeType ?? "B.S.",
-        groups: model.groups,
-        printNotes: model.printNotes,
+        creditsEarned: workingCreditsEarned,
+        creditsRequired: workingModel.totalCreditsRequired ?? degreeCreditTotal,
+        degreeType: workingModel.degreeType ?? "B.S.",
+        groups: workingModel.groups,
+        printNotes: workingModel.printNotes,
         printDate: new Date().toLocaleDateString(),
       });
       downloadPdf(pdfBytes, `${safeFilePart(studentName)}-degree-audit.pdf`);
@@ -129,12 +155,42 @@ export default function BalanceSheetPage() {
     }
   };
 
+  const handleDownloadFilledCustomPdf = async () => {
+    if (!customFile || !workingModel) return;
+    if (customFile.type !== "application/pdf") {
+      toast.error("Custom fill currently supports searchable PDFs. Word and image OCR are next.");
+      return;
+    }
+    if (customMatches.length === 0) {
+      toast.error("No course rows were found to fill on this PDF.");
+      return;
+    }
+
+    setExportingCustomPdf(true);
+    try {
+      const pdfBytes = await fillCustomBalanceSheetPdf({
+        file: customFile,
+        matches: customMatches,
+        groups: workingModel.groups,
+      });
+      downloadPdf(pdfBytes, `${safeFilePart(studentName)}-custom-balance-sheet-filled.pdf`);
+    } catch {
+      toast.error("Could not export the filled custom balance sheet");
+    } finally {
+      setExportingCustomPdf(false);
+    }
+  };
+
   useEffect(() => {
     if (!customFile) {
       setCustomFileUrl((current) => {
         if (current) URL.revokeObjectURL(current);
         return null;
       });
+      setCustomMatches([]);
+      setCustomUnmatchedCount(0);
+      setCustomScanMethod(null);
+      setCustomScanConfidence(0);
       return;
     }
 
@@ -148,6 +204,45 @@ export default function BalanceSheetPage() {
       URL.revokeObjectURL(nextUrl);
     };
   }, [customFile]);
+
+  useEffect(() => {
+    if (!customFile || customFile.type !== "application/pdf" || !accessToken || templateCourseCodes.length === 0) {
+      setCustomMatches([]);
+      setCustomUnmatchedCount(0);
+      setCustomScanMethod(null);
+      setCustomScanConfidence(0);
+      return;
+    }
+
+    let cancelled = false;
+    setCustomScanLoading(true);
+    scanCustomBalanceSheetPDF(customFile, accessToken, templateCourseCodes)
+      .then((result) => {
+        if (cancelled) return;
+        setCustomMatches(result.matches);
+        setCustomUnmatchedCount(result.unmatched_codes.length);
+        setCustomScanMethod(result.method);
+        setCustomScanConfidence(result.confidence);
+        if (result.matches.length === 0) {
+          toast.warning(result.warning ?? "No course codes were found in that PDF.");
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setCustomMatches([]);
+        setCustomUnmatchedCount(0);
+        setCustomScanMethod(null);
+        setCustomScanConfidence(0);
+        toast.error(error instanceof Error ? error.message : "Could not scan that balance sheet");
+      })
+      .finally(() => {
+        if (!cancelled) setCustomScanLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, customFile, templateCourseCodes]);
 
   if (loading) {
     return (
@@ -165,7 +260,7 @@ export default function BalanceSheetPage() {
     );
   }
 
-  if (!model) {
+  if (!workingModel) {
     return (
       <div className="px-4 md:px-8 py-6 max-w-5xl mx-auto pb-8">
         <div className="rounded-xl border border-border bg-card p-6">
@@ -186,13 +281,15 @@ export default function BalanceSheetPage() {
     );
   }
 
+  const activeModel = workingModel;
+
   return (
     <div className="px-4 md:px-8 py-6 max-w-6xl mx-auto pb-8">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">Balance Sheet</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Advisor-facing degree sheet for {majorName ?? model.majorName}, filled from your current plan and transcript-backed progress.
+            Advisor-facing degree sheet for {majorName ?? activeModel.majorName}, filled from your current plan and transcript-backed progress.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -273,27 +370,27 @@ export default function BalanceSheetPage() {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">
               {source === "system"
-                ? model.sheetTitle
+                ? activeModel.sheetTitle
                 : customFile
                 ? customFile.name
                 : "Custom balance sheet"}
             </p>
             <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
               {source === "system"
-                ? "This version uses the system major template as the source of truth and now prints as an advisor-facing sheet."
+                ? "This version uses the system major template as the source of truth. You can adjust row status, grade, term, and credits before printing."
                 : customFile
-                ? "You are viewing your uploaded balance sheet source. This path is local to the current browser session for now."
-                : "Upload a PDF, Word document, or image version of your own balance sheet to use it as the source instead of the FiskGrad template."}
+                ? "Your uploaded source stays beside the editable working sheet, so you can mark rows while checking the original balance sheet."
+                : "Upload a PDF, Word document, or image version of your own balance sheet, then use the editable working sheet to mark requirements."}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="rounded-full bg-background border border-border px-3 py-1 text-xs text-foreground">
-                {source === "system" ? model.sourceLabel : "Custom source"}
+                {source === "system" ? activeModel.sourceLabel : "Custom source"}
               </span>
               <span className="rounded-full bg-background border border-border px-3 py-1 text-xs text-foreground">
-                {source === "system" ? "Print layout ready" : "Upload preview"}
+                {source === "system" ? "Print layout ready" : "Editable working copy"}
               </span>
               <span className="rounded-full bg-background border border-border px-3 py-1 text-xs text-foreground">
-                {source === "system" ? "Grouped requirements" : "Persistence next"}
+                {source === "system" ? "Grouped requirements" : "Original source + edits"}
               </span>
             </div>
           </div>
@@ -304,20 +401,20 @@ export default function BalanceSheetPage() {
       <div className="hidden print:block mb-6">
         <div className="text-center mb-4">
           <p className="text-base font-bold tracking-wide uppercase">Fisk University</p>
-          <p className="text-sm font-semibold mt-0.5">{majorName ?? model.majorName} — Degree Evaluation Balance Sheet</p>
+          <p className="text-sm font-semibold mt-0.5">{majorName ?? activeModel.majorName} — Degree Evaluation Balance Sheet</p>
         </div>
         <table className="w-full text-sm border border-black" style={{ borderCollapse: "collapse" }}>
           <tbody>
             <tr>
               <td className="px-3 py-1.5 border border-black w-1/4"><span className="font-semibold">Student:</span> {studentName}</td>
-              <td className="px-3 py-1.5 border border-black w-1/4"><span className="font-semibold">Major:</span> {majorName ?? model.majorName}</td>
+              <td className="px-3 py-1.5 border border-black w-1/4"><span className="font-semibold">Major:</span> {majorName ?? activeModel.majorName}</td>
               <td className="px-3 py-1.5 border border-black w-1/4"><span className="font-semibold">Entry:</span> {entryLabel ?? "—"}</td>
               <td className="px-3 py-1.5 border border-black w-1/4"><span className="font-semibold">Exp. Grad:</span> {gradLabel ?? "—"}</td>
             </tr>
             <tr>
               <td className="px-3 py-1.5 border border-black"><span className="font-semibold">GPA:</span> {profile?.gpa != null ? Number(profile.gpa).toFixed(2) : "—"}</td>
-              <td className="px-3 py-1.5 border border-black"><span className="font-semibold">Credits Earned:</span> {creditsEarned} / {model.totalCreditsRequired ?? degreeCreditTotal}</td>
-              <td className="px-3 py-1.5 border border-black"><span className="font-semibold">Degree:</span> {model.degreeType ?? "B.S."}</td>
+              <td className="px-3 py-1.5 border border-black"><span className="font-semibold">Credits Earned:</span> {workingCreditsEarned} / {activeModel.totalCreditsRequired ?? degreeCreditTotal}</td>
+              <td className="px-3 py-1.5 border border-black"><span className="font-semibold">Degree:</span> {activeModel.degreeType ?? "B.S."}</td>
               <td className="px-3 py-1.5 border border-black"><span className="font-semibold">Sheet date:</span> {new Date().toLocaleDateString()}</td>
             </tr>
           </tbody>
@@ -330,22 +427,22 @@ export default function BalanceSheetPage() {
             {[
               {
                 label: "Completed Rows",
-                value: model.completedRows,
+                value: activeModel.completedRows,
                 sub: "template rows matched to completed plan courses",
               },
               {
                 label: "Planned Rows",
-                value: model.plannedRows,
+                value: activeModel.plannedRows,
                 sub: "future rows already tagged from your planner",
               },
               {
                 label: "Requirement Groups",
-                value: model.groups.length,
+                value: activeModel.groups.length,
                 sub: "sections carried over from the balance sheet",
               },
               {
                 label: "Degree Target",
-                value: model.totalCreditsRequired ?? degreeCreditTotal,
+                value: activeModel.totalCreditsRequired ?? degreeCreditTotal,
                 sub: "program total used for the final print view",
               },
             ].map((card, index) => (
@@ -378,7 +475,7 @@ export default function BalanceSheetPage() {
               </div>
 
               <div className={cn("divide-y divide-border", isBusinessLayout && "bg-amber-50/20")}>
-                {model.groups.map((group) => {
+                {activeModel.groups.map((group) => {
                   const resolvedOpen = expandedGroups[group.id] ?? (group.defaultExpanded || group.completedCount > 0 || group.plannedCount > 0);
                   return (
                     <div key={group.id}>
@@ -458,7 +555,12 @@ export default function BalanceSheetPage() {
                                 <tbody className="divide-y divide-border">
                                   {group.rows.length > 0 ? (
                                     group.rows.map((row, index) => (
-                                      <BalanceSheetRenderRow key={`${group.id}-${getRowKey(row, index)}`} row={row} />
+                                      <BalanceSheetRenderRow
+                                        key={`${group.id}-${getRowKey(row, index)}`}
+                                        row={row}
+                                        editable
+                                        onRowChange={(code, patch) => updateRowOverride(setRowOverrides, code, patch)}
+                                      />
                                     ))
                                   ) : (
                                     <tr>
@@ -497,13 +599,13 @@ export default function BalanceSheetPage() {
               <tbody>
                 <tr>
                   <td className="px-3 py-2 border border-black w-1/3">
-                    <span className="font-semibold">Total Credits Earned:</span> {creditsEarned}
+                    <span className="font-semibold">Total Credits Earned:</span> {workingCreditsEarned}
                   </td>
                   <td className="px-3 py-2 border border-black w-1/3">
-                    <span className="font-semibold">Credits Required:</span> {model.totalCreditsRequired ?? degreeCreditTotal}
+                    <span className="font-semibold">Credits Required:</span> {activeModel.totalCreditsRequired ?? degreeCreditTotal}
                   </td>
                   <td className="px-3 py-2 border border-black w-1/3">
-                    <span className="font-semibold">Remaining:</span> {Math.max(0, (model.totalCreditsRequired ?? degreeCreditTotal) - creditsEarned)}
+                    <span className="font-semibold">Remaining:</span> {Math.max(0, (activeModel.totalCreditsRequired ?? degreeCreditTotal) - workingCreditsEarned)}
                   </td>
                 </tr>
                 <tr>
@@ -524,7 +626,7 @@ export default function BalanceSheetPage() {
           </div>
         </>
       ) : (
-        <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-4 print:block">
+        <div className="grid xl:grid-cols-[0.9fr_1.1fr] gap-4 print:block">
           <motion.div
             className="rounded-xl border border-border bg-card overflow-hidden"
             initial={{ opacity: 0, y: 24 }}
@@ -534,7 +636,7 @@ export default function BalanceSheetPage() {
             <div className="px-5 py-4 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Custom Balance Sheet</p>
               <p className="text-xs text-muted-foreground mt-0.5 print:hidden">
-                Uploaded file preview for the current session.
+                Uploaded source for the current session.
               </p>
             </div>
 
@@ -566,60 +668,101 @@ export default function BalanceSheetPage() {
               </div>
             )}
           </motion.div>
-
           <motion.div
-            className="rounded-xl border border-border bg-card p-5 h-fit print:hidden"
+            className="rounded-xl border border-border bg-card overflow-hidden print:block"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.08, ease: "easeOut" }}
           >
-            {customLoading ? (
-              <div className="flex flex-col items-center gap-3 py-4">
-                <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                <p className="text-sm font-medium text-foreground">Processing your balance sheet…</p>
-                <p className="text-xs text-muted-foreground text-center">Getting everything ready</p>
-              </div>
-            ) : customFile ? (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{customFile.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {(customFile.size / 1024).toFixed(0)} KB · Ready
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => {
-                    if (!customFileUrl) return;
-                    const a = document.createElement("a");
-                    a.href = customFileUrl;
-                    a.download = customFile.name;
-                    a.click();
-                  }}
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="w-4 h-4" />
-                  Replace File
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-4 text-center">
-                <FileUp className="w-7 h-7 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">Upload a file to see options here</p>
-              </div>
-            )}
+            <div className="px-5 py-4 border-b border-border">
+              <p className="text-sm font-semibold text-foreground">Editable Working Sheet</p>
+              <p className="text-xs text-muted-foreground mt-0.5 print:hidden">
+                Mark this table while checking the uploaded source. Downloads and print use these edits.
+              </p>
+            </div>
+            <div className="max-h-[70vh] overflow-auto print:max-h-none">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead className="bg-muted/40 sticky top-0 z-10">
+                  <tr className="text-left text-xs text-muted-foreground">
+                    <th className="px-3 py-2.5 font-medium w-12">Mark</th>
+                    <th className="px-5 py-2.5 font-medium">Course</th>
+                    <th className="px-3 py-2.5 font-medium">Status</th>
+                    <th className="px-3 py-2.5 font-medium">Grade</th>
+                    <th className="px-3 py-2.5 font-medium">Term</th>
+                    <th className="px-3 py-2.5 font-medium">Credits</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {activeModel.groups.flatMap((group) =>
+                    group.rows.map((row, index) => (
+                      <BalanceSheetRenderRow
+                        key={`${group.id}-${getRowKey(row, index)}`}
+                        row={row}
+                        editable
+                        onRowChange={(code, patch) => updateRowOverride(setRowOverrides, code, patch)}
+                      />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 border-t border-border flex flex-wrap gap-2 print:hidden">
+              {customLoading ? (
+                <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Processing your balance sheet...
+                </span>
+              ) : customFile ? (
+                <>
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleDownloadFilledCustomPdf}
+                    disabled={exportingCustomPdf || customScanLoading || customMatches.length === 0}
+                  >
+                    {exportingCustomPdf || customScanLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    Export Filled PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      if (!customFileUrl) return;
+                      const a = document.createElement("a");
+                      a.href = customFileUrl;
+                      a.download = customFile.name;
+                      a.click();
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Source
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Replace File
+                  </Button>
+                  <span className="basis-full text-[11px] text-muted-foreground">
+                    {customFile.type === "application/pdf"
+                      ? customScanLoading
+                        ? "Scanning course rows..."
+                        : `${customMatches.length} rows matched by ${customScanMethod === "ocr" ? "OCR" : "PDF text"}${customScanMethod === "ocr" ? ` (${Math.round(customScanConfidence * 100)}% confidence)` : ""}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}`
+                      : "Searchable PDF fill is supported now. Word/image OCR comes next."}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground">Upload a source file when you need to compare against the original sheet.</span>
+              )}
+            </div>
           </motion.div>
         </div>
       )}
@@ -652,7 +795,133 @@ function safeFilePart(value: string) {
     .replace(/^-+|-+$/g, "") || "student";
 }
 
-function BalanceSheetTableRow({ row }: { row: BalanceSheetRow }) {
+function normalizeRowKey(code: string): string {
+  return code.replace(/[-\s]+/g, " ").trim().toUpperCase();
+}
+
+function updateRowOverride(
+  setRowOverrides: Dispatch<SetStateAction<RowOverrideMap>>,
+  code: string,
+  patch: RowOverride
+) {
+  const key = normalizeRowKey(code);
+  setRowOverrides((prev) => ({
+    ...prev,
+    [key]: {
+      ...prev[key],
+      ...patch,
+    },
+  }));
+}
+
+function applyBalanceSheetOverrides(
+  model: BalanceSheetViewModel | null,
+  overrides: RowOverrideMap
+): BalanceSheetViewModel | null {
+  if (!model) return null;
+
+  const groups = model.groups.map((group) => {
+    const rows = group.rows.map((row) => applyRenderableOverride(row, overrides));
+    const courseRows = collectCourseRows(rows);
+    const completedCount = courseRows.filter((row) => row.status === "completed").length;
+    const plannedCount = courseRows.filter((row) => row.status === "planned").length;
+    const completedCredits = courseRows.reduce(
+      (sum, row) => sum + (row.status === "completed" ? row.actualCredits ?? row.templateCredits ?? 0 : 0),
+      0
+    );
+    const plannedCredits = courseRows.reduce(
+      (sum, row) => sum + (row.status === "planned" ? row.actualCredits ?? row.templateCredits ?? 0 : 0),
+      0
+    );
+    const isSatisfied = group.isCreditBased && group.requiredCredits != null
+      ? completedCredits >= group.requiredCredits
+      : courseRows.length > 0 && courseRows.every((row) => row.status === "completed");
+    const progressLabel = group.isCreditBased && group.requiredCredits != null
+      ? `${Math.min(completedCredits, group.requiredCredits)}/${group.requiredCredits} cr`
+      : `${completedCount}/${courseRows.length} rows`;
+
+    return {
+      ...group,
+      rows,
+      completedCount,
+      plannedCount,
+      completedCredits,
+      plannedCredits,
+      isSatisfied,
+      progressLabel,
+    } satisfies BalanceSheetGroupView;
+  });
+
+  return {
+    ...model,
+    groups,
+    completedRows: groups.reduce((sum, group) => sum + group.completedCount, 0),
+    plannedRows: groups.reduce((sum, group) => sum + group.plannedCount, 0),
+  };
+}
+
+function applyRenderableOverride(row: BalanceSheetRenderableRow, overrides: RowOverrideMap): BalanceSheetRenderableRow {
+  if (row.kind === "course") return applyCourseOverride(row, overrides);
+  if (row.kind === "course_pair") {
+    return {
+      ...row,
+      courses: row.courses.map((course) => applyCourseOverride(course, overrides)),
+    };
+  }
+  return row;
+}
+
+function applyCourseOverride(row: BalanceSheetRow, overrides: RowOverrideMap): BalanceSheetRow {
+  const override = overrides[normalizeRowKey(row.code)];
+  if (!override) return row;
+  return {
+    ...row,
+    status: override.status ?? row.status,
+    grade: override.grade !== undefined ? override.grade : row.grade,
+    termCode: override.termCode !== undefined ? override.termCode : row.termCode,
+    actualCredits: override.actualCredits !== undefined ? override.actualCredits : row.actualCredits,
+  };
+}
+
+function collectCourseRows(rows: BalanceSheetRenderableRow[]): BalanceSheetRow[] {
+  return rows.flatMap((row) => {
+    if (row.kind === "course") return [row];
+    if (row.kind === "course_pair") return row.courses;
+    return [];
+  });
+}
+
+function getUniqueCompletedCredits(groups: BalanceSheetGroupView[]): number | null {
+  if (groups.length === 0) return null;
+  const byCode = new Map<string, BalanceSheetRow>();
+  groups.forEach((group) => {
+    collectCourseRows(group.rows).forEach((row) => {
+      if (row.status === "completed") byCode.set(normalizeRowKey(row.code), row);
+    });
+  });
+  return Array.from(byCode.values()).reduce(
+    (sum, row) => sum + (row.actualCredits ?? row.templateCredits ?? 0),
+    0
+  );
+}
+
+function getTemplateCourseCodes(groups: BalanceSheetGroupView[]): string[] {
+  const codes = new Set<string>();
+  groups.forEach((group) => {
+    collectCourseRows(group.rows).forEach((row) => codes.add(row.code));
+  });
+  return Array.from(codes);
+}
+
+function BalanceSheetTableRow({
+  row,
+  editable = false,
+  onRowChange,
+}: {
+  row: BalanceSheetRow;
+  editable?: boolean;
+  onRowChange?: (code: string, patch: RowOverride) => void;
+}) {
   const statusMeta = STATUS_META[row.status];
   const creditText = row.actualCredits ?? row.templateCredits ?? "-";
 
@@ -700,20 +969,72 @@ function BalanceSheetTableRow({ row }: { row: BalanceSheetRow }) {
         </div>
       </td>
       <td className="px-3 py-3 print:hidden">
-        <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium", statusMeta.pill)}>
-          {statusMeta.text}
-        </span>
+        {editable ? (
+          <select
+            value={row.status}
+            onChange={(event) => onRowChange?.(row.code, { status: event.target.value as BalanceSheetRow["status"] })}
+            className="w-28 rounded-md border border-input bg-background px-2 py-1 text-[11px] text-foreground"
+          >
+            <option value="empty">Open</option>
+            <option value="planned">Planned</option>
+            <option value="completed">Completed</option>
+          </select>
+        ) : (
+          <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium", statusMeta.pill)}>
+            {statusMeta.text}
+          </span>
+        )}
       </td>
-      <td className="px-3 py-3 text-sm text-foreground font-medium">{row.grade ?? "-"}</td>
-      <td className="px-3 py-3 text-sm text-foreground font-mono">{row.termCode ?? "-"}</td>
-      <td className="px-3 py-3 text-sm text-foreground font-mono">{creditText}</td>
+      <td className="px-3 py-3 text-sm text-foreground font-medium">
+        {editable ? (
+          <input
+            value={row.grade ?? ""}
+            onChange={(event) => onRowChange?.(row.code, { grade: event.target.value.trim() || null })}
+            placeholder="-"
+            className="w-16 rounded-md border border-input bg-background px-2 py-1 text-xs"
+          />
+        ) : row.grade ?? "-"}
+      </td>
+      <td className="px-3 py-3 text-sm text-foreground font-mono">
+        {editable ? (
+          <input
+            value={row.termCode ?? ""}
+            onChange={(event) => onRowChange?.(row.code, { termCode: event.target.value.trim().toUpperCase() || null })}
+            placeholder="FA26"
+            className="w-20 rounded-md border border-input bg-background px-2 py-1 text-xs font-mono"
+          />
+        ) : row.termCode ?? "-"}
+      </td>
+      <td className="px-3 py-3 text-sm text-foreground font-mono">
+        {editable ? (
+          <input
+            value={row.actualCredits ?? row.templateCredits ?? ""}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              onRowChange?.(row.code, { actualCredits: Number.isFinite(value) ? value : null });
+            }}
+            type="number"
+            min="0"
+            step="0.5"
+            className="w-16 rounded-md border border-input bg-background px-2 py-1 text-xs font-mono"
+          />
+        ) : creditText}
+      </td>
     </tr>
   );
 }
 
-function BalanceSheetRenderRow({ row }: { row: BalanceSheetRenderableRow }) {
-  if (row.kind === "course") return <BalanceSheetTableRow row={row} />;
-  if (row.kind === "course_pair") return <BalanceSheetPairRow row={row} />;
+function BalanceSheetRenderRow({
+  row,
+  editable = false,
+  onRowChange,
+}: {
+  row: BalanceSheetRenderableRow;
+  editable?: boolean;
+  onRowChange?: (code: string, patch: RowOverride) => void;
+}) {
+  if (row.kind === "course") return <BalanceSheetTableRow row={row} editable={editable} onRowChange={onRowChange} />;
+  if (row.kind === "course_pair") return <BalanceSheetPairRow row={row} editable={editable} onRowChange={onRowChange} />;
 
   if (row.kind === "choice_summary") {
     return (
@@ -760,7 +1081,15 @@ function getRowKey(row: BalanceSheetRenderableRow, index: number): string {
   return `note-${index}`;
 }
 
-function BalanceSheetPairRow({ row }: { row: BalanceSheetCoursePairRow }) {
+function BalanceSheetPairRow({
+  row,
+  editable = false,
+  onRowChange,
+}: {
+  row: BalanceSheetCoursePairRow;
+  editable?: boolean;
+  onRowChange?: (code: string, patch: RowOverride) => void;
+}) {
   return (
     <tr className="bg-muted/10">
       <td colSpan={6} className="px-5 py-4">
@@ -807,11 +1136,46 @@ function BalanceSheetPairRow({ row }: { row: BalanceSheetCoursePairRow }) {
                       </div>
                     )}
                   </div>
-                  <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium h-fit", STATUS_META[course.status].pill)}>
-                    {STATUS_META[course.status].text}
-                  </span>
-                  <span className="text-sm text-foreground font-mono">{course.termCode ?? "-"}</span>
-                  <span className="text-sm text-foreground font-mono">{course.actualCredits ?? course.templateCredits ?? "-"}</span>
+                  {editable ? (
+                    <select
+                      value={course.status}
+                      onChange={(event) => onRowChange?.(course.code, { status: event.target.value as BalanceSheetRow["status"] })}
+                      className="w-28 rounded-md border border-input bg-background px-2 py-1 text-[11px] text-foreground"
+                    >
+                      <option value="empty">Open</option>
+                      <option value="planned">Planned</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  ) : (
+                    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium h-fit", STATUS_META[course.status].pill)}>
+                      {STATUS_META[course.status].text}
+                    </span>
+                  )}
+                  {editable ? (
+                    <input
+                      value={course.termCode ?? ""}
+                      onChange={(event) => onRowChange?.(course.code, { termCode: event.target.value.trim().toUpperCase() || null })}
+                      placeholder="FA26"
+                      className="w-20 rounded-md border border-input bg-background px-2 py-1 text-xs font-mono"
+                    />
+                  ) : (
+                    <span className="text-sm text-foreground font-mono">{course.termCode ?? "-"}</span>
+                  )}
+                  {editable ? (
+                    <input
+                      value={course.actualCredits ?? course.templateCredits ?? ""}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        onRowChange?.(course.code, { actualCredits: Number.isFinite(value) ? value : null });
+                      }}
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      className="w-16 rounded-md border border-input bg-background px-2 py-1 text-xs font-mono"
+                    />
+                  ) : (
+                    <span className="text-sm text-foreground font-mono">{course.actualCredits ?? course.templateCredits ?? "-"}</span>
+                  )}
                 </div>
               </div>
             ))}

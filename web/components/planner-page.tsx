@@ -488,6 +488,11 @@ export default function PlannerPage() {
       ? rawGpa
       : Number(rawGpa);
   const gpa = parsedGpa != null && Number.isFinite(parsedGpa) ? parsedGpa : null;
+  const displayedSemesters = [...semesters].sort((a, b) => {
+    if (a.isPast !== b.isPast) return a.isPast ? 1 : -1;
+    const chronological = compareSemesters(a, b);
+    return a.isPast ? -chronological : chronological;
+  });
 
   const majorName = formatDisplayName(
     majors.find((m) => m.code === profile?.major_code)?.name
@@ -566,7 +571,7 @@ export default function PlannerPage() {
       {/* Semester columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory">
         <div className="flex gap-3 p-4 pb-4 h-full" style={{ minWidth: "max-content" }}>
-          {semesters.map((sem) => {
+          {displayedSemesters.map((sem) => {
             const load = getSemesterCreditLoad(sem, planCatalog);
             const semCredits = getTotalCredits(sem.courseIds, planCatalog);
             const semesterGpa = getSemesterGpa(sem, planCatalog);

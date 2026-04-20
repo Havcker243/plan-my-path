@@ -26,19 +26,26 @@ function ReviewCard({ review }: { review: CourseReview }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-sm font-semibold text-foreground">
-            {review.course_code}
-          </span>
-          {review.term_taken && review.year_taken && (
-            <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-              {review.term_taken} {review.year_taken}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-sm font-semibold text-foreground">
+              {review.course_code}
             </span>
-          )}
-          {review.professor && (
-            <span className="text-[10px] text-muted-foreground">
-              with {review.professor}
-            </span>
+            {review.term_taken && review.year_taken && (
+              <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                {review.term_taken} {review.year_taken}
+              </span>
+            )}
+            {review.professor && (
+              <span className="text-[10px] text-muted-foreground">
+                with {review.professor}
+              </span>
+            )}
+          </div>
+          {review.course_title && (
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {review.course_title}
+            </p>
           )}
         </div>
         <span className="text-[10px] text-muted-foreground flex-shrink-0">

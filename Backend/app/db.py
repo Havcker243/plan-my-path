@@ -1105,10 +1105,12 @@ def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, course_code, year_taken, term_taken, professor, comment, created_at
-                FROM course_reviews
-                WHERE course_code = %s
-                ORDER BY created_at DESC
+                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
+                       c.title AS course_title
+                FROM course_reviews r
+                LEFT JOIN courses c ON c.course_code = r.course_code
+                WHERE r.course_code = %s
+                ORDER BY r.created_at DESC
                 LIMIT 50
                 """,
                 (course_code,),
@@ -1123,6 +1125,7 @@ def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
             "professor": row[4],
             "comment": row[5],
             "created_at": row[6].isoformat() if row[6] else None,
+            "course_title": row[7],
         }
         for row in rows
     ]
@@ -1133,9 +1136,11 @@ def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, course_code, year_taken, term_taken, professor, comment, created_at
-                FROM course_reviews
-                ORDER BY created_at DESC
+                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
+                       c.title AS course_title
+                FROM course_reviews r
+                LEFT JOIN courses c ON c.course_code = r.course_code
+                ORDER BY r.created_at DESC
                 LIMIT %s
                 """,
                 (min(limit, 100),),
@@ -1150,6 +1155,41 @@ def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
             "professor": row[4],
             "comment": row[5],
             "created_at": row[6].isoformat() if row[6] else None,
+            "course_title": row[7],
+        }
+        for row in rows
+    ]
+
+
+def get_reviews_for_subject(pooler_url: str, subject_code: str, limit: int = 60) -> list[dict]:
+    subject = subject_code.strip().upper()
+    if not subject:
+        return []
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
+                       c.title AS course_title
+                FROM course_reviews r
+                LEFT JOIN courses c ON c.course_code = r.course_code
+                WHERE r.course_code ILIKE %s OR r.course_code ILIKE %s
+                ORDER BY r.created_at DESC
+                LIMIT %s
+                """,
+                (f"{subject}-%", f"{subject} %", min(limit, 100)),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "course_code": row[1],
+            "year_taken": row[2],
+            "term_taken": row[3],
+            "professor": row[4],
+            "comment": row[5],
+            "created_at": row[6].isoformat() if row[6] else None,
+            "course_title": row[7],
         }
         for row in rows
     ]
@@ -1167,9 +1207,15 @@ def create_review(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO course_reviews (course_code, year_taken, term_taken, professor, comment)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, course_code, year_taken, term_taken, professor, comment, created_at
+                WITH inserted AS (
+                    INSERT INTO course_reviews (course_code, year_taken, term_taken, professor, comment)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id, course_code, year_taken, term_taken, professor, comment, created_at
+                )
+                SELECT i.id, i.course_code, i.year_taken, i.term_taken, i.professor, i.comment, i.created_at,
+                       c.title AS course_title
+                FROM inserted i
+                LEFT JOIN courses c ON c.course_code = i.course_code
                 """,
                 (course_code, year_taken, term_taken, professor, comment),
             )
@@ -1183,4 +1229,5 @@ def create_review(
         "professor": row[4],
         "comment": row[5],
         "created_at": row[6].isoformat() if row[6] else None,
+        "course_title": row[7],
     }

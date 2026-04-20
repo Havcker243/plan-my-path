@@ -267,12 +267,31 @@ export interface ParsedTranscript {
 export interface CourseReview {
   id: string;
   course_code: string;
+  course_title: string | null;
   year_taken: number | null;
   term_taken: string | null;
   professor: string | null;
   comment: string;
   helpful_count: number;
   created_at: string | null;
+}
+
+export interface BalanceSheetPdfMatch {
+  course_code: string;
+  page: number;
+  x: number;
+  y: number;
+  font_size: number;
+  line_text: string;
+  confidence?: number;
+}
+
+export interface BalanceSheetScanResult {
+  method: "text" | "ocr";
+  confidence: number;
+  matches: BalanceSheetPdfMatch[];
+  unmatched_codes: string[];
+  warning?: string;
 }
 
 export async function fetchReviews(courseCode: string): Promise<CourseReview[]> {
@@ -299,10 +318,35 @@ export async function submitReview(
   return res.data;
 }
 
-export async function parseTranscriptPDF(file: File): Promise<ParsedTranscript> {
+export async function scanCustomBalanceSheetPDF(
+  file: File,
+  token: string,
+  courseCodes: string[]
+): Promise<BalanceSheetScanResult> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE}/api/transcript`, { method: "POST", body: form });
+  form.append("payload_json", JSON.stringify({ course_codes: courseCodes }));
+  const res = await fetch(`${BASE}/api/balance-sheet/scan`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? `Scan failed (${res.status})`);
+  }
+  const json = await res.json() as { data: BalanceSheetScanResult };
+  return json.data;
+}
+
+export async function parseTranscriptPDF(file: File, token: string): Promise<ParsedTranscript> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE}/api/transcript`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { detail?: string }).detail ?? `Parse failed (${res.status})`);
@@ -316,6 +360,7 @@ export async function parseTranscriptPDF(file: File): Promise<ParsedTranscript> 
 export interface AdvisorMessage {
   role: "user" | "assistant";
   content: string;
+  reasoning_details?: unknown;
 }
 
 export class AdvisorBusyError extends Error {
@@ -326,12 +371,14 @@ export async function callAdvisor(
   token: string,
   message: string,
   history: AdvisorMessage[] = [],
-  onChunk?: (chunk: string) => void
+  onChunk?: (chunk: string) => void,
+  onReasoningDetails?: (reasoningDetails: unknown) => void
 ): Promise<string> {
   const res = await fetch(`${BASE}/api/ai/advise`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Accept: "text/event-stream",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ message, history }),
@@ -353,15 +400,19 @@ export async function callAdvisor(
     const lines = buffer.split("\n");
     buffer = lines.pop() ?? "";
     for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const raw = line.slice(6).trim();
+      const dataLine = line.trimStart();
+      if (!dataLine.startsWith("data: ")) continue;
+      const raw = dataLine.slice(6).trim();
       if (raw === "[DONE]") return full;
       try {
-        const parsed = JSON.parse(raw) as { chunk?: string; error?: string };
+        const parsed = JSON.parse(raw) as { chunk?: string; error?: string; reasoning_details?: unknown };
         if (parsed.error) throw new Error(parsed.error);
         if (parsed.chunk) {
           full += parsed.chunk;
           onChunk?.(parsed.chunk);
+        }
+        if (parsed.reasoning_details !== undefined) {
+          onReasoningDetails?.(parsed.reasoning_details);
         }
       } catch (e) {
         if (e instanceof SyntaxError) continue;

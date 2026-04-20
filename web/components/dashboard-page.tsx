@@ -14,6 +14,7 @@ import {
   BookMarked,
   Zap,
   ChevronRight,
+  GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -197,82 +198,72 @@ export default function DashboardPage() {
     <div className="px-4 md:px-8 py-6 max-w-5xl mx-auto pb-8">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-foreground">{greeting}, {firstName}</h1>
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-            <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
-              {standing}
-            </span>
-            {majorName && (
-              <span className="text-xs text-muted-foreground font-medium">{majorName}</span>
-            )}
-            {minorName && (
-              <span className="text-xs text-muted-foreground">· Minor: {minorName}</span>
-            )}
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-background to-muted/30 p-5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-muted-foreground mb-0.5">{greeting},</p>
+            <h1 className="text-2xl font-bold text-foreground leading-tight">{firstName}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                {standing}
+              </span>
+              {majorName && (
+                <span className="text-sm text-muted-foreground font-medium">{majorName}</span>
+              )}
+              {minorName && (
+                <span className="text-sm text-muted-foreground">· Minor: {minorName}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
             {gradText && (
-              <span className="text-xs text-muted-foreground">· Graduating {gradText}</span>
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+                <GraduationCap className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wide">Graduation</p>
+                  <p className="text-sm font-bold text-amber-800">{gradText}</p>
+                </div>
+              </div>
             )}
+            <Link href="/planner">
+              <Button className="hidden md:flex gap-2 flex-shrink-0">
+                Open Plan <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
         </div>
-        <Link href="/planner">
-          <Button className="hidden md:flex gap-2 flex-shrink-0">
-            Open Degree Plan <ArrowRight className="w-4 h-4" />
-          </Button>
-        </Link>
+
+        {/* Progress bar */}
+        <div className="mt-4 pt-4 border-t border-border/60">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-muted-foreground font-medium">Degree progress</span>
+            <span className="font-bold text-foreground">{completedCredits} <span className="font-normal text-muted-foreground">/ {DEGREE_CREDITS} credits</span></span>
+          </div>
+          <div className="h-2.5 rounded-full bg-muted overflow-hidden flex">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-700 rounded-l-full"
+              style={{ width: `${(completedCredits / DEGREE_CREDITS) * 100}%` }}
+            />
+            <div
+              className="h-full bg-primary/40 transition-all duration-700"
+              style={{ width: `${(plannedCredits / DEGREE_CREDITS) * 100}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-4 mt-1.5 text-[11px]">
+            <span className="flex items-center gap-1 text-amber-600 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+              {completedCredits} earned
+            </span>
+            <span className="flex items-center gap-1 text-primary font-medium">
+              <span className="w-2 h-2 rounded-full bg-primary/40 inline-block" />
+              {plannedCredits} planned
+            </span>
+            <span className="text-muted-foreground">{remainingCredits} remaining</span>
+          </div>
+        </div>
       </div>
 
-      {/* ── Degree progress ── */}
-      <motion.div
-        className="rounded-xl border border-border bg-card p-5 mb-6"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Degree Progress</p>
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex items-center gap-5">
-            <div className="relative flex-shrink-0">
-              <CircleProgress pct={creditPct} size={90} stroke={8} color="stroke-primary" />
-              <span className="absolute inset-0 flex items-center justify-center text-lg font-bold text-foreground">
-                {creditPct}%
-              </span>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Total credits</p>
-              <p className="text-2xl font-bold text-foreground">{completedCredits}</p>
-              <p className="text-xs text-muted-foreground">of {DEGREE_CREDITS} required</p>
-            </div>
-          </div>
-
-          <div className="flex-1 grid grid-cols-3 gap-4 md:gap-6">
-            <div className="text-center md:text-left">
-              <p className="text-2xl font-bold text-green-600">{completedCredits}</p>
-              <p className="text-xs text-muted-foreground">Earned</p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-2xl font-bold text-primary">{plannedCredits}</p>
-              <p className="text-xs text-muted-foreground">Planned</p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-2xl font-bold text-muted-foreground">{remainingCredits}</p>
-              <p className="text-xs text-muted-foreground">Remaining</p>
-            </div>
-          </div>
-
-          <div className="md:w-48 flex-shrink-0">
-            <div className="h-3 rounded-full bg-muted overflow-hidden flex">
-              <div className="bg-green-500 h-full" style={{ width: `${(completedCredits / DEGREE_CREDITS) * 100}%` }} />
-              <div className="bg-primary h-full" style={{ width: `${(plannedCredits / DEGREE_CREDITS) * 100}%` }} />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-              <span>Earned</span>
-              <span>Planned</span>
-              <span>Remaining</span>
-            </div>
-          </div>
-        </div>
-      </motion.div>
 
       {/* ── Stats row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import json
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import require_allowed_email, resolve_allowed_email_domains, resolve_jwt_secret, verify_token
 from app.advisor import stream_advisor_reply
+from app.custom_balance_sheet import scan_balance_sheet_pdf
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
@@ -35,6 +36,7 @@ from app.db import (
     get_course_label,
     get_reviews,
     get_recent_reviews,
+    get_reviews_for_subject,
     create_review,
     delete_user_data,
 )
@@ -385,6 +387,43 @@ class ReviewPayload(BaseModel):
 RE_COURSE_CODE = re.compile(r"^[A-Z]{2,6}[-\s]?\d+[A-Z0-9]*$")
 
 
+class BalanceSheetScanPayload(BaseModel):
+    course_codes: List[str]
+
+
+@app.post("/api/balance-sheet/scan")
+async def scan_custom_balance_sheet(
+    payload_json: str = Form(...),
+    file: UploadFile = File(...),
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    if not user.get("sub"):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    try:
+        payload = BalanceSheetScanPayload(**json.loads(payload_json))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid scan payload")
+
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only searchable PDF balance sheets can be scanned right now.")
+    if file.content_type and file.content_type not in {"application/pdf", "application/x-pdf"}:
+        raise HTTPException(status_code=400, detail="Only searchable PDF balance sheets can be scanned right now.")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10 MB).")
+    if not contents.startswith(b"%PDF-"):
+        raise HTTPException(status_code=400, detail="The uploaded file is not a valid PDF.")
+
+    try:
+        result = scan_balance_sheet_pdf(contents, payload.course_codes)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not scan balance sheet: {exc}")
+
+    return {"data": result}
+
+
 @app.get("/api/reviews/recent")
 def list_recent_reviews(limit: int = 20) -> Dict[str, object]:
     limit = max(1, min(limit, 50))
@@ -464,21 +503,24 @@ def advise(
         labels_data = {k: dict(v) for k, v in raw.get("labels", {}).items()}
         total_credits = raw.get("total_credits", 120)
 
-    # Grab recent hub reviews relevant to this major
-    reviews = get_recent_reviews(POOLER_URL, limit=50)
+    subject_codes = _advisor_subject_codes(major_code, labels_data, plan)
+    course_catalog_context = _advisor_course_catalog(subject_codes, message)
+    reviews = _advisor_reviews(subject_codes)
 
     def generate():
         try:
-            for chunk in stream_advisor_reply(
+            for event in stream_advisor_reply(
                 message=message,
                 profile=dict(profile),
                 plan=dict(plan) if plan else None,
                 labels=labels_data,
                 total_credits=total_credits,
                 reviews=reviews,
+                course_catalog=course_catalog_context,
+                subject_codes=subject_codes,
                 history=history,
             ):
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+                yield f"data: {json.dumps(event)}\n\n"
             yield "data: [DONE]\n\n"
         except RuntimeError as exc:
             print(f"[Advisor] RuntimeError: {exc}")
@@ -489,7 +531,92 @@ def advise(
             traceback.print_exc()
             yield f"data: {json.dumps({'error': 'Advisor unavailable — try again shortly'})}\n\n"
 
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+def _advisor_subject_codes(major_code: str, labels: dict, plan: Optional[dict]) -> List[str]:
+    subjects: set[str] = set()
+    if major_code and re.match(r"^[A-Z]{2,6}$", major_code):
+        subjects.add(major_code)
+    for code in labels.keys():
+        match = re.match(r"^([A-Z]{2,6})[-\s]", str(code).upper())
+        if match:
+            subjects.add(match.group(1))
+    if plan:
+        for semester in plan.get("semesters", []):
+            for course in semester.get("courses", []):
+                match = re.match(r"^([A-Z]{2,6})[-\s]", str(course.get("code", "")).upper())
+                if match:
+                    subjects.add(match.group(1))
+    return sorted(subjects)[:6]
+
+
+def _advisor_course_catalog(subject_codes: List[str], message: str) -> List[dict]:
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for subject in subject_codes[:3]:
+        try:
+            for course in fetch_courses_by_subject(POOLER_URL, subject)[:30]:
+                code = course.get("course_code")
+                if not code or code in seen:
+                    continue
+                seen.add(code)
+                rows.append({
+                    "course_code": code,
+                    "title": course.get("title"),
+                    "credits": course.get("credits_min") or course.get("credits_max"),
+                    "terms": course.get("terms") or [],
+                    "description": (course.get("description") or "")[:220],
+                })
+        except Exception:
+            continue
+
+    query = message.strip()[:140]
+    if len(query) >= 3:
+        try:
+            search_rows, _total = search_courses(POOLER_URL, query, page=1, limit=10)
+            for course in search_rows:
+                code = course.get("course_code")
+                if not code or code in seen:
+                    continue
+                seen.add(code)
+                credits = course.get("credits") or {}
+                rows.append({
+                    "course_code": code,
+                    "title": course.get("title"),
+                    "credits": credits.get("min_credits") or credits.get("max_credits"),
+                    "terms": [section.get("term") for section in course.get("sections", []) if section.get("term")],
+                    "description": (course.get("description") or "")[:220],
+                })
+        except Exception:
+            pass
+    return rows[:80]
+
+
+def _advisor_reviews(subject_codes: List[str]) -> List[dict]:
+    reviews: list[dict] = []
+    seen: set[str] = set()
+    for subject in subject_codes[:4]:
+        try:
+            for review in get_reviews_for_subject(POOLER_URL, subject, limit=40):
+                review_id = review.get("id")
+                if review_id and review_id in seen:
+                    continue
+                if review_id:
+                    seen.add(review_id)
+                reviews.append(review)
+        except Exception:
+            continue
+    if len(reviews) < 20:
+        reviews.extend(get_recent_reviews(POOLER_URL, limit=50 - len(reviews)))
+    return reviews[:80]
 
 
 # ---------------------------------------------------------------------------

@@ -2,6 +2,31 @@
 
 These are not part of the current finish scope for the app. They are future-facing features to revisit after the existing product is stable and complete.
 
+## Current Product Baseline
+
+FiskGrad is considered feature-complete for the MVP/beta scope apart from testing, deployment, and production setup.
+
+The current balance-sheet templates were provided by real students and are accepted as the working source set for this version of the product. The remaining template work is not to add more MVP features, but to test them in the app, catch edge cases, and improve polish after real usage.
+
+Current baseline:
+- Fisk-only access using `@my.fisk.edu`
+- transcript PDF import
+- semester-by-semester planner
+- requirements tracking
+- credit-threshold requirement groups
+- advisor-ready balance sheets
+- 14 student-provided working templates
+- custom PDF, Word document, and image sheet upload preview
+- course search, sections, calendar export, reviews, profile, and AI advisor support
+
+What remains before launch:
+- test the full student flow end to end
+- deploy the frontend and backend
+- run Supabase security hardening
+- configure production environment variables
+- set up the Render keep-alive cron
+- rename the actual local/GitHub project folder to `fiskgrad`
+
 ## 1. Startup Validation Track
 
 Once this project is in a stronger state, evaluate whether it has startup potential before expanding it further.

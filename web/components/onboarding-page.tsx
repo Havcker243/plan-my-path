@@ -17,10 +17,11 @@ const YEARS = Array.from({ length: 8 }, (_, index) => CURRENT_YEAR - 4 + index);
 const TERMS = ["Fall", "Spring", "Summer", "Winter"] as const;
 const STEPS = ["Major", "Timeline", "Courses", "Confirm"];
 
-// Calendar-year ordering for timeline validation
-const TERM_ORDER: Record<string, number> = { Spring: 0, Summer: 1, Fall: 2, Winter: 3 };
+// Semester-count math only counts regular academic semesters.
+// Summer follows Spring and Winter follows Fall without adding another term.
+const TERM_ORDER: Record<string, number> = { Spring: 0, Summer: 0, Fall: 1, Winter: 1 };
 function semesterIndex(term: string, year: number) {
-  return year * 4 + (TERM_ORDER[term] ?? 0);
+  return year * 2 + (TERM_ORDER[term] ?? 0);
 }
 
 function getTimelineSemesterCount(
@@ -37,11 +38,7 @@ function currentSemesterIndex(): number {
   const now = new Date();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
-  let term: string;
-  if (month >= 1 && month <= 5) term = "Spring";
-  else if (month >= 6 && month <= 8) term = "Summer";
-  else if (month >= 9 && month <= 11) term = "Fall";
-  else term = "Winter";
+  const term = month >= 1 && month <= 5 ? "Spring" : "Fall";
   return semesterIndex(term, year);
 }
 

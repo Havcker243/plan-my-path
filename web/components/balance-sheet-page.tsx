@@ -28,9 +28,9 @@ import {
   type BalanceSheetRow,
   type BalanceSheetViewModel,
 } from "@/lib/balance-sheet";
-import { scanCustomBalanceSheetPDF, type BalanceSheetPdfMatch } from "@/lib/api";
+import { fillCustomBalanceSheetDOCX, scanCustomBalanceSheetPDF, type BalanceSheetFillRow, type BalanceSheetPdfMatch } from "@/lib/api";
 import { useAuth } from "@/contexts/auth-context";
-import { downloadPdf, fillBalanceSheetPdf, fillCustomBalanceSheetPdf } from "@/lib/pdf-fill";
+import { downloadBlob, downloadPdf, fillBalanceSheetPdf, fillCustomBalanceSheetPdf } from "@/lib/pdf-fill";
 import { toast } from "sonner";
 
 const STATUS_META = {
@@ -85,6 +85,7 @@ export default function BalanceSheetPage() {
   const [customUnmatchedCount, setCustomUnmatchedCount] = useState(0);
   const [customScanMethod, setCustomScanMethod] = useState<"text" | "ocr" | "docx" | null>(null);
   const [customScanConfidence, setCustomScanConfidence] = useState(0);
+  const [customDocxPreviewLines, setCustomDocxPreviewLines] = useState<string[]>([]);
   const [rowOverrides, setRowOverrides] = useState<RowOverrideMap>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -161,6 +162,10 @@ export default function BalanceSheetPage() {
 
   const handleDownloadFilledCustomPdf = async () => {
     if (!customFile || !workingModel) return;
+    if (isDocxFile(customFile) && !accessToken) {
+      toast.error("Sign in again before exporting the filled Word document.");
+      return;
+    }
 
     if (customMatches.length === 0) {
       toast.error("No course codes were found in that file. Nothing to export.");
@@ -172,21 +177,17 @@ export default function BalanceSheetPage() {
       let pdfBytes: Uint8Array;
 
       if (isDocxFile(customFile)) {
-        // Word doc: generate a fresh FiskGrad-formatted PDF with matched data
-        pdfBytes = await fillBalanceSheetPdf({
-          studentName,
-          majorCode: workingModel.majorCode,
-          majorName: majorName ?? workingModel.majorName,
-          gpa: profile?.gpa != null ? Number(profile.gpa) : null,
-          entryLabel,
-          gradLabel,
-          creditsEarned: workingCreditsEarned,
-          creditsRequired: workingModel.totalCreditsRequired ?? degreeCreditTotal,
-          degreeType: workingModel.degreeType ?? "B.S.",
-          groups: workingModel.groups,
-          printNotes: workingModel.printNotes,
-          printDate: new Date().toLocaleDateString(),
-        });
+        if (!accessToken) {
+          toast.error("Sign in again before exporting the filled Word document.");
+          return;
+        }
+        const filledDocx = await fillCustomBalanceSheetDOCX(
+          customFile,
+          accessToken,
+          getFillRows(workingModel.groups)
+        );
+        downloadBlob(filledDocx, `${safeFilePart(studentName)}-balance-sheet-filled.docx`);
+        return;
       } else {
         // PDF: write marks directly into the original file
         pdfBytes = await fillCustomBalanceSheetPdf({
@@ -214,6 +215,7 @@ export default function BalanceSheetPage() {
       setCustomUnmatchedCount(0);
       setCustomScanMethod(null);
       setCustomScanConfidence(0);
+      setCustomDocxPreviewLines([]);
       return;
     }
 
@@ -240,6 +242,7 @@ export default function BalanceSheetPage() {
       setCustomUnmatchedCount(0);
       setCustomScanMethod(null);
       setCustomScanConfidence(0);
+      setCustomDocxPreviewLines([]);
       return;
     }
 
@@ -252,8 +255,9 @@ export default function BalanceSheetPage() {
         setCustomUnmatchedCount(result.unmatched_codes.length);
         setCustomScanMethod(result.method);
         setCustomScanConfidence(result.confidence);
+        setCustomDocxPreviewLines(result.method === "docx" ? result.preview_lines ?? [] : []);
         if (result.matches.length === 0) {
-          toast.warning(result.warning ?? "No course codes were found in that PDF.");
+          toast.warning(result.warning ?? "No course codes were found in that file.");
         }
       })
       .catch((error) => {
@@ -262,6 +266,7 @@ export default function BalanceSheetPage() {
         setCustomUnmatchedCount(0);
         setCustomScanMethod(null);
         setCustomScanConfidence(0);
+        setCustomDocxPreviewLines([]);
         toast.error(error instanceof Error ? error.message : "Could not scan that balance sheet");
       })
       .finally(() => {
@@ -409,7 +414,7 @@ export default function BalanceSheetPage() {
                 ? "This version uses the system major template as the source of truth. You can adjust row status, grade, term, and credits before printing."
                 : customFile
                 ? "Your uploaded source stays beside the editable working sheet, so you can mark rows while checking the original balance sheet."
-                : "Upload a PDF, Word document, or image version of your own balance sheet, then use the editable working sheet to mark requirements."}
+                : "Upload a PDF or Word document version of your own balance sheet, then use the editable working sheet to mark requirements."}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="rounded-full bg-background border border-border px-3 py-1 text-xs text-foreground">
@@ -677,9 +682,30 @@ export default function BalanceSheetPage() {
                   <div className="p-4 flex items-center justify-center h-full">
                     <img src={customFileUrl} alt="Custom balance sheet" className="max-w-full max-h-[66vh] object-contain border border-border bg-background" />
                   </div>
+                ) : isDocxFile(customFile) ? (
+                  <div className="h-full overflow-auto bg-background">
+                    {customScanLoading && customDocxPreviewLines.length === 0 ? (
+                      <div className="p-6 text-sm text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading Word preview...
+                      </div>
+                    ) : customDocxPreviewLines.length > 0 ? (
+                      <div className="p-6 space-y-2 text-sm leading-relaxed text-foreground">
+                        {customDocxPreviewLines.map((line, index) => (
+                          <p key={`${index}-${line.slice(0, 24)}`} className="whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-6 text-sm text-muted-foreground">
+                        No readable Word preview was found. Use the download action to open this file.
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">
-                    Word documents are accepted, but browser preview is not available here. Use the download action to open this file.
+                    Preview is not available for this file type. Use the download action to open this file.
                   </div>
                 )}
               </div>
@@ -688,7 +714,7 @@ export default function BalanceSheetPage() {
                 <FileUp className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
                 <p className="text-sm font-medium text-foreground mb-1">No custom balance sheet uploaded yet</p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Upload a PDF, Word document, or image to use your own advisor balance sheet as the source.
+                  Upload a PDF or Word document to use your own advisor balance sheet as the source.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-2 print:hidden">
                   <Upload className="w-4 h-4" />
@@ -754,7 +780,7 @@ export default function BalanceSheetPage() {
                     ) : (
                       <Download className="w-4 h-4" />
                     )}
-                    Export Filled PDF
+                    Export Filled Source
                   </Button>
                   <Button
                     size="sm"
@@ -784,7 +810,7 @@ export default function BalanceSheetPage() {
                     {customScanLoading
                       ? "Scanning course rows..."
                       : customScanMethod
-                        ? `${customMatches.length} rows matched${customScanMethod === "ocr" ? ` by OCR (${Math.round(customScanConfidence * 100)}% confidence)` : customScanMethod === "docx" ? " from Word document" : " from PDF text"}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}${customScanMethod === "docx" ? " · Export generates a new FiskGrad PDF" : ""}`
+                        ? `${customMatches.length} rows matched${customScanMethod === "ocr" ? ` by OCR (${Math.round(customScanConfidence * 100)}% confidence)` : customScanMethod === "docx" ? " from Word document" : " from PDF text"}${customUnmatchedCount > 0 ? `, ${customUnmatchedCount} not found` : ""}`
                         : "Upload a PDF or Word (.docx) balance sheet to auto-fill from your plan."}
                   </span>
                 </>
@@ -931,6 +957,18 @@ function getUniqueCompletedCredits(groups: BalanceSheetGroupView[]): number | nu
   return Array.from(byCode.values()).reduce(
     (sum, row) => sum + (row.actualCredits ?? row.templateCredits ?? 0),
     0
+  );
+}
+
+function getFillRows(groups: BalanceSheetGroupView[]): BalanceSheetFillRow[] {
+  return groups.flatMap((group) =>
+    collectCourseRows(group.rows).map((row) => ({
+      code: row.code,
+      status: row.status,
+      grade: row.grade,
+      term: row.termCode,
+      credits: row.actualCredits ?? row.templateCredits ?? null,
+    }))
   );
 }
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import time
+import io
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -17,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import require_allowed_email, resolve_allowed_email_domains, resolve_jwt_secret, verify_token
 from app.advisor import stream_advisor_reply
-from app.custom_balance_sheet import scan_balance_sheet_pdf, scan_balance_sheet_docx
+from app.custom_balance_sheet import fill_balance_sheet_docx, scan_balance_sheet_pdf, scan_balance_sheet_docx
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
@@ -391,6 +392,10 @@ class BalanceSheetScanPayload(BaseModel):
     course_codes: List[str]
 
 
+class BalanceSheetFillPayload(BaseModel):
+    rows: List[dict]
+
+
 @app.post("/api/balance-sheet/scan")
 async def scan_custom_balance_sheet(
     payload_json: str = Form(...),
@@ -432,6 +437,48 @@ async def scan_custom_balance_sheet(
         raise HTTPException(status_code=422, detail=f"Could not scan balance sheet: {exc}")
 
     return {"data": result}
+
+
+@app.post("/api/balance-sheet/fill-docx")
+async def fill_custom_balance_sheet_docx(
+    payload_json: str = Form(...),
+    file: UploadFile = File(...),
+    user: Dict[str, object] = Depends(get_current_user),
+):
+    if not user.get("sub"):
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    try:
+        payload = BalanceSheetFillPayload(**json.loads(payload_json))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid fill payload")
+
+    DOCX_TYPES = {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    filename_lower = (file.filename or "").lower()
+    is_docx = filename_lower.endswith(".docx") or file.content_type in DOCX_TYPES
+    if not is_docx:
+        raise HTTPException(status_code=400, detail="Only Word (.docx) balance sheets are supported.")
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10 MB).")
+
+    try:
+        output = fill_balance_sheet_docx(contents, payload.rows)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not fill Word balance sheet: {exc}")
+
+    filename = re.sub(r"[^A-Za-z0-9._-]+", "-", file.filename or "balance-sheet.docx")
+    if not filename.lower().endswith(".docx"):
+        filename = f"{filename}.docx"
+    stem = filename[:-5]
+    return StreamingResponse(
+        io.BytesIO(output),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{stem}-filled.docx"'},
+    )
 
 
 @app.get("/api/reviews/recent")

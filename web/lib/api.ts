@@ -287,11 +287,20 @@ export interface BalanceSheetPdfMatch {
 }
 
 export interface BalanceSheetScanResult {
-  method: "text" | "ocr";
+  method: "text" | "ocr" | "docx";
   confidence: number;
   matches: BalanceSheetPdfMatch[];
   unmatched_codes: string[];
   warning?: string;
+  preview_lines?: string[];
+}
+
+export interface BalanceSheetFillRow {
+  code: string;
+  status: "completed" | "planned" | "empty";
+  grade: string | null;
+  term: string | null;
+  credits: number | null;
 }
 
 export async function fetchReviews(courseCode: string): Promise<CourseReview[]> {
@@ -337,6 +346,26 @@ export async function scanCustomBalanceSheetPDF(
   }
   const json = await res.json() as { data: BalanceSheetScanResult };
   return json.data;
+}
+
+export async function fillCustomBalanceSheetDOCX(
+  file: File,
+  token: string,
+  rows: BalanceSheetFillRow[]
+): Promise<Blob> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("payload_json", JSON.stringify({ rows }));
+  const res = await fetch(`${BASE}/api/balance-sheet/fill-docx`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? `Fill failed (${res.status})`);
+  }
+  return res.blob();
 }
 
 export async function parseTranscriptPDF(file: File, token: string): Promise<ParsedTranscript> {

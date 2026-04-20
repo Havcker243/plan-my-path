@@ -208,8 +208,15 @@ def scan_balance_sheet_docx(file_bytes: bytes, course_codes: Iterable[str]) -> d
 
     found: set[str] = set()
     matches: list[dict] = []
+    preview_lines: list[str] = []
+
+    def _add_preview_line(text: str) -> None:
+        line = " ".join((text or "").split())
+        if line:
+            preview_lines.append(line)
 
     def _scan_text(text: str) -> None:
+        _add_preview_line(text)
         for match in RE_COURSE_CODE.finditer(text):
             code = normalize_code(f"{match.group(1)} {match.group(2)}")
             if code in wanted and code not in found:
@@ -229,15 +236,76 @@ def scan_balance_sheet_docx(file_bytes: bytes, course_codes: Iterable[str]) -> d
 
     for table in doc.tables:
         for row in table.rows:
-            for cell in row.cells:
-                _scan_text(cell.text)
+            cells = [" ".join(cell.text.split()) for cell in row.cells if cell.text.strip()]
+            if cells:
+                _scan_text(" | ".join(cells))
 
     return {
         "method": "docx",
         "confidence": 1 if matches else 0,
         "matches": matches,
         "unmatched_codes": sorted(wanted - found),
+        "preview_lines": preview_lines[:250],
     }
+
+
+def fill_balance_sheet_docx(file_bytes: bytes, rows: Iterable[dict]) -> bytes:
+    """
+    Add plan markings to the uploaded Word balance sheet and return the edited
+    document bytes. This preserves the user's source document instead of
+    generating a FiskGrad replacement layout.
+    """
+    from docx import Document
+
+    doc = Document(io.BytesIO(file_bytes))
+    row_map = {
+        normalize_code(str(row.get("code", ""))): row
+        for row in rows
+        if str(row.get("code", "")).strip()
+    }
+    applied: set[str] = set()
+
+    def _fill_text_container(paragraphs) -> None:
+        for paragraph in paragraphs:
+            text = paragraph.text or ""
+            for match in RE_COURSE_CODE.finditer(text):
+                code = normalize_code(f"{match.group(1)} {match.group(2)}")
+                row = row_map.get(code)
+                if not row or code in applied:
+                    continue
+                marker = _docx_marker(row)
+                if marker:
+                    run = paragraph.add_run(f"  {marker}")
+                    run.bold = True
+                applied.add(code)
+
+    _fill_text_container(doc.paragraphs)
+
+    seen_cells: set[int] = set()
+    for table in doc.tables:
+        for table_row in table.rows:
+            for cell in table_row.cells:
+                cell_id = id(cell._tc)
+                if cell_id in seen_cells:
+                    continue
+                seen_cells.add(cell_id)
+                _fill_text_container(cell.paragraphs)
+
+    output = io.BytesIO()
+    doc.save(output)
+    return output.getvalue()
+
+
+def _docx_marker(row: dict) -> str:
+    status = str(row.get("status") or "").strip().lower()
+    mark = "X" if status == "completed" else "N" if status == "planned" else ""
+    parts = [part for part in [
+        mark,
+        str(row.get("grade") or "").strip(),
+        str(row.get("term") or "").strip(),
+        str(row.get("credits") or "").strip(),
+    ] if part]
+    return " | ".join(parts)
 
 
 def _ocr_course_candidate(data: dict, index: int, count: int) -> dict | None:

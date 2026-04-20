@@ -505,6 +505,10 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
 
 export function downloadPdf(bytes: Uint8Array, filename: string) {
   const blob = new Blob([bytes], { type: "application/pdf" });
+  downloadBlob(blob, filename);
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

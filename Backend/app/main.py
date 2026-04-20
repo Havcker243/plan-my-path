@@ -407,11 +407,10 @@ async def scan_custom_balance_sheet(
 
     DOCX_TYPES = {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/msword",
     }
     filename_lower = (file.filename or "").lower()
     is_pdf = filename_lower.endswith(".pdf") or (file.content_type or "").startswith("application/pdf")
-    is_docx = filename_lower.endswith(".docx") or filename_lower.endswith(".doc") or file.content_type in DOCX_TYPES
+    is_docx = filename_lower.endswith(".docx") or file.content_type in DOCX_TYPES
 
     if not is_pdf and not is_docx:
         raise HTTPException(status_code=400, detail="Only PDF or Word (.docx) balance sheets are supported.")

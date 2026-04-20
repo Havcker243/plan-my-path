@@ -157,9 +157,7 @@ export default function BalanceSheetPage() {
 
   const isDocxFile = (f: File) =>
     f.name.toLowerCase().endsWith(".docx") ||
-    f.name.toLowerCase().endsWith(".doc") ||
-    f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    f.type === "application/msword";
+    f.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
   const handleDownloadFilledCustomPdf = async () => {
     if (!customFile || !workingModel) return;
@@ -235,9 +233,7 @@ export default function BalanceSheetPage() {
       customFile.type === "application/pdf" ||
       customFile.name.toLowerCase().endsWith(".pdf") ||
       customFile.name.toLowerCase().endsWith(".docx") ||
-      customFile.name.toLowerCase().endsWith(".doc") ||
-      customFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      customFile.type === "application/msword"
+      customFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
     if (!isScannable || !accessToken || templateCourseCodes.length === 0) {
       setCustomMatches([]);
@@ -375,7 +371,7 @@ export default function BalanceSheetPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0] ?? null;

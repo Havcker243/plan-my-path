@@ -66,11 +66,18 @@ app.add_middleware(
 )
 
 _rate_limit_hits: dict[str, deque[float]] = defaultdict(deque)
-_RATE_LIMITS = {
+
+# (max_requests, window_seconds) per IP for general routes
+_IP_RATE_LIMITS = {
     ("POST", "/api/transcript"): (5, 15 * 60),
-    ("POST", "/api/ai/advise"): (20, 15 * 60),
+    ("POST", "/api/ai/advise"): (30, 15 * 60),      # IP-level backstop
     ("POST", "/api/reviews"): (10, 15 * 60),
+    ("POST", "/api/balance-sheet/scan"): (10, 5 * 60),
+    ("POST", "/api/balance-sheet/fill-docx"): (10, 5 * 60),
 }
+
+# Tighter per-user limits on the AI endpoint (keyed by JWT sub)
+_USER_AI_LIMIT = (20, 15 * 60)  # 20 messages per user per 15 min
 
 
 def _client_ip(request) -> str:
@@ -78,6 +85,18 @@ def _client_ip(request) -> str:
     if forwarded_for:
         return forwarded_for.split(",", 1)[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+def _check_rate_limit(key: str, max_requests: int, window_seconds: int) -> bool:
+    """Returns True if the request is allowed, False if rate-limited."""
+    now = time.monotonic()
+    hits = _rate_limit_hits[key]
+    while hits and now - hits[0] > window_seconds:
+        hits.popleft()
+    if len(hits) >= max_requests:
+        return False
+    hits.append(now)
+    return True
 
 
 @app.middleware("http")
@@ -93,22 +112,17 @@ async def add_security_headers(request, call_next):
 
 @app.middleware("http")
 async def rate_limit_sensitive_routes(request, call_next):
-    limit = _RATE_LIMITS.get((request.method.upper(), request.url.path))
+    limit = _IP_RATE_LIMITS.get((request.method.upper(), request.url.path))
     if not limit:
         return await call_next(request)
 
     max_requests, window_seconds = limit
-    now = time.monotonic()
     key = f"{request.method.upper()}:{request.url.path}:{_client_ip(request)}"
-    hits = _rate_limit_hits[key]
-    while hits and now - hits[0] > window_seconds:
-        hits.popleft()
-    if len(hits) >= max_requests:
+    if not _check_rate_limit(key, max_requests, window_seconds):
         return JSONResponse(
             status_code=429,
             content={"detail": "Too many requests. Try again later."},
         )
-    hits.append(now)
     return await call_next(request)
 
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
@@ -539,11 +553,16 @@ def advise(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+    # Per-user rate limit (separate from the IP-level middleware limit)
+    user_limit_max, user_limit_window = _USER_AI_LIMIT
+    if not _check_rate_limit(f"ai:user:{user_id}", user_limit_max, user_limit_window):
+        raise HTTPException(status_code=429, detail="You've sent too many messages. Wait a few minutes before trying again.")
+
     message = (payload.message or "").strip()
     if not message:
         raise HTTPException(status_code=400, detail="message is required")
-    if len(message) > 4000:
-        raise HTTPException(status_code=400, detail="message must be 4000 characters or fewer")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message is too long — keep it under 2000 characters.")
     history = payload.history or []
     if len(history) > 20:
         raise HTTPException(status_code=400, detail="history must include 20 messages or fewer")

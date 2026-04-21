@@ -21,11 +21,22 @@ function MessageBubble({ msg }: { msg: AdvisorMessage }) {
   // Highlight course codes in assistant messages
   const renderContent = (text: string) => {
     // Strip JSON blocks from display (they're for internal use)
-    const cleaned = text.replace(/```json[\s\S]*?```/g, "").trim();
-    // Bold course codes like CSCI-241 or CSCI 241
-    const parts = cleaned.split(/(\b[A-Z]{2,5}[-\s]\d{3}\b)/g);
+    let cleaned = text.replace(/```json[\s\S]*?```/g, "").trim();
+
+    // Strip markdown formatting the model outputs despite instructions
+    cleaned = cleaned
+      .replace(/\*\*(.+?)\*\*/g, "$1")       // **bold**
+      .replace(/\*(.+?)\*/g, "$1")            // *italic*
+      .replace(/__(.+?)__/g, "$1")            // __bold__
+      .replace(/_([^_]+)_/g, "$1")            // _italic_
+      .replace(/^#{1,6}\s+/gm, "")            // ### headers
+      .replace(/^[-–—]\s+/gm, "• ")           // - bullets → •
+      .replace(/`([^`]+)`/g, "$1");           // `inline code`
+
+    // Highlight course codes like CSCI-241 or CSCI 241
+    const parts = cleaned.split(/(\b[A-Z]{2,6}[-\s]\d{3,4}[A-Z]?\b)/g);
     return parts.map((part, i) =>
-      /^[A-Z]{2,5}[-\s]\d{3}$/.test(part)
+      /^[A-Z]{2,6}[-\s]\d{3,4}[A-Z]?$/.test(part)
         ? <span key={i} className="font-mono font-semibold bg-primary/10 text-primary px-1 rounded">{part}</span>
         : part
     );

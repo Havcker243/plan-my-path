@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
-import { getCompletedCredits, getTotalCredits, type RequirementLabel } from "@/lib/data";
+import { downloadPdf } from "@/lib/pdf-fill";
+import { getCompletedCredits, type RequirementLabel } from "@/lib/data";
+import { buildPlanPdf } from "@/lib/plan-pdf";
 import { formatDisplayName } from "@/lib/utils";
 
 const LABEL_BADGE: Record<RequirementLabel, string> = {
@@ -23,9 +25,20 @@ function formatStatus(status: string | undefined) {
   return "Planned";
 }
 
+function buildFileName(studentName: string) {
+  const safe = studentName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${safe || "student"}-academic-plan.pdf`;
+}
+
 export default function PlanExportPage() {
   const { user, loading: authLoading } = useAuth();
   const { profile, semesters, planCatalog, majors, degreeCreditTotal, initialized } = usePlan();
+  const [exporting, setExporting] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const autoDownloadedRef = useRef(false);
 
   if (authLoading) return null;
   if (!user) {
@@ -33,7 +46,7 @@ export default function PlanExportPage() {
     return null;
   }
 
-  const studentName = profile?.name?.trim() || user?.email || "Student";
+  const studentName = profile?.name?.trim() || user.email || "Student";
   const majorName = formatDisplayName(
     majors.find((major) => major.code === profile?.major_code)?.name ?? profile?.major_code ?? null
   );
@@ -46,13 +59,11 @@ export default function PlanExportPage() {
   const gradLabel = profile?.graduation_term && profile?.graduation_year
     ? `${capitalize(profile.graduation_term)} ${profile.graduation_year}`
     : null;
-
   const completedCredits = getCompletedCredits(semesters, planCatalog);
   const plannedCredits = semesters.flatMap((semester) => semester.courseIds).reduce((acc, courseId) => {
     const course = planCatalog[courseId];
     return course?.status === "planned" ? acc + (course.credits ?? 0) : acc;
   }, 0);
-  const totalCredits = degreeCreditTotal;
   const gpa = profile?.gpa != null ? Number(profile.gpa).toFixed(2) : null;
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -61,31 +72,53 @@ export default function PlanExportPage() {
   });
   const nonEmptySemesters = semesters.filter((semester) => semester.courseIds.length > 0);
 
+  const handleDownload = async () => {
+    setExporting(true);
+    try {
+      const bytes = await buildPlanPdf({
+        profile: {
+          name: studentName,
+          majorName: majorName ?? null,
+          minorName: minorName ?? null,
+          entryLabel,
+          gradLabel,
+          gpa,
+        },
+        semesters,
+        planCatalog,
+        completedCredits,
+        plannedCredits,
+        totalCredits: degreeCreditTotal,
+        printDate: today,
+      });
+      downloadPdf(bytes, buildFileName(studentName));
+      setDownloaded(true);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   useEffect(() => {
-    if (!initialized || typeof window === "undefined") return;
-    const timer = window.setTimeout(() => window.print(), 600);
-    return () => window.clearTimeout(timer);
+    if (!initialized || autoDownloadedRef.current) return;
+    autoDownloadedRef.current = true;
+    void handleDownload();
   }, [initialized]);
 
   return (
     <>
       <style>{`
-        @media print {
-          @page { size: letter portrait; margin: 0.6in 0.7in; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-print { display: none !important; }
-        }
         body { font-family: Georgia, serif; color: #111; background: white; }
         * { box-sizing: border-box; }
       `}</style>
 
-      <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
+      <div className="fixed top-4 right-4 z-50 flex gap-2">
         <button
           type="button"
-          onClick={() => window.print()}
-          className="px-4 py-2 bg-black text-white text-sm rounded-md hover:bg-gray-800"
+          onClick={() => void handleDownload()}
+          disabled={exporting}
+          className="px-4 py-2 bg-black text-white text-sm rounded-md hover:bg-gray-800 disabled:opacity-60"
         >
-          Print / Save PDF
+          {exporting ? "Generating PDF..." : downloaded ? "Download Again" : "Download PDF"}
         </button>
         <button
           type="button"
@@ -123,7 +156,7 @@ export default function PlanExportPage() {
           {[
             { label: "Completed Credits", value: completedCredits },
             { label: "Planned Credits", value: plannedCredits },
-            { label: "Total Required", value: totalCredits },
+            { label: "Total Required", value: degreeCreditTotal },
             { label: "Cumulative GPA", value: gpa ?? "N/A" },
           ].map((stat) => (
             <div key={stat.label} style={{ border: "1px solid #ddd", borderRadius: 6, padding: "10px 12px" }}>
@@ -138,73 +171,68 @@ export default function PlanExportPage() {
             No courses have been added to this plan yet.
           </div>
         ) : (
-          nonEmptySemesters.map((semester) => {
-            const semesterCredits = getTotalCredits(semester.courseIds, planCatalog);
-
-            return (
-              <div key={semester.id} style={{ marginBottom: 20, pageBreakInside: "avoid" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    backgroundColor: semester.isPast ? "#f0f0f0" : semester.isCurrent ? "#e8f0fe" : "#f9f9f9",
-                    border: "1px solid #ccc",
-                    borderRadius: "6px 6px 0 0",
-                    padding: "7px 12px",
-                  }}
-                >
-                  <span style={{ fontWeight: "bold", fontSize: 13 }}>
-                    {semester.term} {semester.year}
-                    {semester.isCurrent && (
-                      <span style={{ marginLeft: 8, fontSize: 10, color: "#1a56db", fontWeight: "normal" }}>Current</span>
-                    )}
-                    {semester.isPast && (
-                      <span style={{ marginLeft: 8, fontSize: 10, color: "#555", fontWeight: "normal" }}>Completed</span>
-                    )}
-                  </span>
-                  <span style={{ fontSize: 12, color: "#555" }}>{semesterCredits} credits</span>
-                </div>
-
-                <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #ccc", borderTop: "none" }}>
-                  <thead>
-                    <tr style={{ backgroundColor: "#fafafa" }}>
-                      <th style={{ textAlign: "left", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "15%", borderBottom: "1px solid #ddd" }}>Code</th>
-                      <th style={{ textAlign: "left", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", borderBottom: "1px solid #ddd" }}>Course Title</th>
-                      <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "8%", borderBottom: "1px solid #ddd" }}>Cr</th>
-                      <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "10%", borderBottom: "1px solid #ddd" }}>Grade</th>
-                      <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "10%", borderBottom: "1px solid #ddd" }}>Type</th>
-                      <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "12%", borderBottom: "1px solid #ddd" }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {semester.courseIds.map((courseId, index) => {
-                      const course = planCatalog[courseId];
-                      return (
-                        <tr key={`${semester.id}-${courseId}`} style={{ backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa" }}>
-                          <td style={{ padding: "6px 10px", fontSize: 12, fontFamily: "monospace", fontWeight: 600, borderBottom: "1px solid #eee" }}>{courseId}</td>
-                          <td style={{ padding: "6px 10px", fontSize: 12, borderBottom: "1px solid #eee" }}>{course?.title ?? "N/A"}</td>
-                          <td style={{ padding: "6px 10px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #eee" }}>{course?.credits ?? "N/A"}</td>
-                          <td style={{ padding: "6px 10px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #eee" }}>{course?.grade ?? "N/A"}</td>
-                          <td style={{ padding: "6px 10px", fontSize: 11, textAlign: "center", borderBottom: "1px solid #eee", color: "#555" }}>
-                            {course ? LABEL_BADGE[course.label] : "N/A"}
-                          </td>
-                          <td style={{ padding: "6px 10px", fontSize: 11, textAlign: "center", borderBottom: "1px solid #eee" }}>
-                            {formatStatus(course?.status)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+          nonEmptySemesters.map((semester) => (
+            <div key={semester.id} style={{ marginBottom: 20, pageBreakInside: "avoid" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  backgroundColor: semester.isPast ? "#f0f0f0" : semester.isCurrent ? "#e8f0fe" : "#f9f9f9",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px 6px 0 0",
+                  padding: "7px 12px",
+                }}
+              >
+                <span style={{ fontWeight: "bold", fontSize: 13 }}>
+                  {semester.term} {semester.year}
+                  {semester.isCurrent && (
+                    <span style={{ marginLeft: 8, fontSize: 10, color: "#1a56db", fontWeight: "normal" }}>Current</span>
+                  )}
+                  {semester.isPast && (
+                    <span style={{ marginLeft: 8, fontSize: 10, color: "#555", fontWeight: "normal" }}>Completed</span>
+                  )}
+                </span>
               </div>
-            );
-          })
+
+              <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #ccc", borderTop: "none" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#fafafa" }}>
+                    <th style={{ textAlign: "left", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "15%", borderBottom: "1px solid #ddd" }}>Code</th>
+                    <th style={{ textAlign: "left", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", borderBottom: "1px solid #ddd" }}>Course Title</th>
+                    <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "8%", borderBottom: "1px solid #ddd" }}>Cr</th>
+                    <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "10%", borderBottom: "1px solid #ddd" }}>Grade</th>
+                    <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "10%", borderBottom: "1px solid #ddd" }}>Type</th>
+                    <th style={{ textAlign: "center", padding: "5px 10px", fontSize: 10, color: "#777", fontWeight: "normal", width: "12%", borderBottom: "1px solid #ddd" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {semester.courseIds.map((courseId, index) => {
+                    const course = planCatalog[courseId];
+                    return (
+                      <tr key={`${semester.id}-${courseId}`} style={{ backgroundColor: index % 2 === 0 ? "#fff" : "#fafafa" }}>
+                        <td style={{ padding: "6px 10px", fontSize: 12, fontFamily: "monospace", fontWeight: 600, borderBottom: "1px solid #eee" }}>{courseId}</td>
+                        <td style={{ padding: "6px 10px", fontSize: 12, borderBottom: "1px solid #eee" }}>{course?.title ?? "N/A"}</td>
+                        <td style={{ padding: "6px 10px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #eee" }}>{course?.credits ?? "N/A"}</td>
+                        <td style={{ padding: "6px 10px", fontSize: 12, textAlign: "center", borderBottom: "1px solid #eee" }}>{course?.grade ?? "N/A"}</td>
+                        <td style={{ padding: "6px 10px", fontSize: 11, textAlign: "center", borderBottom: "1px solid #eee", color: "#555" }}>
+                          {course ? LABEL_BADGE[course.label] : "N/A"}
+                        </td>
+                        <td style={{ padding: "6px 10px", fontSize: 11, textAlign: "center", borderBottom: "1px solid #eee" }}>
+                          {formatStatus(course?.status)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))
         )}
 
         <div style={{ borderTop: "1px solid #ccc", paddingTop: 14, marginTop: 28, display: "flex", justifyContent: "space-between", fontSize: 10, color: "#888" }}>
           <span>Generated by FiskGrad / fiskgrad.app</span>
-          <span>Printed {today}</span>
+          <span>{downloaded ? "PDF ready" : "Preparing download"}</span>
         </div>
       </div>
     </>

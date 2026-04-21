@@ -22,6 +22,8 @@ from app.custom_balance_sheet import fill_balance_sheet_docx, scan_balance_sheet
 from app.db import (
     CourseLabelsData,
     CourseLabelEntry,
+    create_section_alert,
+    delete_section_alert,
     fetch_courses_by_subject,
     fetch_majors,
     fetch_profile,
@@ -29,6 +31,7 @@ from app.db import (
     fetch_subjects,
     fetch_term_calendar,
     fetch_plan,
+    list_section_alerts,
     resolve_pooler_url,
     search_courses,
     save_plan,
@@ -285,6 +288,7 @@ def get_course_labels_endpoint(
         "data": labels_data.get('labels', {}),
         "rules": labels_data.get('rules', []),
         "total_credits": labels_data.get('total_credits', 120),
+        "coreqs": labels_data.get('coreqs', {}),
     }
 
 
@@ -398,6 +402,52 @@ def put_plan(payload: dict, user: Dict[str, object] = Depends(get_current_user))
     return {"data": saved}
 
 
+@app.get("/api/section-alerts")
+def get_section_alerts(user: Dict[str, object] = Depends(get_current_user)) -> Dict[str, object]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    alerts = list_section_alerts(POOLER_URL, str(user_id))
+    return {"data": alerts}
+
+
+@app.post("/api/section-alerts")
+def post_section_alert(
+    payload: SectionAlertPayload,
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    course_code = (payload.course_code or "").strip().upper()
+    if not course_code or not RE_COURSE_CODE.match(course_code):
+        raise HTTPException(status_code=400, detail="valid course_code is required")
+    if not payload.section_id:
+        raise HTTPException(status_code=400, detail="section_id is required")
+    alert = create_section_alert(
+        POOLER_URL,
+        str(user_id),
+        course_code=course_code,
+        section_id=payload.section_id,
+        term=payload.term.strip() if payload.term else None,
+    )
+    return {"data": alert}
+
+
+@app.delete("/api/section-alerts/{alert_id}")
+def remove_section_alert(
+    alert_id: str,
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    deleted = delete_section_alert(POOLER_URL, str(user_id), alert_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"data": {"deleted": True}}
+
+
 # ---------------------------------------------------------------------------
 # Course reviews
 # ---------------------------------------------------------------------------
@@ -429,6 +479,12 @@ class BalanceSheetScanPayload(BaseModel):
 
 class BalanceSheetFillPayload(BaseModel):
     rows: List[dict]
+
+
+class SectionAlertPayload(BaseModel):
+    course_code: str
+    section_id: str
+    term: Optional[str] = None
 
 
 @app.post("/api/balance-sheet/scan")

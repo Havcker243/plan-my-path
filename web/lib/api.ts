@@ -42,6 +42,20 @@ async function post<T>(path: string, body: unknown, token: string): Promise<T> {
   return res.json();
 }
 
+async function del<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({})) as { detail?: string };
+    throw new Error(detail.detail ?? `DELETE ${path} → ${res.status}`);
+  }
+  return res.json();
+}
+
 // ─── Types matching backend responses ────────────────────────────────────────
 
 export interface Major {
@@ -157,6 +171,22 @@ export interface CourseLabelsResponse {
   labels: Record<string, CourseLabelEntry>;
   rules: ElectiveRule[];
   total_credits: number;
+  /** Maps course code → required corequisite code (e.g. "CSCI 110" → "CSCI 110L") */
+  coreqs: Record<string, string>;
+}
+
+export interface SectionAlert {
+  id: string;
+  user_id: string;
+  course_code: string;
+  term: string | null;
+  section_id: string;
+  section_code: string | null;
+  seats_available: number | null;
+  seats_capacity: number | null;
+  status: string | null;
+  emailed_at: string | null;
+  created_at: string | null;
 }
 
 export interface TermCalendarEntry {
@@ -251,10 +281,27 @@ export async function fetchTermCalendar(): Promise<TermCalendarEntry[]> {
 export async function fetchCourseLabels(
   majorCode: string
 ): Promise<CourseLabelsResponse> {
-  const res = await get<{ data: Record<string, CourseLabelEntry>; rules: ElectiveRule[]; total_credits?: number }>(
+  const res = await get<{ data: Record<string, CourseLabelEntry>; rules: ElectiveRule[]; total_credits?: number; coreqs?: Record<string, string> }>(
     `/api/course-labels?major_code=${encodeURIComponent(majorCode)}`
   );
-  return { labels: res.data ?? {}, rules: res.rules ?? [], total_credits: res.total_credits ?? 120 };
+  return { labels: res.data ?? {}, rules: res.rules ?? [], total_credits: res.total_credits ?? 120, coreqs: res.coreqs ?? {} };
+}
+
+export async function fetchSectionAlerts(token: string): Promise<SectionAlert[]> {
+  const res = await get<{ data: SectionAlert[] }>("/api/section-alerts", token);
+  return res.data ?? [];
+}
+
+export async function createSectionAlert(
+  token: string,
+  payload: { course_code: string; section_id: string; term?: string | null }
+): Promise<SectionAlert> {
+  const res = await post<{ data: SectionAlert }>("/api/section-alerts", payload, token);
+  return res.data;
+}
+
+export async function deleteSectionAlert(token: string, alertId: string): Promise<void> {
+  await del<{ data: { deleted: boolean } }>(`/api/section-alerts/${encodeURIComponent(alertId)}`, token);
 }
 
 // ─── Transcript parsing ───────────────────────────────────────────────────────

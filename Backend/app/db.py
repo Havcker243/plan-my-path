@@ -149,6 +149,20 @@ class ProfileRow(TypedDict):
     gpa: Optional[float]
 
 
+class SectionAlertRow(TypedDict):
+    id: str
+    user_id: str
+    course_code: str
+    term: Optional[str]
+    section_id: str
+    section_code: Optional[str]
+    seats_available: Optional[int]
+    seats_capacity: Optional[int]
+    status: Optional[str]
+    emailed_at: Optional[str]
+    created_at: Optional[str]
+
+
 class CourseLabelEntry(TypedDict):
     label: str
     group_name: str
@@ -928,6 +942,10 @@ def delete_user_data(pooler_url: str, user_id: str) -> None:
     """Delete all user-owned rows: plan_courses → plan_semesters → plans → profiles."""
     with connect(pooler_url) as conn:
         with conn.cursor() as cur:
+            try:
+                cur.execute("DELETE FROM section_alerts WHERE user_id = %s", (user_id,))
+            except Exception:
+                conn.rollback()
             cur.execute(
                 """
                 DELETE FROM plan_courses
@@ -949,6 +967,102 @@ def delete_user_data(pooler_url: str, user_id: str) -> None:
             cur.execute("DELETE FROM plans WHERE user_id = %s", (user_id,))
             cur.execute("DELETE FROM profiles WHERE user_id = %s", (user_id,))
         conn.commit()
+
+
+def list_section_alerts(pooler_url: str, user_id: str) -> list[SectionAlertRow]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT sa.id,
+                       sa.user_id,
+                       sa.course_code,
+                       sa.term,
+                       sa.section_id,
+                       sec.section_code,
+                       sec.seats_available,
+                       sec.seats_capacity,
+                       sec.status,
+                       sa.emailed_at,
+                       sa.created_at
+                FROM section_alerts sa
+                LEFT JOIN sections sec ON sec.id = sa.section_id
+                WHERE sa.user_id = %s
+                ORDER BY sa.created_at DESC
+                """,
+                (user_id,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "user_id": str(row[1]),
+            "course_code": row[2],
+            "term": row[3],
+            "section_id": str(row[4]),
+            "section_code": row[5],
+            "seats_available": row[6],
+            "seats_capacity": row[7],
+            "status": row[8],
+            "emailed_at": row[9].isoformat() if row[9] else None,
+            "created_at": row[10].isoformat() if row[10] else None,
+        }
+        for row in rows
+    ]
+
+
+def create_section_alert(
+    pooler_url: str,
+    user_id: str,
+    course_code: str,
+    section_id: str,
+    term: Optional[str] = None,
+) -> SectionAlertRow:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO section_alerts (user_id, course_code, term, section_id)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (user_id, section_id) DO UPDATE
+                SET course_code = EXCLUDED.course_code,
+                    term = EXCLUDED.term
+                RETURNING id, user_id, course_code, term, section_id, emailed_at, created_at
+                """,
+                (user_id, course_code, term, section_id),
+            )
+            row = cur.fetchone()
+            conn.commit()
+
+    alerts = list_section_alerts(pooler_url, user_id)
+    for alert in alerts:
+        if alert["id"] == str(row[0]):
+            return alert
+    return {
+        "id": str(row[0]),
+        "user_id": str(row[1]),
+        "course_code": row[2],
+        "term": row[3],
+        "section_id": str(row[4]),
+        "section_code": None,
+        "seats_available": None,
+        "seats_capacity": None,
+        "status": None,
+        "emailed_at": row[5].isoformat() if row[5] else None,
+        "created_at": row[6].isoformat() if row[6] else None,
+    }
+
+
+def delete_section_alert(pooler_url: str, user_id: str, alert_id: str) -> bool:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM section_alerts WHERE id = %s AND user_id = %s",
+                (alert_id, user_id),
+            )
+            deleted = cur.rowcount > 0
+        conn.commit()
+    return deleted
 
 
 def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
@@ -986,7 +1100,8 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                     rg.description,
                     rg.credits_required_min,
                     rg.credits_required_max,
-                    rg.courses_required
+                    rg.courses_required,
+                    rc.requires_corequisite
                 FROM requirement_courses rc
                 JOIN requirement_groups rg ON rg.id = rc.group_id
                 JOIN majors m ON m.id = rg.major_id
@@ -998,6 +1113,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
 
             rows = cur.fetchall()
             labels: dict[str, CourseLabelEntry] = {}
+            coreqs: dict[str, str] = {}
 
             for row in rows:
                 (
@@ -1012,7 +1128,10 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                     credits_required_min,
                     credits_required_max,
                     courses_required,
+                    requires_corequisite,
                 ) = row
+                if requires_corequisite:
+                    coreqs[course_code] = requires_corequisite
 
                 # Determine label based on group type
                 if group_type == 'all_of':
@@ -1075,7 +1194,7 @@ def fetch_course_labels(pooler_url: str, major_code: str) -> CourseLabelsData:
                     'group_name': group_name,
                 })
 
-    return {'labels': labels, 'rules': elective_rules, 'total_credits': total_credits}
+    return {'labels': labels, 'rules': elective_rules, 'total_credits': total_credits, 'coreqs': coreqs}
 
 
 def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseLabelEntry:

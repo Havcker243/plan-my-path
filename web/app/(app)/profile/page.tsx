@@ -104,16 +104,12 @@ export default function ProfilePage() {
     setImpactLoading(true);
     fetchCourseLabels(major).then(({ labels }) => {
       let carryOver = 0, becomeElective = 0;
-      const oldLabels = profile?.major_code && profile.major_code !== "UNDECLARED" ? null : null;
       for (const code of allPlanCodes) {
         const entry = labels[code];
         if (!entry) continue;
-        if (entry.label === "required" || entry.label === "group") carryOver++;
+        if (entry.label === "Required" || entry.label === "Group Choice") carryOver++;
         else becomeElective++;
       }
-      const newGaps = Object.values(labels).filter((e) => (e.label === "required") && !allPlanCodes.some((c) => {
-        const l = labels[c]; return l && c === Object.keys(labels).find((k) => labels[k] === e);
-      })).length;
       setImpactData({ carryOver, becomeElective, newGaps: 0 });
     }).catch(() => setImpactData(null)).finally(() => setImpactLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -15,6 +15,7 @@ export interface Course {
   selectedSectionId: string | null;
   description: string;
   prereqs: string[]; // course codes
+  coreqs: string[]; // course codes that should be taken with or before this course
   offeredTerms: SemesterTerm[];
   subject: string;
   level: 100 | 200 | 300 | 400;
@@ -185,6 +186,34 @@ export function getPrereqWarnings(
       }
     }
   }
+  return warnings;
+}
+
+export function getCoreqWarnings(
+  semesters: Semester[],
+  catalog: Record<string, Course>
+): Array<{ courseId: string; coreqId: string }> {
+  const warnings: Array<{ courseId: string; coreqId: string }> = [];
+  const semesterIndexForCourse: Record<string, number> = {};
+
+  semesters.forEach((sem, idx) => {
+    sem.courseIds.forEach((id) => {
+      semesterIndexForCourse[id] = idx;
+    });
+  });
+
+  for (const [courseId, semIdx] of Object.entries(semesterIndexForCourse)) {
+    const course = catalog[courseId];
+    if (!course) continue;
+    if (course.status === "completed") continue;
+    for (const coreqId of course.coreqs) {
+      const coreqIdx = semesterIndexForCourse[coreqId];
+      if (coreqIdx === undefined || coreqIdx > semIdx) {
+        warnings.push({ courseId, coreqId });
+      }
+    }
+  }
+
   return warnings;
 }
 

@@ -100,3 +100,77 @@ export function getInstructorNames(section: BackendSection): string {
     .filter(Boolean);
   return names.length > 0 ? names.join(", ") : "Instructor TBA";
 }
+
+export type DayPatternPreference = "any" | "mwf" | "tth";
+
+export interface SchedulePreferences {
+  earliestStartHour: number | null;
+  latestEndHour: number | null;
+  noFriday: boolean;
+  dayPattern: DayPatternPreference;
+  onlyMatching: boolean;
+}
+
+function parseTimeToHour(value: string | null): number | null {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = match[3]?.toUpperCase();
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (meridiem === "AM") hours = hours === 12 ? 0 : hours;
+  if (meridiem === "PM") hours = hours === 12 ? 12 : hours + 12;
+  return hours + minutes / 60;
+}
+
+function normalizeDayTokens(days: string | null): string[] {
+  if (!days) return [];
+  return days.toUpperCase().replace(/TH/g, "R").split("").filter((day) => "MTWRFSU".includes(day));
+}
+
+export function sectionMatchesPreferences(
+  section: BackendSection,
+  preferences: SchedulePreferences
+): boolean {
+  const meetings = section.meeting_times ?? [];
+  if (meetings.length === 0) return true;
+
+  return meetings.every((meeting) => {
+    const startHour = parseTimeToHour(meeting.start_time);
+    const endHour = parseTimeToHour(meeting.end_time);
+    const dayTokens = normalizeDayTokens(meeting.days);
+
+    if (preferences.earliestStartHour != null && startHour != null && startHour < preferences.earliestStartHour) {
+      return false;
+    }
+    if (preferences.latestEndHour != null && endHour != null && endHour > preferences.latestEndHour) {
+      return false;
+    }
+    if (preferences.noFriday && dayTokens.includes("F")) {
+      return false;
+    }
+    if (preferences.dayPattern === "mwf") {
+      return dayTokens.length === 0 || dayTokens.every((day) => ["M", "W", "F"].includes(day));
+    }
+    if (preferences.dayPattern === "tth") {
+      return dayTokens.length === 0 || dayTokens.every((day) => ["T", "R"].includes(day));
+    }
+    return true;
+  });
+}
+
+export function filterSectionsByPreferences(
+  sections: BackendSection[],
+  preferences: SchedulePreferences
+): BackendSection[] {
+  if (!preferences.onlyMatching) return sections;
+  return sections.filter((section) => sectionMatchesPreferences(section, preferences));
+}
+
+export function countMatchingSections(
+  sections: BackendSection[],
+  preferences: SchedulePreferences
+): number {
+  return sections.filter((section) => sectionMatchesPreferences(section, preferences)).length;
+}

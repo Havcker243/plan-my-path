@@ -70,7 +70,8 @@ export function normalizePrereqs(requisites: unknown): string[] {
 export function planCourseToCourse(
   bc: BackendPlanCourse,
   labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
+  rules: ElectiveRule[] = [],
+  coreqs: Record<string, string> = {}
 ): Course {
   // Used when loading an already-saved plan. Preserve backend state while
   // re-resolving labels against the current major rules.
@@ -86,6 +87,7 @@ export function planCourseToCourse(
     selectedSectionId: bc.selectedSectionId,
     description: bc.description ?? "",
     prereqs: bc.prerequisites,
+    coreqs: coreqs[bc.code] ? [coreqs[bc.code]] : [],
     offeredTerms: (bc.offeredTerms ?? []).map(capitalizeTerm) as SemesterTerm[],
     subject,
     level,
@@ -95,7 +97,8 @@ export function planCourseToCourse(
 export function searchCourseToCourse(
   bc: BackendCourse,
   labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
+  rules: ElectiveRule[] = [],
+  coreqs: Record<string, string> = {}
 ): Course {
   // Used for catalog search results before the user adds a course to a plan.
   // Search results always begin as planned courses.
@@ -115,6 +118,7 @@ export function searchCourseToCourse(
     selectedSectionId: null,
     description: bc.description ?? "",
     prereqs: normalizePrereqs(bc.requisites),
+    coreqs: coreqs[bc.course_code] ? [coreqs[bc.course_code]] : [],
     offeredTerms,
     subject,
     level,
@@ -124,7 +128,8 @@ export function searchCourseToCourse(
 export function subjectCourseToCourse(
   bc: BackendSubjectCourse,
   labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[] = []
+  rules: ElectiveRule[] = [],
+  coreqs: Record<string, string> = {}
 ): Course {
   const { subject, level } = parseCodeParts(bc.code);
   return {
@@ -138,6 +143,7 @@ export function subjectCourseToCourse(
     selectedSectionId: null,
     description: bc.description ?? "",
     prereqs: normalizePrereqs(bc.prerequisites),
+    coreqs: coreqs[bc.code] ? [coreqs[bc.code]] : [],
     offeredTerms: (bc.offeredTerms ?? []).map(capitalizeTerm) as SemesterTerm[],
     subject,
     level,
@@ -199,7 +205,8 @@ export function buildSemesters(
   backendSemesters: BackendSemester[],
   labels: Record<string, CourseLabelEntry>,
   rules: ElectiveRule[] = [],
-  termCalendar: TermCalendarEntry[] = []
+  termCalendar: TermCalendarEntry[] = [],
+  coreqs: Record<string, string> = {}
 ): { semesters: Semester[]; catalog: Record<string, Course> } {
   const catalog: Record<string, Course> = {};
   const today = new Date();
@@ -220,7 +227,7 @@ export function buildSemesters(
         })();
 
     bs.courses.forEach((bc) => {
-      catalog[bc.code] = planCourseToCourse(bc, labels, rules);
+      catalog[bc.code] = planCourseToCourse(bc, labels, rules, coreqs);
     });
 
     return {
@@ -328,7 +335,8 @@ export function buildInitialSemesters(
 export async function fetchCatalogMetadataForTranscriptCourses(
   courses: OnboardingCourse[],
   labels: Record<string, CourseLabelEntry>,
-  rules: ElectiveRule[]
+  rules: ElectiveRule[],
+  coreqs: Record<string, string> = {}
 ): Promise<Record<string, Course>> {
   // Transcript rows may use spaces while the catalog uses hyphens. Match by
   // normalized code and return catalog metadata keyed by the original
@@ -352,7 +360,7 @@ export async function fetchCatalogMetadataForTranscriptCourses(
   subjectResults.forEach((result) => {
     if (result.status !== "fulfilled") return;
     result.value.rows.forEach((row) => {
-      const course = subjectCourseToCourse(row, labels, rules);
+      const course = subjectCourseToCourse(row, labels, rules, coreqs);
       catalogByNormalizedCode[normalizeCourseCode(course.code)] = course;
     });
   });

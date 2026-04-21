@@ -238,6 +238,7 @@ export function buildOnboardingPlanState(
           selectedSectionId: null,
           description: "",
           prereqs: [],
+          coreqs: [],
           offeredTerms: [],
           subject,
           level,

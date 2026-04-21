@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, X, Check, AlertTriangle, GripVertical,
+  Plus, X, Check, AlertTriangle, GripVertical, Bell, BellOff,
   CheckCircle, Clock, Loader2, GraduationCap, ArrowRight, ListChecks,
 } from "lucide-react";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { cn, formatDisplayName } from "@/lib/utils";
 import {
   getTotalCredits,
   getPrereqWarnings,
+  getCoreqWarnings,
   getOfferedTermWarnings,
   getSemesterCreditLoad,
   getSemesterGpa,
@@ -50,14 +51,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePlan } from "@/contexts/plan-context";
-import type { BackendSection } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  createSectionAlert,
+  deleteSectionAlert,
+  fetchSectionAlerts,
+  type BackendSection,
+  type SectionAlert,
+} from "@/lib/api";
 import {
   getMissingRequired,
+  countMatchingSections,
+  type SchedulePreferences,
+  filterSectionsByPreferences,
   formatSectionDate,
   formatSectionTime,
   formatMeetingTime,
   formatSeatSummary,
   getInstructorNames,
+  sectionMatchesPreferences,
 } from "@/lib/planner";
 import { toast } from "sonner";
 
@@ -82,10 +94,12 @@ function SectionOptionCard({
   section,
   selected,
   onClick,
+  footer,
 }: {
   section: BackendSection;
   selected: boolean;
   onClick?: () => void;
+  footer?: ReactNode;
 }) {
   // Shared section display card for both "add course" and "edit selected
   // section" flows. Keep it display-only; persistence belongs to PlannerPage.
@@ -101,7 +115,7 @@ function SectionOptionCard({
         const parts = [meeting.location, meeting.building, meeting.room]
           .map((value) => value?.trim())
           .filter(Boolean);
-        return parts.length > 0 ? parts.join(" • ") : null;
+        return parts.length > 0 ? parts.join(" â€¢ ") : null;
       })
       .filter((value): value is string => Boolean(value)) ?? [];
   const dateStart = formatSectionDate(section.start_date);
@@ -110,51 +124,54 @@ function SectionOptionCard({
   const seatSummary = formatSeatSummary(section);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full rounded-lg border p-3 text-left transition-colors",
-        onClick && "hover:border-primary/40 hover:bg-muted/40",
-        selected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{section.section_code}</p>
-          <p className="text-xs text-muted-foreground">{getInstructorNames(section)}</p>
-        </div>
-        {selected && (
-          <span className="text-[10px] font-medium rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-            Selected
-          </span>
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "w-full rounded-lg border p-3 text-left transition-colors",
+          onClick && "hover:border-primary/40 hover:bg-muted/40",
+          selected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"
         )}
-      </div>
-      <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
-        {meetingSummary.length > 0 ? (
-          meetingSummary.map((line) => (
-            <p key={`${section.id}-${line}`}>{line}</p>
-          ))
-        ) : (
-          <p>Meeting time TBA</p>
-        )}
-        {locationSummary.slice(0, 2).map((line) => (
-          <p key={`${section.id}-loc-${line}`}>{line}</p>
-        ))}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {section.modality && (
-            <span className="rounded-full bg-muted px-2 py-0.5">{section.modality}</span>
-          )}
-          {section.campus && (
-            <span className="rounded-full bg-muted px-2 py-0.5">{section.campus}</span>
-          )}
-          {seatSummary && (
-            <span className="rounded-full bg-muted px-2 py-0.5">{seatSummary}</span>
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">{section.section_code}</p>
+            <p className="text-xs text-muted-foreground">{getInstructorNames(section)}</p>
+          </div>
+          {selected && (
+            <span className="text-[10px] font-medium rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+              Selected
+            </span>
           )}
         </div>
-        {dateSummary && <p className="pt-1">{dateSummary}</p>}
-      </div>
-    </button>
+        <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+          {meetingSummary.length > 0 ? (
+            meetingSummary.map((line) => (
+              <p key={`${section.id}-${line}`}>{line}</p>
+            ))
+          ) : (
+            <p>Meeting time TBA</p>
+          )}
+          {locationSummary.slice(0, 2).map((line) => (
+            <p key={`${section.id}-loc-${line}`}>{line}</p>
+          ))}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {section.modality && (
+              <span className="rounded-full bg-muted px-2 py-0.5">{section.modality}</span>
+            )}
+            {section.campus && (
+              <span className="rounded-full bg-muted px-2 py-0.5">{section.campus}</span>
+            )}
+            {seatSummary && (
+              <span className="rounded-full bg-muted px-2 py-0.5">{seatSummary}</span>
+            )}
+          </div>
+          {dateSummary && <p className="pt-1">{dateSummary}</p>}
+        </div>
+      </button>
+      {footer}
+    </div>
   );
 }
 
@@ -166,6 +183,7 @@ type ConfirmAction =
   | null;
 
 export default function PlannerPage() {
+  const { accessToken } = useAuth();
   const {
     semesters,
     setSemesters,
@@ -205,6 +223,16 @@ export default function PlannerPage() {
   const [semesterDialogOpen, setSemesterDialogOpen] = useState(false);
   const [reqModalOpen, setReqModalOpen] = useState(false);
   const [reqModalSemId, setReqModalSemId] = useState<string>("");
+  const [alerts, setAlerts] = useState<SectionAlert[]>([]);
+  const [searchSectionMatchCounts, setSearchSectionMatchCounts] = useState<Record<string, number>>({});
+  const [optimizerOpen, setOptimizerOpen] = useState(false);
+  const [optimizer, setOptimizer] = useState<SchedulePreferences>({
+    earliestStartHour: null,
+    latestEndHour: null,
+    noFriday: false,
+    dayPattern: "any",
+    onlyMatching: false,
+  });
   const [newSemesterTerm, setNewSemesterTerm] = useState<SemesterTerm>("Fall");
   const [newSemesterYear, setNewSemesterYear] = useState<number>(new Date().getFullYear());
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -226,10 +254,21 @@ export default function PlannerPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [saving]);
 
+  useEffect(() => {
+    if (!accessToken) {
+      setAlerts([]);
+      return;
+    }
+    fetchSectionAlerts(accessToken)
+      .then(setAlerts)
+      .catch(() => setAlerts([]));
+  }, [accessToken]);
+
   // Search for courses to add
   useEffect(() => {
     if (!addingTo || searchTerm.length < 2) {
       setSearchResults([]);
+      setSearchSectionMatchCounts({});
       return;
     }
     setSearching(true);
@@ -248,6 +287,26 @@ export default function PlannerPage() {
     return () => clearTimeout(timer);
   }, [searchTerm, addingTo, searchCoursesCatalog, semesters]);
 
+  useEffect(() => {
+    const semester = semesters.find((sem) => sem.id === addingTo);
+    if (!addingTo || !semester || searchResults.length === 0) {
+      setSearchSectionMatchCounts({});
+      return;
+    }
+
+    const termFilter = `${semester.term.toLowerCase()} ${semester.year}`;
+    const courseCodes = searchResults.slice(0, 12).map((course) => course.code);
+    loadSectionsForCourses(courseCodes, termFilter)
+      .then((data) => {
+        const nextCounts: Record<string, number> = {};
+        courseCodes.forEach((code) => {
+          nextCounts[code] = countMatchingSections(data[code] ?? [], optimizer);
+        });
+        setSearchSectionMatchCounts(nextCounts);
+      })
+      .catch(() => setSearchSectionMatchCounts({}));
+  }, [addingTo, searchResults, semesters, loadSectionsForCourses, optimizer]);
+
   const triggerSave = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     pendingSaveRef.current = true;
@@ -265,12 +324,14 @@ export default function PlannerPage() {
         setSaving(false);
       }
     }, 1200);
-  }, []); // no deps — the ref handles currency
+  }, []); // no deps â€” the ref handles currency
 
   const warnings = getPrereqWarnings(semesters, planCatalog);
+  const coreqWarnings = getCoreqWarnings(semesters, planCatalog);
   const offeredTermWarns = getOfferedTermWarnings(semesters, planCatalog);
   const warnSet = new Set([
     ...warnings.map((w) => w.courseId),
+    ...coreqWarnings.map((w) => w.courseId),
     ...offeredTermWarns.map((w) => w.courseId),
   ]);
   const planCodes = new Set(semesters.flatMap((s) => s.courseIds));
@@ -282,11 +343,66 @@ export default function PlannerPage() {
   const selectedCourseSemester = selectedCourse
     ? semesters.find((sem) => sem.courseIds.includes(selectedCourse.code))
     : null;
+  const selectedCourseAlertMap = new Map(alerts.map((alert) => [alert.section_id, alert]));
+  const filteredSelectedSections = filterSectionsByPreferences(selectedCourseSections, optimizer);
+  const filteredPendingSections = filterSectionsByPreferences(pendingSections, optimizer);
+  const hasOptimizerFilters = Boolean(
+    optimizer.earliestStartHour != null ||
+    optimizer.latestEndHour != null ||
+    optimizer.noFriday ||
+    optimizer.dayPattern !== "any"
+  );
   const applySemesters = useCallback((nextSemesters: Semester[]) => {
     const normalized = markCurrentSemester([...nextSemesters].sort(compareSemesters));
     setSemesters(normalized);
     return normalized;
   }, [setSemesters]);
+
+  const toggleSectionAlert = useCallback(async (courseCode: string, section: BackendSection) => {
+    if (!accessToken) return;
+    const existing = alerts.find((alert) => alert.section_id === section.id);
+    try {
+      if (existing) {
+        await deleteSectionAlert(accessToken, existing.id);
+        setAlerts((prev) => prev.filter((alert) => alert.id !== existing.id));
+        toast.success(`Removed alert for ${courseCode} ${section.section_code}`);
+      } else {
+        const created = await createSectionAlert(accessToken, {
+          course_code: courseCode,
+          section_id: section.id,
+          term: section.term,
+        });
+        setAlerts((prev) => [created, ...prev.filter((alert) => alert.id !== created.id)]);
+        toast.success(`We'll email you if ${section.section_code} opens.`);
+      }
+    } catch (error) {
+      console.error("[PlannerPage] failed to toggle alert:", error);
+      toast.error("Couldn't update section alert.");
+    }
+  }, [accessToken, alerts]);
+
+  const sectionHasOpenSeats = (section: BackendSection) => (section.seats?.available ?? 0) > 0;
+
+  const renderSectionAlertButton = (courseCode: string, section: BackendSection) => {
+    if (sectionHasOpenSeats(section)) return null;
+    const existing = selectedCourseAlertMap.get(section.id);
+    return (
+      <button
+        type="button"
+        onClick={() => void toggleSectionAlert(courseCode, section)}
+        disabled={!accessToken}
+        className={cn(
+          "inline-flex h-8 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium transition-colors disabled:opacity-50",
+          existing
+            ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
+            : "border-border bg-background text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {existing ? <BellOff className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+        {existing ? "Alert on" : "Alert me"}
+      </button>
+    );
+  };
 
   useEffect(() => {
     if (!selectedCourse) {
@@ -328,7 +444,7 @@ export default function PlannerPage() {
     }
   };
 
-  // ── Drag handlers ──────────────────────────────────────────────────────────
+  // â”€â”€ Drag handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleDragStart = (courseId: string, semId: string) => {
     setDrag({ courseId, fromSemId: semId });
   };
@@ -351,7 +467,7 @@ export default function PlannerPage() {
     triggerSave();
   };
 
-  // ── Add/remove courses ─────────────────────────────────────────────────────
+  // â”€â”€ Add/remove courses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const addCourse = (semId: string, course: Course) => {
     const semester = semesters.find((sem) => sem.id === semId);
     if (!semester) return;
@@ -368,7 +484,7 @@ export default function PlannerPage() {
         const sections = data[course.code] ?? [];
         setPendingSections(sections);
         if (sections.length === 0) {
-          // No section to pick — add directly via context (writes planCatalog + saves)
+          // No section to pick â€” add directly via context (writes planCatalog + saves)
           await addCourseToSemester(course, semId);
           setAddingTo(null);
           setSearchTerm("");
@@ -379,7 +495,7 @@ export default function PlannerPage() {
         // If sections exist, the pending-section dialog opens (state already set above)
       })
       .catch(async () => {
-        // Section fetch failed — add without a section
+        // Section fetch failed â€” add without a section
         await addCourseToSemester(course, semId);
         setAddingTo(null);
         setSearchTerm("");
@@ -430,7 +546,7 @@ export default function PlannerPage() {
     }
   };
 
-  // ── Add/remove semesters ───────────────────────────────────────────────────
+  // â”€â”€ Add/remove semesters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const addSemester = () => {
     if (semesters.some((semester) => semester.term === newSemesterTerm && semester.year === newSemesterYear)) {
       toast.error(`${newSemesterTerm} ${newSemesterYear} already exists in your plan.`);
@@ -519,7 +635,7 @@ export default function PlannerPage() {
         <div className="min-w-0">
           <h1 className="text-base font-semibold text-foreground">4-Year Planner</h1>
           <p className="text-xs text-muted-foreground truncate">
-            {majorName}{gradText ? ` · ${gradText}` : ""}
+            {majorName}{gradText ? ` Â· ${gradText}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -543,9 +659,9 @@ export default function PlannerPage() {
             {gpa !== null && (
               <span>GPA <span className="font-semibold text-foreground">{gpa.toFixed(2)}</span></span>
             )}
-            {warnings.length > 0 && (
+            {(warnings.length + coreqWarnings.length) > 0 && (
               <span className="flex items-center gap-1 text-yellow-600 font-medium">
-                <AlertTriangle className="w-3 h-3" /> {warnings.length}
+                <AlertTriangle className="w-3 h-3" /> {warnings.length + coreqWarnings.length}
               </span>
             )}
           </div>
@@ -554,7 +670,7 @@ export default function PlannerPage() {
             saving ? "text-muted-foreground" : lastSaved ? "text-green-600" : "text-muted-foreground"
           )}>
             {saving
-              ? <><Clock className="w-3.5 h-3.5 animate-spin" /><span className="hidden sm:inline"> Saving…</span></>
+              ? <><Clock className="w-3.5 h-3.5 animate-spin" /><span className="hidden sm:inline"> Savingâ€¦</span></>
               : lastSaved
               ? <><CheckCircle className="w-3.5 h-3.5" /><span className="hidden sm:inline"> Saved</span></>
               : null
@@ -567,6 +683,71 @@ export default function PlannerPage() {
             Clear
           </button>
         </div>
+      </div>
+
+      <div className="px-4 md:px-5 py-2.5 border-b border-border/60 bg-muted/20 flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setOptimizerOpen((prev) => !prev)}
+            className="text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            {optimizerOpen ? "Hide optimizer" : "Show optimizer"}
+          </button>
+          <p className="text-[11px] text-muted-foreground">
+            Filter sections by time preferences before you pick them.
+          </p>
+        </div>
+        {optimizerOpen && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <select
+              value={optimizer.earliestStartHour ?? ""}
+              onChange={(e) => setOptimizer((prev) => ({ ...prev, earliestStartHour: e.target.value ? Number(e.target.value) : null }))}
+              className="rounded-md border border-input bg-background px-2.5 py-2 text-xs"
+            >
+              <option value="">Earliest start</option>
+              <option value="9">After 9am</option>
+              <option value="10">After 10am</option>
+              <option value="11">After 11am</option>
+            </select>
+            <select
+              value={optimizer.latestEndHour ?? ""}
+              onChange={(e) => setOptimizer((prev) => ({ ...prev, latestEndHour: e.target.value ? Number(e.target.value) : null }))}
+              className="rounded-md border border-input bg-background px-2.5 py-2 text-xs"
+            >
+              <option value="">Latest end</option>
+              <option value="15">By 3pm</option>
+              <option value="16">By 4pm</option>
+              <option value="17">By 5pm</option>
+              <option value="18">By 6pm</option>
+            </select>
+            <select
+              value={optimizer.dayPattern}
+              onChange={(e) => setOptimizer((prev) => ({ ...prev, dayPattern: e.target.value as SchedulePreferences["dayPattern"] }))}
+              className="rounded-md border border-input bg-background px-2.5 py-2 text-xs"
+            >
+              <option value="any">Any days</option>
+              <option value="mwf">MWF only</option>
+              <option value="tth">T/Th only</option>
+            </select>
+            <label className="flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-2 text-xs">
+              <input
+                type="checkbox"
+                checked={optimizer.noFriday}
+                onChange={(e) => setOptimizer((prev) => ({ ...prev, noFriday: e.target.checked }))}
+              />
+              No Friday
+            </label>
+            <label className="flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-2 text-xs">
+              <input
+                type="checkbox"
+                checked={optimizer.onlyMatching}
+                onChange={(e) => setOptimizer((prev) => ({ ...prev, onlyMatching: e.target.checked }))}
+              />
+              Hide non-matches
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Semester columns */}
@@ -671,7 +852,7 @@ export default function PlannerPage() {
                           <div className="flex items-center gap-0.5 flex-shrink-0">
                             {hasWarn && (
                               <button
-                                title="Prerequisite warning"
+                                title="Planning warning"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (course) setSelectedCourse(course);
@@ -697,7 +878,12 @@ export default function PlannerPage() {
                             <p className="text-[10px] text-muted-foreground leading-snug pl-4 line-clamp-2">{course.title}</p>
                             {course.prereqs.length > 0 && (
                               <p className="text-[8px] text-muted-foreground pl-4 truncate" title={`Prereq: ${course.prereqs.join(", ")}`}>
-                                <span className="font-semibold">Prereq:</span> {course.prereqs.join(" → ")}
+                                <span className="font-semibold">Prereq:</span> {course.prereqs.join(" â†’ ")}
+                              </p>
+                            )}
+                            {course.coreqs.length > 0 && (
+                              <p className="text-[8px] text-muted-foreground pl-4 truncate" title={`Coreq: ${course.coreqs.join(", ")}`}>
+                                <span className="font-semibold">Coreq:</span> {course.coreqs.join(" + ")}
                               </p>
                             )}
                             <div className="flex items-center justify-between pl-4 gap-2">
@@ -737,7 +923,7 @@ export default function PlannerPage() {
                         <input
                           autoFocus
                           type="text"
-                          placeholder="Search courses…"
+                          placeholder="Search coursesâ€¦"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="w-full text-[10px] px-2.5 py-1.5 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
@@ -745,7 +931,7 @@ export default function PlannerPage() {
                         <div className="max-h-40 overflow-y-auto flex flex-col gap-0.5">
                           {searching && (
                             <p className="text-[9px] text-muted-foreground text-center py-2 flex items-center justify-center gap-1">
-                              <Loader2 className="w-2.5 h-2.5 animate-spin" /> Searching…
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" /> Searchingâ€¦
                             </p>
                           )}
                           {!searching && searchTerm.length < 2 && (
@@ -754,16 +940,51 @@ export default function PlannerPage() {
                           {!searching && searchResults.length === 0 && searchTerm.length >= 2 && (
                             <p className="text-[9px] text-muted-foreground text-center py-2">No courses found</p>
                           )}
-                          {searchResults.slice(0, 8).map((c) => (
-                            <button
-                              key={c.code}
-                              onClick={() => addCourse(sem.id, c)}
-                              className="text-left px-2 py-1.5 rounded hover:bg-muted/60 transition-colors"
-                            >
-                              <p className="text-[10px] font-semibold text-foreground">{c.code}</p>
-                              <p className="text-[9px] text-muted-foreground">{c.title} · {c.credits}cr</p>
-                            </button>
-                          ))}
+                          {searchResults
+                            .slice(0, 8)
+                            .filter((course) => {
+                              if (!optimizer.onlyMatching) return true;
+                              const count = searchSectionMatchCounts[course.code];
+                              return count == null || count > 0;
+                            })
+                            .map((c) => {
+                              const matchCount = searchSectionMatchCounts[c.code];
+                              return (
+                                <button
+                                  key={c.code}
+                                  onClick={() => addCourse(sem.id, c)}
+                                  className="text-left px-2 py-1.5 rounded hover:bg-muted/60 transition-colors"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[10px] font-semibold text-foreground">{c.code}</p>
+                                    {typeof matchCount === "number" && (
+                                      <span
+                                        className={cn(
+                                          "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
+                                          matchCount > 0
+                                            ? "bg-green-50 text-green-700"
+                                            : "bg-yellow-50 text-yellow-700"
+                                        )}
+                                      >
+                                        {matchCount} match{matchCount === 1 ? "" : "es"}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[9px] text-muted-foreground">{c.title} · {c.credits}cr</p>
+                                </button>
+                              );
+                            })}
+                          {!searching &&
+                            optimizer.onlyMatching &&
+                            searchResults.length > 0 &&
+                            searchResults.slice(0, 8).every((course) => {
+                              const count = searchSectionMatchCounts[course.code];
+                              return typeof count === "number" && count === 0;
+                            }) && (
+                              <p className="text-[9px] text-muted-foreground text-center py-2">
+                                No search results match the optimizer filters.
+                              </p>
+                            )}
                         </div>
                         <button
                           onClick={() => { setAddingTo(null); setSearchTerm(""); setSearchResults([]); }}
@@ -786,7 +1007,7 @@ export default function PlannerPage() {
             );
           })}
 
-          {/* Empty state — shown when no semesters exist */}
+          {/* Empty state â€” shown when no semesters exist */}
           {semesters.length === 0 && (
             <div className="flex-shrink-0 w-80 rounded-xl border border-border bg-card p-8 flex flex-col items-center text-center gap-4 min-h-[260px] justify-center">
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
@@ -876,8 +1097,22 @@ export default function PlannerPage() {
                         {prereq}
                       </span>
                       {i < selectedCourse.prereqs.length - 1 && (
-                        <span className="text-xs text-muted-foreground">→</span>
+                        <span className="text-xs text-muted-foreground">â†’</span>
                       )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selectedCourse.coreqs.length > 0 && (
+              <div className="mb-4 p-3 rounded-lg bg-muted/50 border border-border">
+                <p className="text-xs font-semibold text-foreground mb-2">
+                  Should be taken with this course
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedCourse.coreqs.map((coreq) => (
+                    <span key={coreq} className="text-xs bg-background border border-border rounded-md px-2 py-1 font-mono font-medium text-foreground">
+                      {coreq}
                     </span>
                   ))}
                 </div>
@@ -888,10 +1123,19 @@ export default function PlannerPage() {
                 <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-yellow-800">
                   {(() => {
-                    const warn = warnings.find((w) => w.courseId === selectedCourse.id);
-                    return warn
-                      ? `${warn.prereqId} must come before ${selectedCourse.code}. Move it to an earlier semester.`
-                      : "A prerequisite hasn't been placed yet.";
+                    const prereqWarn = warnings.find((w) => w.courseId === selectedCourse.id);
+                    if (prereqWarn) {
+                      return `${prereqWarn.prereqId} must come before ${selectedCourse.code}. Move it to an earlier semester.`;
+                    }
+                    const coreqWarn = coreqWarnings.find((w) => w.courseId === selectedCourse.id);
+                    if (coreqWarn) {
+                      return `${coreqWarn.coreqId} should be taken in the same semester as ${selectedCourse.code}, or earlier if already completed.`;
+                    }
+                    const offeredWarn = offeredTermWarns.find((w) => w.courseId === selectedCourse.id);
+                    if (offeredWarn) {
+                      return `${selectedCourse.code} may not be offered in ${offeredWarn.semesterTerm}. Check the catalog before registering.`;
+                    }
+                    return "This course has a planning warning.";
                   })()}
                 </p>
               </div>
@@ -901,7 +1145,7 @@ export default function PlannerPage() {
                 <div>
                   <p className="text-xs font-semibold text-foreground mb-2">Section</p>
                   {sectionsLoading ? (
-                    <p className="text-xs text-muted-foreground">Loading sections…</p>
+                    <p className="text-xs text-muted-foreground">Loading sectionsâ€¦</p>
                   ) : selectedCourseSections.length > 0 ? (
                     <div className="space-y-3">
                       <Select
@@ -913,7 +1157,7 @@ export default function PlannerPage() {
                         </SelectTrigger>
                         <SelectContent className="max-h-72">
                           <SelectItem value="__none__">No section selected</SelectItem>
-                          {selectedCourseSections.map((section) => (
+                          {filteredSelectedSections.map((section) => (
                             <SelectItem key={section.id} value={section.id}>
                               {section.section_code} · {getInstructorNames(section)}
                             </SelectItem>
@@ -921,13 +1165,32 @@ export default function PlannerPage() {
                         </SelectContent>
                       </Select>
 
+                      {optimizer.onlyMatching && filteredSelectedSections.length === 0 && hasOptimizerFilters && (
+                        <p className="text-xs text-muted-foreground">
+                          No sections match your optimizer filters. Relax the filters to see the full list.
+                        </p>
+                      )}
+
                       <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {selectedCourseSections.map((section) => (
+                        {filteredSelectedSections.map((section) => (
                           <SectionOptionCard
                             key={section.id}
                             section={section}
                             selected={sectionDraftId === section.id}
                             onClick={() => setSectionDraftId(section.id)}
+                            footer={
+                              <div className="flex items-center justify-between gap-2 px-1">
+                                <span
+                                  className={cn(
+                                    "text-[11px]",
+                                    sectionMatchesPreferences(section, optimizer) ? "text-green-700" : "text-yellow-700"
+                                  )}
+                                >
+                                  {sectionMatchesPreferences(section, optimizer) ? "Matches preferences" : "Outside current filters"}
+                                </span>
+                                {renderSectionAlertButton(selectedCourse.code, section)}
+                              </div>
+                            }
                           />
                         ))}
                       </div>
@@ -1098,7 +1361,7 @@ export default function PlannerPage() {
               <p className="text-xs text-muted-foreground">{pendingCourse?.title}</p>
             </div>
             {pendingSectionsLoading ? (
-              <p className="text-sm text-muted-foreground">Loading sections…</p>
+              <p className="text-sm text-muted-foreground">Loading sectionsâ€¦</p>
             ) : (
               <div className="space-y-3">
                 <Select value={pendingSectionId} onValueChange={setPendingSectionId}>
@@ -1107,13 +1370,19 @@ export default function PlannerPage() {
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
                     <SelectItem value="__none__">Add without section</SelectItem>
-                    {pendingSections.map((section) => (
+                    {filteredPendingSections.map((section) => (
                       <SelectItem key={section.id} value={section.id}>
                         {section.section_code} · {getInstructorNames(section)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
+                {optimizer.onlyMatching && filteredPendingSections.length === 0 && hasOptimizerFilters && (
+                  <p className="text-xs text-muted-foreground">
+                    No sections match your optimizer filters. Relax the filters or add without a section.
+                  </p>
+                )}
 
                 <button
                   type="button"
@@ -1130,12 +1399,25 @@ export default function PlannerPage() {
                 </button>
 
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {pendingSections.map((section) => (
+                  {filteredPendingSections.map((section) => (
                     <SectionOptionCard
                       key={section.id}
                       section={section}
                       selected={pendingSectionId === section.id}
                       onClick={() => setPendingSectionId(section.id)}
+                      footer={
+                        <div className="flex items-center justify-between gap-2 px-1">
+                          <span
+                            className={cn(
+                              "text-[11px]",
+                              sectionMatchesPreferences(section, optimizer) ? "text-green-700" : "text-yellow-700"
+                            )}
+                          >
+                            {sectionMatchesPreferences(section, optimizer) ? "Matches preferences" : "Outside current filters"}
+                          </span>
+                          {pendingCourse ? renderSectionAlertButton(pendingCourse.code, section) : null}
+                        </div>
+                      }
                     />
                   ))}
                 </div>
@@ -1217,6 +1499,7 @@ export default function PlannerPage() {
                       selectedSectionId: null,
                       description: "",
                       prereqs: [],
+                      coreqs: [],
                       offeredTerms: [],
                       subject: code.split("-")[0] ?? "",
                       level: (() => {
@@ -1324,3 +1607,5 @@ export default function PlannerPage() {
     </div>
   );
 }
+
+

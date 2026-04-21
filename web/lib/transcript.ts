@@ -101,6 +101,7 @@ export function buildCourseEntry(
     selectedSectionId: null,
     description: "",
     prereqs: [],
+    coreqs: [],
     offeredTerms: [],
     subject,
     level,

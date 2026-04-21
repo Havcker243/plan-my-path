@@ -25,6 +25,7 @@ import {
   getCompletedCredits,
   getTotalCredits,
   getPrereqWarnings,
+  getCoreqWarnings,
   getOfferedTermWarnings,
   type Semester,
 } from "@/lib/data";
@@ -170,6 +171,7 @@ export default function DashboardPage() {
 
   // ── Action items (things the student needs to address) ─────────────────────
   const prereqWarnings = getPrereqWarnings(semesters, planCatalog);
+  const coreqWarnings = getCoreqWarnings(semesters, planCatalog);
   const offeredTermWarnings = getOfferedTermWarnings(semesters, planCatalog);
   const overloadedSemesters = semesters.filter(
     (s) => !s.isPast && getTotalCredits(s.courseIds, planCatalog) > 18
@@ -178,7 +180,7 @@ export default function DashboardPage() {
     .filter(([code, entry]) => entry.label === "Required" && !planCodes.has(code))
     .map(([code]) => code);
 
-  const totalActions = prereqWarnings.length + offeredTermWarnings.length + overloadedSemesters.length + missingRequired.length;
+  const totalActions = prereqWarnings.length + coreqWarnings.length + offeredTermWarnings.length + overloadedSemesters.length + missingRequired.length;
 
   if (loading) {
     return (
@@ -363,6 +365,15 @@ export default function DashboardPage() {
                 <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-900">
                   <span className="font-semibold">{w.prereqId}</span> must be taken before{" "}
+                  <span className="font-semibold">{w.courseId}</span>
+                </p>
+              </div>
+            ))}
+            {coreqWarnings.slice(0, 2).map((w, i) => (
+              <div key={`${w.courseId}-${w.coreqId}-${i}`} className="flex items-start gap-2.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900">
+                  <span className="font-semibold">{w.coreqId}</span> should be taken with{" "}
                   <span className="font-semibold">{w.courseId}</span>
                 </p>
               </div>

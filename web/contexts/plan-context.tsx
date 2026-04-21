@@ -65,6 +65,7 @@ interface PlanContextValue {
   /** Search/browse results — not in the plan unless also in planCatalog. */
   courseCache: Record<string, Course>;
   labels: Record<string, CourseLabelEntry>;
+  coreqs: Record<string, string>;
   /** Total credits required for the current major — pulled from DB, falls back to 120. */
   degreeCreditTotal: number;
   majors: Major[];
@@ -111,6 +112,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const [planCatalog, setPlanCatalog] = useState<Record<string, Course>>({});
   const [courseCache, setCourseCache] = useState<Record<string, Course>>({});
   const [labels, setLabels] = useState<Record<string, CourseLabelEntry>>({});
+  const [coreqs, setCoreqs] = useState<Record<string, string>>({});
   const [electiveRules, setElectiveRules] = useState<ElectiveRule[]>([]);
   const [degreeCreditTotal, setDegreeCreditTotal] = useState(120);
   const [majors, setMajors] = useState<Major[]>([]);
@@ -177,6 +179,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setSemesters([]);
       setPlanCatalog({});
       setLabels({});
+      setCoreqs({});
       setInitialized(false);
       setInitError(false);
       setProfileLoaded(false);
@@ -200,13 +203,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         setProfileLoaded(true);
 
         let labelsData: Record<string, CourseLabelEntry> = {};
+        let coreqsData: Record<string, string> = {};
         let rulesData: ElectiveRule[] = [];
         if (prof?.major_code) {
           try {
             const res = await fetchCourseLabels(prof.major_code);
             labelsData = res.labels;
+            coreqsData = res.coreqs;
             rulesData = res.rules;
             setLabels(labelsData);
+            setCoreqs(coreqsData);
             setElectiveRules(rulesData);
             setDegreeCreditTotal(res.total_credits ?? 120);
           } catch {
@@ -215,7 +221,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (plan?.semesters?.length) {
-          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData, rulesData, terms);
+          const { semesters: sems, catalog } = buildSemesters(plan.semesters, labelsData, rulesData, terms, coreqsData);
           setSemesters(sems);
           setPlanCatalog(catalog);
         } else {
@@ -234,7 +240,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     searchQueryCacheRef.current = {};
-  }, [labels, electiveRules]);
+  }, [labels, electiveRules, coreqs]);
 
   // Writes to the search/browse cache — not to planCatalog.
   // planCatalog is only written when a course is added to a semester.
@@ -323,6 +329,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetchCourseLabels(data.major_code);
           setLabels(res.labels);
+          setCoreqs(res.coreqs);
           setElectiveRules(res.rules);
           setDegreeCreditTotal(res.total_credits ?? 120);
           // Re-resolve labels for every course already in the plan so the UI
@@ -330,7 +337,11 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           setPlanCatalog((prev) => {
             const next = { ...prev };
             for (const code of Object.keys(next)) {
-              next[code] = { ...next[code], label: resolveLabel(code, res.labels, res.rules) };
+              next[code] = {
+                ...next[code],
+                label: resolveLabel(code, res.labels, res.rules),
+                coreqs: res.coreqs[code] ? [res.coreqs[code]] : [],
+              };
             }
             return next;
           });
@@ -356,7 +367,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data } = await apiSearchCourses(q, subject, 1, 30);
-      const courses = data.map((bc) => searchCourseToCourse(bc, labels, electiveRules));
+      const courses = data.map((bc) => searchCourseToCourse(bc, labels, electiveRules, coreqs));
       searchQueryCacheRef.current[cacheKey] = courses;
       // Populate the browse cache so consumers can look up metadata by code
       setCourseCache((prev) => {
@@ -366,7 +377,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       });
       return courses;
     },
-    [labels, electiveRules]
+    [labels, electiveRules, coreqs]
   );
 
   const loadSectionsForCourses = useCallback(
@@ -415,7 +426,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     async (courses: OnboardingCourse[], gpa: number | null): Promise<{ added: number; skipped: number }> => {
       if (!accessToken) throw new Error("Not authenticated");
 
-      const metaByCode = await fetchCatalogMetadataForTranscriptCourses(courses, labels, electiveRules);
+      const metaByCode = await fetchCatalogMetadataForTranscriptCourses(courses, labels, electiveRules, coreqs);
 
       // Current plan state (read-only snapshots for closure safety)
       const prevSemesters = semesters;
@@ -521,7 +532,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             result.semesters,
             labels,
             electiveRules,
-            termCalendar
+            termCalendar,
+            coreqs
           );
           setSemesters(savedSemesters);
           setPlanCatalog((prev) => ({ ...prev, ...savedCatalog }));
@@ -534,7 +546,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
 
       return { added, skipped };
     },
-    [accessToken, semesters, planCatalog, labels, electiveRules, persistPlan, profile, termCalendar]
+    [accessToken, semesters, planCatalog, labels, electiveRules, coreqs, persistPlan, profile, termCalendar]
   );
 
   const completeOnboarding = useCallback(
@@ -553,13 +565,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       setProfile(updated);
 
       let labelsData: Record<string, CourseLabelEntry> = {};
+      let coreqsData: Record<string, string> = {};
       let rulesData: ElectiveRule[] = [];
       if (updated.major_code) {
         try {
           const res = await fetchCourseLabels(updated.major_code);
           labelsData = res.labels;
+          coreqsData = res.coreqs;
           rulesData = res.rules;
           setLabels(labelsData);
+          setCoreqs(coreqsData);
           setElectiveRules(rulesData);
           setDegreeCreditTotal(res.total_credits ?? 120);
         } catch {
@@ -570,7 +585,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
       const metaByCode = await fetchCatalogMetadataForTranscriptCourses(
         data.completedCourses,
         labelsData,
-        rulesData
+        rulesData,
+        coreqsData
       );
 
       const normalizedCourses = data.completedCourses.map((course) => ({
@@ -660,6 +676,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
               selectedSectionId: null,
               description: "",
               prereqs: [],
+              coreqs: coreqsData[plannerCode] ? [coreqsData[plannerCode]] : [],
               offeredTerms: [],
               subject,
               level,
@@ -759,6 +776,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
         planCatalog,
         courseCache,
         labels,
+        coreqs,
         degreeCreditTotal,
         majors,
         majorsLoading,

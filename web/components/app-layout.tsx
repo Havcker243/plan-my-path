@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
-import { getPrereqWarnings, getTotalCredits, getOfferedTermWarnings, getCompletedCredits } from "@/lib/data";
+import { getPrereqWarnings, getCoreqWarnings, getTotalCredits, getOfferedTermWarnings, getCompletedCredits } from "@/lib/data";
 import CommandSearch from "@/components/command-search";
 import { NAV_ITEMS } from "@/lib/nav";
 import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
@@ -86,6 +86,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // ── Notifications ────────────────────────────────────────────────────────────
   const prereqWarnings = getPrereqWarnings(semesters, planCatalog);
+  const coreqWarnings = getCoreqWarnings(semesters, planCatalog);
   const offeredTermWarnings = getOfferedTermWarnings(semesters, planCatalog);
 
   const overloadedSemesters = semesters.filter(
@@ -97,7 +98,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     .filter(([code, entry]) => entry.label === "Required" && !scheduledCodes.has(code))
     .map(([code]) => code);
 
-  const totalNotifs = prereqWarnings.length + offeredTermWarnings.length + overloadedSemesters.length + missingRequired.length;
+  const totalNotifs = prereqWarnings.length + coreqWarnings.length + offeredTermWarnings.length + overloadedSemesters.length + missingRequired.length;
 
   // Wait for auth AND for at least one full plan-fetch cycle to complete.
   // Without `initialized`, there's a window after auth resolves where planLoading
@@ -382,6 +383,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             </p>
                             <p className="text-[11px] text-muted-foreground">
                               {w.prereqId} must be taken before {w.courseId}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {coreqWarnings.map((w, i) => (
+                        <div key={`${w.courseId}-${w.coreqId}-${i}`} className="flex gap-3 px-4 py-3 items-start">
+                          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground">
+                              Corequisite issue: {w.courseId}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {w.coreqId} should be taken with {w.courseId}
                             </p>
                           </div>
                         </div>

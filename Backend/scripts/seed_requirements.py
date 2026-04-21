@@ -11,10 +11,16 @@ Usage:
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
-import psycopg2
-from psycopg2.extras import execute_values
+
+try:
+    import psycopg2
+    from psycopg2.extras import execute_values
+except ModuleNotFoundError:
+    psycopg2 = None
+    execute_values = None
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
@@ -40,6 +46,9 @@ _load_env_file(Path(__file__).resolve().parent.parent / ".env")
 
 def get_db_connection():
     """Get database connection from environment variables."""
+    if psycopg2 is None:
+        print("ERROR: psycopg2 is required for database seeding. Install Backend requirements first.")
+        sys.exit(1)
     # Accept the supabase_URL key (postgresql:// variant) used in Backend/.env
     database_url = (
         os.getenv('SUPABASE_DB_URL')
@@ -221,6 +230,8 @@ def seed_requirement_groups(conn, major_id, requirement_groups, data_dir=None):
 
 def seed_requirement_courses(cur, group_id, courses):
     """Insert courses for a requirement group"""
+    if execute_values is None:
+        raise RuntimeError("psycopg2 is required for database seeding")
     course_values = []
 
     for course in courses:
@@ -276,6 +287,64 @@ def seed_requirement_rules(cur, group_id, rules):
         print(f"    → Added rule: {subject_code} {min_level}+ level")
 
 
+def load_major_codes_from_seed_sql(filepath: Path) -> list[str]:
+    """Extract major codes from the seed_all_majors.sql VALUES block."""
+    if not filepath.exists():
+        return []
+    content = filepath.read_text(encoding="utf-8")
+    return re.findall(r"\('([A-Z0-9_]+)'\s*,", content)
+
+
+def report_coverage(data_dir: Path, major_seed_file: Path) -> int:
+    """Print requirements-template coverage against the majors seed list."""
+    files = sorted(data_dir.glob("*_requirements.json"))
+    if not files:
+        print(f"ERROR: No *_requirements.json files found in {data_dir}")
+        return 1
+
+    template_codes: list[str] = []
+    template_map: dict[str, str] = {}
+    for filepath in files:
+        payload = load_requirements_json(filepath)
+        code = str(payload.get("major_code", "")).strip().upper()
+        if not code:
+            print(f"WARNING: {filepath.name} is missing major_code")
+            continue
+        template_codes.append(code)
+        template_map[code] = filepath.name
+
+    seeded_codes = load_major_codes_from_seed_sql(major_seed_file)
+    missing_codes = sorted(code for code in seeded_codes if code not in template_map)
+    extra_codes = sorted(code for code in template_codes if code not in seeded_codes)
+
+    print("=" * 80)
+    print("REQUIREMENTS TEMPLATE COVERAGE")
+    print("=" * 80)
+    print(f"Templates found: {len(template_codes)}")
+    print(f"Majors in seed_all_majors.sql: {len(seeded_codes)}")
+    print(f"Coverage: {len(template_codes)}/{len(seeded_codes) if seeded_codes else len(template_codes)}")
+    print()
+    print("Available templates:")
+    for code in sorted(template_codes):
+        print(f"  - {code}: {template_map[code]}")
+
+    if missing_codes:
+        print()
+        print("Majors without requirement templates:")
+        for code in missing_codes:
+            print(f"  - {code}")
+
+    if extra_codes:
+        print()
+        print("Templates not present in seed_all_majors.sql:")
+        for code in extra_codes:
+            print(f"  - {code}")
+
+    print()
+    print("Run `python scripts/seed_requirements.py --all` to seed all available templates.")
+    return 0
+
+
 def main():
     """Main seeding function"""
     import argparse
@@ -290,13 +359,20 @@ def main():
         action="store_true",
         help="Seed all requirements JSON files found in the data/ directory.",
     )
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Report which seeded majors do and do not have requirements JSON templates.",
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent
     data_dir = project_root / "data"
 
-    if args.all:
+    if args.coverage:
+        sys.exit(report_coverage(data_dir, script_dir / "seed_all_majors.sql"))
+    elif args.all:
         files = sorted(data_dir.glob("*_requirements.json"))
         if not files:
             print(f"ERROR: No *_requirements.json files found in {data_dir}")

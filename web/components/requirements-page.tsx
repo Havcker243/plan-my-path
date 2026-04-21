@@ -143,44 +143,46 @@ export default function RequirementsPage() {
         </div>
       )}
 
-      {/* Summary cards */}
-      {(profile?.major_code && profile.major_code !== "UNDECLARED" || whatIfLabels) && (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        {[
-          { label: "Credits Earned", value: totalCreditsEarned, sub: `of ${activeDegreeCredits}` },
-          { label: "Core Courses", value: groups.required.completed, sub: `of ${groups.required.total} done` },
-          { label: "Group Choice", value: groups.group.completed, sub: `of ${groups.group.total} done` },
-          { label: "Electives", value: groups.elective.completed + groups.general.completed, sub: `of ${groups.elective.total + groups.general.total} done` },
-        ].map((card, index) => (
-          <motion.div
-            key={card.label}
-            className="bg-card border border-border rounded-xl p-4"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
-          >
-            <p className="text-xs text-muted-foreground mb-1">{card.label}</p>
-            <p className="text-2xl font-bold text-foreground">{card.value}</p>
-            <p className="text-xs text-muted-foreground">{card.sub}</p>
-          </motion.div>
-        ))}
-      </div>
+      {/* Summary cards + progress bar — hidden for undeclared with no what-if active */}
+      {((profile?.major_code && profile.major_code !== "UNDECLARED") || whatIfLabels) && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            {[
+              { label: "Credits Earned", value: totalCreditsEarned, sub: `of ${activeDegreeCredits}` },
+              { label: "Core Courses", value: groups.required.completed, sub: `of ${groups.required.total} done` },
+              { label: "Group Choice", value: groups.group.completed, sub: `of ${groups.group.total} done` },
+              { label: "Electives", value: groups.elective.completed + groups.general.completed, sub: `of ${groups.elective.total + groups.general.total} done` },
+            ].map((card, index) => (
+              <motion.div
+                key={card.label}
+                className="bg-card border border-border rounded-xl p-4"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: index * 0.1 }}
+              >
+                <p className="text-xs text-muted-foreground mb-1">{card.label}</p>
+                <p className="text-2xl font-bold text-foreground">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.sub}</p>
+              </motion.div>
+            ))}
+          </div>
 
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-foreground">Overall Progress</span>
-          <span className="text-sm text-muted-foreground">
-            {Math.round((totalCreditsEarned / activeDegreeCredits) * 100)}%
-          </span>
-        </div>
-        <div className="h-3 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${(totalCreditsEarned / activeDegreeCredits) * 100}%` }}
-          />
-        </div>
-      </div>
+          {/* Progress bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-foreground">Overall Progress</span>
+              <span className="text-sm text-muted-foreground">
+                {Math.round((totalCreditsEarned / activeDegreeCredits) * 100)}%
+              </span>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-500"
+                style={{ width: `${(totalCreditsEarned / activeDegreeCredits) * 100}%` }}
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {/* Degree Audit — grouped by requirement group */}

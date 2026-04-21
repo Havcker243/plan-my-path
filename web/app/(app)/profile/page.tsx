@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Loader2, Save, Trash2, LogOut, FileDown } from "lucide-react";
+import { Camera, Loader2, Save, Trash2, LogOut, FileDown, Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +71,8 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [majorOpen, setMajorOpen] = useState(false);
+  const [minorOpen, setMinorOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const majorChanged = major !== (profile?.major_code ?? "");
@@ -267,36 +282,89 @@ export default function ProfilePage() {
             {/* Major */}
             <div className="mb-3">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Major</label>
-              <Select value={major} onValueChange={setMajor} disabled={majorsLoading}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={majorsLoading ? "Loading…" : "Select major"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {majors.map((m) => (
-                    <SelectItem key={m.code} value={m.code}>
-                      {formatDisplayName(m.name ?? m.code)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={majorOpen} onOpenChange={setMajorOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    disabled={majorsLoading}
+                    className="w-full h-9 px-3 flex items-center justify-between rounded-md border border-input bg-background text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent/50 transition-colors"
+                  >
+                    <span className={major ? "text-foreground" : "text-muted-foreground"}>
+                      {majorsLoading
+                        ? "Loading…"
+                        : major
+                          ? formatDisplayName(majors.find((m) => m.code === major)?.name ?? major)
+                          : "Select major"}
+                    </span>
+                    <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search majors…" />
+                    <CommandList>
+                      <CommandEmpty>No major found.</CommandEmpty>
+                      <CommandGroup>
+                        {majors.map((m) => (
+                          <CommandItem
+                            key={m.code}
+                            value={formatDisplayName(m.name ?? m.code) ?? m.code}
+                            onSelect={() => { setMajor(m.code); setMajorOpen(false); }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${major === m.code ? "opacity-100" : "opacity-0"}`} />
+                            {formatDisplayName(m.name ?? m.code)}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Minor */}
             <div className="mb-3">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Minor <span className="text-muted-foreground/60">(optional)</span></label>
-              <Select value={minor || "__none__"} onValueChange={(v) => setMinor(v === "__none__" ? "" : v)} disabled={majorsLoading}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="No minor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No minor</SelectItem>
-                  {majors.filter((m) => m.code !== "UNDECLARED").map((m) => (
-                    <SelectItem key={m.code} value={m.code}>
-                      {formatDisplayName(m.name ?? m.code)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={minorOpen} onOpenChange={setMinorOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    disabled={majorsLoading}
+                    className="w-full h-9 px-3 flex items-center justify-between rounded-md border border-input bg-background text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent/50 transition-colors"
+                  >
+                    <span className={minor ? "text-foreground" : "text-muted-foreground"}>
+                      {majorsLoading
+                        ? "Loading…"
+                        : minor
+                          ? formatDisplayName(majors.find((m) => m.code === minor)?.name ?? minor)
+                          : "No minor"}
+                    </span>
+                    <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search minors…" />
+                    <CommandList>
+                      <CommandEmpty>No match found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem value="__none__" onSelect={() => { setMinor(""); setMinorOpen(false); }}>
+                          <Check className={`mr-2 h-4 w-4 ${!minor ? "opacity-100" : "opacity-0"}`} />
+                          No minor
+                        </CommandItem>
+                        {majors.filter((m) => m.code !== "UNDECLARED").map((m) => (
+                          <CommandItem
+                            key={m.code}
+                            value={formatDisplayName(m.name ?? m.code) ?? m.code}
+                            onSelect={() => { setMinor(m.code); setMinorOpen(false); }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${minor === m.code ? "opacity-100" : "opacity-0"}`} />
+                            {formatDisplayName(m.name ?? m.code)}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Graduation */}

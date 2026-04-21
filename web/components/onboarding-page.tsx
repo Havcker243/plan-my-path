@@ -130,7 +130,15 @@ export default function OnboardingPage() {
   const toggleCourse = (code: string, course?: Course) => {
     setCompletedCourses((prev) => {
       if (prev.some((c) => c.code === code)) return prev.filter((c) => c.code !== code);
-      return [...prev, { code, status: "completed", grade: null, term: null, year: null }];
+      return [...prev, {
+        code,
+        status: "completed",
+        grade: null,
+        term: null,
+        year: null,
+        title: course?.title,
+        credits: course?.credits ?? undefined,
+      }];
     });
   };
 
@@ -419,13 +427,13 @@ export default function OnboardingPage() {
                   />
                 </div>
                 {courseResults.length > 0 && (
-                  <div className="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto rounded-lg border border-border divide-y divide-border">
                     {courseResults.map((c) => {
                       const checked = completedCodes.includes(c.code);
                       return (
                         <button
                           key={c.code}
-                          onClick={() => toggleCourse(c.code)}
+                          onClick={() => toggleCourse(c.code, c)}
                           className={cn(
                             "flex items-center justify-between px-4 py-3 text-sm text-left hover:bg-muted/60 transition-colors",
                             checked && "bg-green-50"
@@ -436,7 +444,7 @@ export default function OnboardingPage() {
                             <p className="text-xs text-muted-foreground">{c.title} · {c.credits}cr</p>
                           </div>
                           <div className={cn(
-                            "w-5 h-5 rounded-full flex items-center justify-center border transition-all",
+                            "w-5 h-5 rounded-full flex items-center justify-center border transition-all shrink-0",
                             checked ? "bg-green-600 border-green-600" : "border-border"
                           )}>
                             {checked && <Check className="w-3 h-3 text-white" />}
@@ -446,12 +454,34 @@ export default function OnboardingPage() {
                     })}
                   </div>
                 )}
-                {courseSearch.length < 2 && (
+                {courseSearch.length < 2 && completedCodes.length === 0 && (
                   <p className="text-xs text-muted-foreground text-center">Type at least 2 characters to search courses</p>
                 )}
-                {completedCodes.length > 0 && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded-lg px-4 py-2.5">
-                    <span>{completedCodes.length} courses selected</span>
+
+                {/* Persistent list of added courses */}
+                {completedCourses.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+                      Added ({completedCourses.length})
+                    </p>
+                    <div className="flex flex-col gap-1 max-h-48 overflow-y-auto rounded-lg border border-green-200 bg-green-50/50 divide-y divide-green-100">
+                      {completedCourses.map((c) => (
+                        <div key={c.code} className="flex items-center justify-between px-4 py-2.5">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{c.code}</p>
+                            {c.title && (
+                              <p className="text-xs text-muted-foreground">{c.title}{c.credits ? ` · ${c.credits}cr` : ""}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => toggleCourse(c.code)}
+                            className="ml-3 text-xs text-red-500 hover:text-red-700 transition-colors shrink-0"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-3">

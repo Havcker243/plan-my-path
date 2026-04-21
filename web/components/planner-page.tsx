@@ -221,6 +221,7 @@ export default function PlannerPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (pendingSaveRef.current || saving) e.preventDefault();
     };
+    if (typeof window === "undefined") return;
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [saving]);

@@ -62,7 +62,7 @@ export default function PlanExportPage() {
   const nonEmptySemesters = semesters.filter((semester) => semester.courseIds.length > 0);
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || typeof window === "undefined") return;
     const timer = window.setTimeout(() => window.print(), 600);
     return () => window.clearTimeout(timer);
   }, [initialized]);

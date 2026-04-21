@@ -347,7 +347,7 @@ export default function OnboardingPage() {
           <div className="w-full flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-3 duration-200">
             <div>
               <h1 className="text-xl font-bold text-foreground mb-1">Courses you&apos;ve passed</h1>
-              <p className="text-sm text-muted-foreground">Upload your transcript for instant pre-fill, or search manually.</p>
+              <p className="text-sm text-muted-foreground">Upload your <span className="font-medium text-foreground">unofficial transcript</span> for instant pre-fill, or search manually.</p>
             </div>
 
             {/* Tab switcher */}

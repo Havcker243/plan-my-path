@@ -180,9 +180,24 @@ export interface BackendSubjectCourse {
 
 // ─── Public endpoints ─────────────────────────────────────────────────────────
 
+export interface MajorCompatibility {
+  code: string;
+  name: string;
+  degree_type: string | null;
+  total_required: number;
+  matched: number;
+}
+
 export async function fetchMajors(): Promise<Major[]> {
   const res = await get<{ data: Major[] }>("/api/majors");
   return res.data;
+}
+
+export async function fetchMajorCompatibility(courseCodes: string[]): Promise<MajorCompatibility[]> {
+  if (!courseCodes.length) return [];
+  const qs = courseCodes.map(encodeURIComponent).join(",");
+  const res = await get<{ data: MajorCompatibility[] }>(`/api/majors/compatibility?course_codes=${qs}`);
+  return res.data ?? [];
 }
 
 export async function fetchSubjects(): Promise<Major[]> {
@@ -274,6 +289,19 @@ export interface CourseReview {
   comment: string;
   helpful_count: number;
   created_at: string | null;
+  difficulty: number | null;
+  quality: number | null;
+  would_take_again: boolean | null;
+  tags: string[];
+}
+
+export interface ProfessorSummary {
+  professor: string;
+  review_count: number;
+  avg_quality: number | null;
+  avg_difficulty: number | null;
+  would_take_again_pct: number | null;
+  courses: string[];
 }
 
 export interface BalanceSheetPdfMatch {
@@ -321,10 +349,25 @@ export async function submitReview(
     term_taken?: string | null;
     professor?: string | null;
     comment: string;
+    difficulty?: number | null;
+    quality?: number | null;
+    would_take_again?: boolean | null;
+    tags?: string[];
   }
 ): Promise<CourseReview> {
   const res = await post<{ data: CourseReview }>("/api/reviews", payload, token);
   return res.data;
+}
+
+export async function fetchProfessors(search?: string): Promise<ProfessorSummary[]> {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+  const res = await get<{ data: ProfessorSummary[] }>(`/api/professors${qs}`);
+  return res.data ?? [];
+}
+
+export async function fetchProfessorReviews(name: string): Promise<CourseReview[]> {
+  const res = await get<{ data: CourseReview[] }>(`/api/professors/reviews?name=${encodeURIComponent(name)}`);
+  return res.data ?? [];
 }
 
 export async function scanCustomBalanceSheetPDF(

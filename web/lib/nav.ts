@@ -7,6 +7,8 @@ import {
   ClipboardCheck,
   CalendarDays,
   FileSpreadsheet,
+  TrendingUp,
+  Compass,
 } from "lucide-react";
 
 /**
@@ -24,6 +26,8 @@ export const NAV_ITEMS = [
   { href: "/courses",       label: "Courses",       icon: BookOpen },
   { href: "/calendar",      label: "Schedule",      icon: CalendarDays },
   { href: "/hub",           label: "Course Hub",    icon: MessageSquare },
+  { href: "/explore-majors", label: "Explore Majors", icon: Compass },
+  { href: "/gpa",           label: "GPA Calculator", icon: TrendingUp },
   { href: "/balance-sheet", label: "Degree Audit",  icon: FileSpreadsheet },
   { href: "/profile",       label: "Profile",       icon: User },
 ] as const;

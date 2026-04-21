@@ -39,6 +39,9 @@ from app.db import (
     get_recent_reviews,
     get_reviews_for_subject,
     create_review,
+    get_professors,
+    get_professor_reviews,
+    fetch_major_compatibility,
     delete_user_data,
 )
 
@@ -182,6 +185,14 @@ def list_subjects() -> Dict[str, object]:
 def list_majors() -> Dict[str, object]:
     majors = fetch_majors(POOLER_URL)
     return {"data": [{"code": "UNDECLARED", "name": "Undeclared", "degree_type": None, "total_credits_required": 120}] + majors}
+
+
+@app.get("/api/majors/compatibility")
+def major_compatibility(course_codes: str = "") -> Dict[str, object]:
+    """Given comma-separated course codes, return each major's required-course match count."""
+    codes = [c.strip() for c in course_codes.split(",") if c.strip()]
+    data = fetch_major_compatibility(POOLER_URL, codes)
+    return {"data": data}
 
 
 @app.get("/api/courses")
@@ -391,12 +402,22 @@ def put_plan(payload: dict, user: Dict[str, object] = Depends(get_current_user))
 # Course reviews
 # ---------------------------------------------------------------------------
 
+ALLOWED_TAGS = {
+    "Tough Grader", "Heavy Workload", "Caring", "Clear Explanations",
+    "Group Projects", "Many Tests", "Extra Credit", "Attendance Mandatory",
+    "Easy A", "Inspirational", "Accessible Outside Class", "Participation Matters",
+}
+
 class ReviewPayload(BaseModel):
     course_code: str
     year_taken: Optional[int] = None
     term_taken: Optional[str] = None
     professor: Optional[str] = None
     comment: str
+    difficulty: Optional[int] = None        # 1-5
+    quality: Optional[int] = None           # 1-5
+    would_take_again: Optional[bool] = None
+    tags: Optional[List[str]] = None
 
 
 RE_COURSE_CODE = re.compile(r"^[A-Z]{2,6}[-\s]?\d+[A-Z0-9]*$")
@@ -524,6 +545,13 @@ def post_review(
         raise HTTPException(status_code=400, detail="comment is required")
     if len(comment) > 2000:
         raise HTTPException(status_code=400, detail="comment must be 2000 characters or fewer")
+    difficulty = payload.difficulty
+    if difficulty is not None and not (1 <= difficulty <= 5):
+        raise HTTPException(status_code=400, detail="difficulty must be 1–5")
+    quality = payload.quality
+    if quality is not None and not (1 <= quality <= 5):
+        raise HTTPException(status_code=400, detail="quality must be 1–5")
+    tags = [t for t in (payload.tags or []) if t in ALLOWED_TAGS][:6]
     review = create_review(
         POOLER_URL,
         course_code,
@@ -531,8 +559,26 @@ def post_review(
         payload.term_taken,
         (payload.professor or "").strip() or None,
         comment,
+        difficulty=difficulty,
+        quality=quality,
+        would_take_again=payload.would_take_again,
+        tags=tags,
     )
     return {"data": review}
+
+
+@app.get("/api/professors")
+def list_professors(search: Optional[str] = None) -> Dict[str, object]:
+    professors = get_professors(POOLER_URL, search)
+    return {"data": professors}
+
+
+@app.get("/api/professors/reviews")
+def list_professor_reviews(name: str) -> Dict[str, object]:
+    if not name.strip():
+        raise HTTPException(status_code=400, detail="name is required")
+    reviews = get_professor_reviews(POOLER_URL, name)
+    return {"data": reviews}
 
 
 # ---------------------------------------------------------------------------

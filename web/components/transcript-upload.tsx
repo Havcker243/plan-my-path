@@ -214,9 +214,9 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
             <Upload className="w-5 h-5 text-primary" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Drop your transcript PDF here</p>
+            <p className="text-sm font-medium text-foreground">Drop your unofficial transcript PDF here</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              or click to browse. Unofficial transcripts work fine.
+              or click to browse — <span className="font-medium text-foreground">unofficial only</span>, not the official sealed copy.
             </p>
           </div>
           <input
@@ -239,7 +239,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         )}
 
         <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          Your transcript is processed securely and never stored. It is only used to pre-fill your completed and in-progress courses.
+          Use your <span className="font-medium text-foreground">unofficial transcript</span> from the Fisk registrar portal — not the official sealed PDF. Processed securely and never stored.
         </p>
 
         <button

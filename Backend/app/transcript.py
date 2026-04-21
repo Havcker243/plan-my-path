@@ -83,6 +83,9 @@ def _extract_pdf_text(file_bytes: bytes) -> str:
     from pypdf import PdfReader  # lazy import so missing dep fails gracefully
 
     reader = PdfReader(io.BytesIO(file_bytes))
+    # Fisk transcripts are encrypted (AES, empty password) — decrypt before reading.
+    if reader.is_encrypted:
+        reader.decrypt("")
     pages = []
     for page in reader.pages:
         text = page.extract_text()

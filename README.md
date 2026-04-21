@@ -1,26 +1,36 @@
 # FiskGrad
 
-FiskGrad is an academic planning system for Fisk students. It connects transcript history, degree requirements, course planning, section selection, calendar export, course reviews, AI advising support, and advisor-ready balance sheets into one workflow.
+FiskGrad is an academic planning system for Fisk University students. It connects transcript history, degree requirements, course planning, section selection, calendar export, course reviews, professor ratings, GPA projection, AI advising, and advisor-ready balance sheets into a single workflow.
 
-The purpose is simple: a student should be able to understand where they are, what they still need, and how to finish without having to jump between a transcript PDF, a catalog page, a balance sheet, registration tools, advisor notes, and a spreadsheet.
+The purpose is simple: a student should be able to understand where they are, what they still need, and how to finish — without jumping between a transcript PDF, a catalog page, a balance sheet, registration tools, advisor notes, and a spreadsheet.
+
+---
 
 ## Vision
 
-FiskGrad is designed to become a student-owned degree planning workspace for Fisk University students.
+FiskGrad is designed to become the ultimate academic operating system for Fisk University students — part degree planner, part Rate My Professor, part academic advisor.
 
-The long-term vision is bigger than a prettier planner. FiskGrad should become a practical academic operating system where a student can:
+A student should be able to:
 
 - sign in with a Fisk student email
-- upload an unofficial transcript
-- choose or confirm a major
+- upload an unofficial transcript to pre-fill completed courses
+- explore all available majors and see which ones best match their completed coursework
+- choose or confirm a major (or stay undeclared and explore)
 - see completed, in-progress, planned, and missing requirements
+- preview how their current courses map against any major before committing ("What if I switched to Biology?")
+- understand the impact of changing their major before saving it
 - build a semester-by-semester path to graduation
-- choose real course sections
+- choose real course sections and detect schedule conflicts
 - export a schedule calendar
+- project their GPA based on planned courses and expected grades
+- read and write structured course reviews with difficulty, quality, and would-take-again ratings
+- look up professor profiles with aggregated ratings and course history
 - generate an advisor-ready degree audit or balance sheet
-- get AI-assisted planning explanations without making AI the authority
+- get AI-assisted planning support without making AI the authority
 
-The core academic logic should remain deterministic and auditable. AI can explain, suggest, and help students ask better questions, but requirement satisfaction, transcript parsing, plan storage, balance-sheet progress, and degree-audit outputs should be driven by transparent rules and source data.
+The core academic logic remains deterministic and auditable. AI can explain, suggest, and help students ask better questions — but requirement satisfaction, transcript parsing, plan storage, and degree-audit outputs are driven by transparent rules and source data.
+
+---
 
 ## Why This Exists
 
@@ -36,41 +46,36 @@ Degree planning is fragmented. Students often have to combine:
 - transfer-credit history
 - personal spreadsheets
 
-That fragmentation causes real problems:
+FiskGrad reduces those gaps. The system helps students and advisors work from the same picture: what is done, what is planned, what remains, and what needs review.
 
-- completed courses may not be counted in the right requirement group
-- in-progress courses may be ignored because they do not have final grades yet
-- elective buckets may be treated incorrectly when only a certain number of credits are required
-- transfer credits may be hard to place
-- students may not know which courses count toward their major
-- advisors may not receive a clean, printable view of the student's plan
-- students may make registration decisions from incomplete information
-
-FiskGrad exists to reduce those gaps. The system should help students and advisors work from the same picture: what is done, what is planned, what remains, and what needs review.
+---
 
 ## Product Scope
 
-FiskGrad currently includes these major product areas.
-
 | Area | What it does |
 |---|---|
-| Authentication | Restricts access to Fisk student emails ending in `@my.fisk.edu`. |
-| Dashboard | Gives students a quick view of progress, plan status, transcript import, and next actions. |
-| Onboarding | Collects major, start term, graduation target, and completed course information. |
-| Transcript Import | Parses unofficial transcript PDFs into completed and in-progress courses. |
-| Planner | Provides semester-by-semester course planning with add, remove, drag/drop, warnings, credits, GPA, and section selection. |
-| Requirements | Tracks major requirements using the active plan and template data. |
-| Balance Sheet | Builds advisor-facing degree-audit views from supported major templates and student plan data. |
-| Custom Sheet Upload | Allows students to preview a local PDF, Word document, or image balance sheet alongside their planning work. |
-| Courses | Provides catalog browsing, course search, sections, and course detail views. |
-| Calendar | Turns selected sections into a weekly schedule and `.ics` export. |
-| Reviews | Lets students create and browse course reviews with backend validation and rate limits. |
-| AI Advisor | Offers optional AI planning support through the backend when configured. |
-| Profile | Supports account profile, avatar upload, plan export, and account deletion. |
+| **Authentication** | Restricts access to Fisk student emails (`@my.fisk.edu`). |
+| **Dashboard** | Quick view of progress, plan status, transcript import, and next actions. |
+| **Onboarding** | Collects major, timeline, and completed courses; supports transcript upload and manual search. |
+| **Transcript Import** | Parses unofficial transcript PDFs (including AES-encrypted Fisk exports) into completed and in-progress courses. |
+| **Planner** | Semester-by-semester course planning with drag/drop, warnings, credits, GPA, and section selection. |
+| **Requirements** | Tracks major requirements against the active plan; includes What-if major preview. |
+| **Explore Majors** | Lists all Fisk majors ranked by compatibility with completed courses; preview requirements and declare from one page. |
+| **GPA Calculator** | Projects cumulative GPA based on current standing and expected grades for planned courses. |
+| **Balance Sheet** | Advisor-facing degree-audit views from supported major templates and student plan data. |
+| **Custom Sheet Upload** | Upload a local PDF or Word balance sheet alongside planning work. |
+| **Courses** | Catalog browsing, full-text search, filters, and section detail. |
+| **Calendar** | Turns selected sections into a weekly schedule with conflict detection and `.ics` export. |
+| **Hub — Reviews** | Structured course reviews with quality rating, difficulty rating, would-take-again, and tags. |
+| **Hub — Professors** | Professor profiles aggregated from reviews: avg quality, avg difficulty, would-take-again %, courses taught. |
+| **Hub — AI Advisor** | Streaming AI planning support contextualised to the student's plan, major, and requirements. |
+| **Profile** | Avatar upload, major/minor combobox search, major-change impact preview, plan export, account deletion. |
+
+---
 
 ## Supported Balance-Sheet Templates
 
-The balance-sheet system now supports 14 templates:
+The balance-sheet system supports 14 templates:
 
 | Code | Program |
 |---|---|
@@ -89,73 +94,42 @@ The balance-sheet system now supports 14 templates:
 | `PHYS` | Physics |
 | `SOC-JOINT` | Sociology Joint Major |
 
-Template JSON source files live in both:
+Template JSON source files live in `web/data/` (frontend) and `data/` (source workspace).
 
-- `data/`
-- `web/data/`
-
-This duplication is intentional for now. The frontend is rooted in `web`, so the Next.js app imports template JSON from `web/data`. The root `data` directory remains the source workspace for transcript samples, extracted balance sheets, and template-building artifacts.
+---
 
 ## Requirement Logic
 
-FiskGrad now handles more than fixed course checklists. Requirement groups can be satisfied by:
+Requirement groups can be satisfied by:
 
-- specific required courses
-- course choices
-- credit thresholds
-- a required number of courses
-- rule-based buckets such as approved electives
+- specific required courses (`all_of`)
+- course choices (`choose_one`, `choose_n`)
+- credit thresholds (`credit_threshold`)
+- rule-based elective buckets by subject and level range (`subject_level`)
 
-This matters for degree audits and balance sheets. Some Fisk balance sheets list a group of possible courses where the student only needs a certain number of credits before the group is fulfilled. FiskGrad tracks those groups by progress toward the required credits instead of incorrectly requiring every course in the list.
+Key files: `web/lib/requirements.ts`, `Backend/app/db.py`
 
-Important implementation files:
-
-- `web/lib/requirements.ts`
-- `web/lib/balance-sheet.ts`
-- `web/lib/balance-sheet-templates.ts`
-- `Backend/app/db.py`
+---
 
 ## Architecture
 
-The project follows this structure:
-
 ```text
-shared academic data -> feature engines -> thin UI layers
+shared academic data → feature engines → thin UI layers
 ```
 
-Shared data includes:
-
-- authenticated user profile
-- saved academic plan
-- plan semesters and courses
-- course catalog
-- course sections
-- major requirement labels
-- balance-sheet templates
-- transcript parse results
-
-Feature engines live mainly in `web/lib/*`. They should transform data without depending on React UI state.
-
-Important frontend modules:
+Key frontend modules:
 
 | File | Responsibility |
 |---|---|
-| `web/lib/api.ts` | API client and backend-facing types. |
-| `web/lib/api-adapters.ts` | Backend-to-frontend data adapters. |
-| `web/lib/plan-state.ts` | Pure plan state and save payload helpers. |
-| `web/lib/course-utils.ts` | Course-code, term, and label utilities. |
-| `web/lib/transcript.ts` | Frontend transcript and onboarding helpers. |
-| `web/lib/planner.ts` | Planner-specific helpers. |
+| `web/lib/api.ts` | API client and all backend-facing types. |
 | `web/lib/requirements.ts` | Requirement progress and satisfaction logic. |
 | `web/lib/balance-sheet.ts` | Balance-sheet view-model builder. |
-| `web/lib/balance-sheet-templates.ts` | Supported template registry. |
-| `web/lib/calendar.ts` | Calendar and `.ics` generation helpers. |
-| `web/lib/email-access.ts` | Allowed Fisk student email-domain checks. |
+| `web/lib/calendar.ts` | Calendar and `.ics` generation. |
 | `web/lib/nav.ts` | Navigation source of truth. |
+| `web/contexts/plan-context.tsx` | Global plan, majors, labels, and profile state. |
+| `web/contexts/auth-context.tsx` | Supabase auth state. |
 
-Architecture notes live in:
-
-- `docs/architecture/README.md`
+---
 
 ## Repo Layout
 
@@ -163,132 +137,125 @@ Architecture notes live in:
 fiskgrad/
   Backend/                  FastAPI backend
   Backend/app/              API, auth, DB, transcript parser, AI advisor
-  Backend/scripts/          SQL, sync, seed, and deployment helper scripts
+  Backend/scripts/          SQL migrations, seed scripts, deployment helpers
   data/                     source templates, balance sheets, transcript samples
-  docs/architecture/        architecture guidance
-  web/                      Next.js frontend
-  web/app/                  App Router pages and layouts
-  web/components/           product and UI components
-  web/contexts/             auth and plan providers
-  web/data/                 frontend balance-sheet template JSON
-  web/lib/                  feature engines, API client, utility logic
-  web/public/               static assets and optional PDF templates
+  web/                      Next.js frontend (App Router)
+  web/app/                  Pages and layouts
+  web/components/           Product and UI components
+  web/contexts/             Auth and plan providers
+  web/data/                 Balance-sheet template JSON
+  web/lib/                  Feature engines, API client, utility logic
+  web/public/               Static assets
 ```
 
-The intended GitHub repository and deployed product name is `fiskgrad`. The current local folder may still be named `plan-my-path` if the directory could not be renamed while files were open.
+---
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| Frontend | Next.js App Router, React, TypeScript, Tailwind, shadcn/ui, Framer Motion |
-| Backend | FastAPI, Python |
-| Database | Supabase Postgres |
-| Auth | Supabase Auth |
-| AI | OpenRouter through the OpenAI-compatible backend client |
-| Transcript Parsing | Python PDF parsing |
+| Frontend | Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
+| Backend | FastAPI, Python 3.11 |
+| Database | Supabase Postgres (via pgbouncer pooler) |
+| Auth | Supabase Auth (JWT, `@my.fisk.edu` enforcement) |
+| AI | OpenRouter (OpenAI-compatible client) |
+| Transcript Parsing | pypdf + cryptography (AES-encrypted PDF support) |
 | Calendar Export | Frontend-generated `.ics` files |
-| Deployment | Vercel frontend, Render backend |
+| Deployment | Vercel (frontend), Render (backend) |
+
+---
 
 ## Backend API
 
-Key endpoints:
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/health` | — | Health check. |
+| `GET` | `/api/subjects` | — | Course subject codes. |
+| `GET` | `/api/majors` | — | All degree programs including UNDECLARED. |
+| `GET` | `/api/majors/compatibility` | — | Match student course codes against each major's required courses. |
+| `GET` | `/api/courses` | — | Courses by subject. |
+| `GET` | `/api/courses/search` | — | Full-text catalog search. |
+| `GET` | `/api/sections` | — | Sections for given course codes and term. |
+| `GET` | `/api/course-labels` | — | Requirement labels and elective rules for a major. |
+| `GET` | `/api/terms` | — | Term calendar. |
+| `GET/PUT` | `/api/profile` | ✓ | Student profile. |
+| `GET/PUT` | `/api/plan` | ✓ | Saved academic plan. |
+| `POST` | `/api/transcript` | ✓ | Parse unofficial transcript PDF. |
+| `GET` | `/api/reviews` | — | Reviews for a course code. |
+| `GET` | `/api/reviews/recent` | — | Recent review feed. |
+| `POST` | `/api/reviews` | ✓ | Submit a review (with quality, difficulty, would-take-again, tags). |
+| `GET` | `/api/professors` | — | Aggregated professor stats from reviews. |
+| `GET` | `/api/professors/reviews` | — | All reviews for a specific professor. |
+| `POST` | `/api/ai/advise` | ✓ | Streaming AI advisor response. |
+| `POST` | `/api/balance-sheet/scan` | ✓ | Scan PDF/DOCX balance sheet. |
+| `POST` | `/api/balance-sheet/fill-docx` | ✓ | Fill DOCX balance sheet template. |
+| `DELETE` | `/api/account` | ✓ | Delete account and all plan data. |
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/health` | Backend health check. |
-| `GET` | `/api/subjects` | Course subject acronyms. |
-| `GET` | `/api/majors` | Degree programs. |
-| `GET` | `/api/courses` | Courses by subject. |
-| `GET` | `/api/courses/search` | Catalog search. |
-| `GET` | `/api/sections` | Sections for course codes. |
-| `GET` | `/api/course-labels` | Requirement labels and elective rules for a major. |
-| `GET/PUT` | `/api/profile` | Student profile. |
-| `GET/PUT` | `/api/plan` | Saved academic plan. |
-| `POST` | `/api/transcript` | Parse an authenticated student's transcript PDF. |
-| `GET/POST` | `/api/reviews` | Course reviews. |
-| `GET` | `/api/reviews/recent` | Recent review feed. |
-| `POST` | `/api/ai/advise` | AI advisor response. |
-| `DELETE` | `/api/account` | Account and plan deletion. |
+---
 
-## Security Model
+## Database Seeding
 
-FiskGrad handles student academic information, so security is part of the core product and not a later add-on.
+Run these in order in the **Supabase SQL Editor**:
 
-Current protections:
+### 1. Schema (run once at setup)
+```text
+Backend/scripts/complete_requirements_setup.sql
+```
+Creates all tables and seeds the CS major with full requirements.
 
-- Frontend sign-up and login reject emails outside `@my.fisk.edu`.
-- Backend authenticated routes also reject non-Fisk student emails.
-- Supabase hardening SQL includes an Auth trigger to enforce `@my.fisk.edu` at the database/auth layer.
-- Backend JWT validation requires signed Supabase tokens and no longer falls back to unsafe unsigned decoding.
-- Sensitive routes have basic IP-based rate limits.
-- Transcript uploads require authentication.
-- Transcript uploads are limited to PDF, checked by filename, content type, size, and PDF magic bytes.
-- Profile image uploads are limited by MIME type and size.
-- Review inputs are validated and course codes are normalized.
-- AI advisor request size and history length are capped.
-- Security headers are added by the backend.
-- Service-role Supabase credentials are intended for backend use only.
-- Transcript PDFs are parsed in memory and are not stored by the transcript endpoint.
+### 2. All Fisk Majors
+```text
+Backend/scripts/seed_all_majors.sql
+```
+Adds all 31 Fisk University degree programs to the `majors` table. Required for the major search and Explore Majors page to show anything beyond CS.
 
-Important files:
+### 3. Structured Review Fields
+```text
+Backend/scripts/reviews_structured_fields.sql
+```
+Adds `difficulty`, `quality`, `would_take_again`, and `tags` columns to `course_reviews`. Required for the new rating fields and professor aggregation to work.
 
-- `web/lib/email-access.ts`
-- `web/contexts/auth-context.tsx`
-- `web/app/(auth)/login/page.tsx`
-- `web/app/(auth)/signup/page.tsx`
-- `web/components/app-layout.tsx`
-- `Backend/app/auth.py`
-- `Backend/app/main.py`
-- `Backend/scripts/security_hardening.sql`
-
-Before production, run and verify the SQL in:
-
+### 4. Security Hardening (production only)
 ```text
 Backend/scripts/security_hardening.sql
 ```
+Adds Supabase-side email enforcement, row-level security policies, and storage policies. Review against the actual schema before applying.
 
-That script adds Supabase-side email enforcement, row-level security policies, and storage policies. Review it against the actual Supabase schema before applying it to production.
+---
 
-## Privacy Direction
+## Security Model
 
-FiskGrad should minimize how much student data it stores and make stored data easy to explain.
+- Frontend and backend both reject emails outside `@my.fisk.edu`.
+- Supabase hardening SQL enforces the domain at the database/auth layer.
+- JWT validation requires signed Supabase tokens.
+- IP-based rate limits on transcript, AI, reviews, and balance-sheet endpoints.
+- Per-user AI rate limit: 20 messages per 15 minutes.
+- Transcript PDFs are parsed in memory and never stored.
+- Profile image uploads are limited by MIME type and size.
+- Review inputs are validated; course codes are normalised; tags are allowlisted server-side.
+- Security headers set by the backend on all responses.
 
-Current data categories include:
+---
 
-- student account email
-- student profile details
-- major and graduation target
-- saved academic plan
-- completed and planned courses
-- selected sections
-- course reviews
-- optional profile avatar
-
-Important privacy expectations:
+## Privacy
 
 - Do not expose service-role keys to the frontend.
-- Do not store transcript files unless the product explicitly adds secure transcript storage later.
+- Do not store transcript files.
 - Do not use AI responses as official degree audits.
-- Keep advisor-facing exports clear that students must verify final requirements with Fisk advisors or official university records.
-- Avoid logging sensitive transcript contents in production.
+- Course reviews are anonymous — no user ID is stored or returned.
+- Keep advisor-facing exports clearly labelled as student-generated, not official university records.
+
+---
 
 ## Local Development
 
-Install frontend dependencies:
-
+**Frontend:**
 ```bash
 npm --prefix web install
-```
-
-Run the frontend:
-
-```bash
 npm --prefix web run dev
 ```
 
-Create and activate a backend environment on Windows:
-
+**Backend:**
 ```bash
 cd Backend
 python -m venv .venv
@@ -297,95 +264,30 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-The root package also proxies common frontend commands:
-
-```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
-```
+---
 
 ## Environment Variables
 
-Frontend environment, usually `web/.env.local`:
+This project requires separate frontend and backend environment configuration for local development and deployment.
 
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=my.fisk.edu
-```
+- Keep all secrets in local `.env` files or your hosting provider's secret manager.
+- Do not commit API keys, service-role credentials, JWT secrets, database URLs, or production callback URLs.
+- Use the checked-in example env files as the source of truth for required keys:
+  - `web/.env.example`
+  - `Backend/.env.example`
 
-Backend environment, usually `Backend/.env`:
-
-```env
-SUPABASE_POOLER_URL=...
-SUPABASE_JWT_SECRET=...
-ALLOWED_EMAIL_DOMAINS=my.fisk.edu
-ALLOWED_ORIGINS=http://localhost:3000
-OPENROUTER_API_KEY=...
-OPENROUTER_MODEL=openai/gpt-oss-120b:free
-OPENROUTER_SITE_URL=http://localhost:3000
-OPENROUTER_APP_NAME=FiskGrad
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
-
-Notes:
-
-- `OPENROUTER_API_KEY` is required only for the AI advisor endpoint. The backend also accepts `OPENAI_API_KEY` as a fallback when using OpenRouter's OpenAI-compatible client, and it can read the old `GEMINI_API_KEY` name as a temporary legacy fallback.
-- `OPENROUTER_MODEL` defaults to `openai/gpt-oss-120b:free`.
-- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are required for full backend account deletion.
-- `NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS` and `ALLOWED_EMAIL_DOMAINS` should stay aligned.
-- In production, `ALLOWED_ORIGINS` should include the deployed Vercel domain and should not be left as a wildcard.
-
-## Database And Template Seeding
-
-Requirement labels and templates can be seeded from backend scripts:
-
-```bash
-cd Backend
-python scripts/seed_requirements.py --all
-```
-
-Apply production hardening in Supabase after reviewing the SQL:
-
-```text
-Backend/scripts/security_hardening.sql
-```
+---
 
 ## Deployment
 
-The intended deployment split is:
-
-- Vercel for the Next.js frontend
-- Render for the FastAPI backend
-- Supabase for database and auth
-- A cron monitor that calls the backend health route to keep the Render service warm
-
-### Vercel
-
-Recommended settings:
+### Vercel (frontend)
 
 | Setting | Value |
 |---|---|
 | Root directory | `web` |
 | Build command | `npm run build` |
-| Output | Next.js default |
 
-Required frontend environment variables:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=https://your-render-service.onrender.com
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS=my.fisk.edu
-```
-
-### Render
-
-Recommended backend settings:
+### Render (backend)
 
 | Setting | Value |
 |---|---|
@@ -393,90 +295,75 @@ Recommended backend settings:
 | Build command | `pip install -r requirements.txt` |
 | Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 
-Required backend environment variables:
+Deployment-specific secrets, callback URLs, and redirect URLs should be configured privately in your hosting dashboards, not documented here.
 
-```env
-SUPABASE_POOLER_URL=...
-SUPABASE_JWT_SECRET=...
-ALLOWED_EMAIL_DOMAINS=my.fisk.edu
-ALLOWED_ORIGINS=https://your-vercel-domain.vercel.app
-OPENROUTER_API_KEY=...
-OPENROUTER_MODEL=openai/gpt-oss-120b:free
-OPENROUTER_SITE_URL=https://your-vercel-domain.vercel.app
-OPENROUTER_APP_NAME=FiskGrad
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
-
-### Keep-Alive Cron
-
-Use a cron service to call:
-
-```text
-GET https://your-render-service.onrender.com/api/health
-```
-
-A 10-minute interval is usually enough for keeping a free or low-cost Render service responsive. This should only hit the health route and should not call authenticated or expensive endpoints.
+---
 
 ## Validation
 
-Backend syntax check:
-
 ```bash
+# Backend syntax check
 python -m py_compile Backend/app/auth.py Backend/app/main.py Backend/app/db.py
-```
 
-Frontend type check:
-
-```bash
+# Frontend type check
 npx --prefix web tsc --noEmit
-```
 
-Frontend production build:
-
-```bash
+# Frontend production build
 npm --prefix web run build
 ```
 
-The production build may require network access because Next.js can fetch configured fonts during build.
+---
 
 ## Current Status
 
-FiskGrad is best described as a feature-complete MVP or beta candidate. Apart from testing, deployment, and production setup, the planned MVP product work is in place.
+FiskGrad is a feature-rich beta. All major product flows are implemented and working end-to-end.
 
-The main product logic is in place:
+**What is fully working:**
+- Fisk-only student access (frontend + backend + Supabase hardening)
+- Unofficial transcript PDF import (AES-encrypted Fisk exports supported)
+- Full onboarding flow with transcript upload and manual course search
+- Semester-by-semester drag-drop planner
+- Course catalog search with full-text and filters
+- Section picker with conflict detection
+- Calendar export (weekly view + `.ics`)
+- Requirements tracking (required, group choice, electives, general)
+- What-if major preview on the requirements page
+- Explore Majors page with compatibility scoring and inline preview
+- Undeclared student path with major exploration and declare flow
+- Major change impact preview on the profile page
+- GPA calculator (current standing + planned courses + expected grades)
+- Structured course reviews (quality, difficulty, would-take-again, tags)
+- Professor ratings aggregated from reviews (Hub → Professors tab)
+- AI advisor (streaming, context-aware)
+- Balance sheet (system-generated + custom PDF/DOCX upload)
+- Profile management (avatar, major/minor search, graduation target)
+- PDF plan export
+- Account deletion
+- Cross-browser compatibility (Chrome, Safari, Brave, Firefox — OKLCH color fallbacks)
 
-- Fisk-only student access checks
-- transcript PDF import
-- planning workflow
-- requirement tracking
-- credit-threshold requirement groups
-- advisor-ready balance sheets
-- 14 student-provided working major templates
-- custom PDF, Word, and image sheet preview
-- course search and sections
-- calendar export
-- reviews
-- AI advisor endpoint
-- Supabase security hardening script
-- Vercel and Render deployment path
+**Pending before full production:**
 
-Before treating it as production-ready, the remaining work should focus on:
+| Item | Priority | Notes |
+|---|---|---|
+| Run `seed_all_majors.sql` in Supabase | **Critical** | Without it, only CS appears in major search |
+| Run `reviews_structured_fields.sql` in Supabase | **Critical** | Without it, review ratings will fail to save |
+| Set `ALLOWED_ORIGINS` on Render | **Critical** | Without it, Vercel can't call the API (CORS block) |
+| Set `NEXT_PUBLIC_API_BASE_URL` on Vercel | **Critical** | Without it, the deployed frontend calls localhost |
+| Set Supabase redirect URLs | **High** | Without it, email verification links don't work |
+| Run `security_hardening.sql` in Supabase | **High** | Adds RLS, storage policies, and auth-layer email enforcement |
+| Seed requirements for non-CS majors | **Medium** | Requirements page is empty for all majors except CS |
+| Test real Fisk student signup/login flows | **Medium** | Verify `@my.fisk.edu` domain works end-to-end |
+| Test transcript import with real student PDFs | **Medium** | Verify parser handles all Fisk transcript formats |
+| Section availability alerts | **Low** | Notify when a closed section gets a seat (not built) |
+| Schedule optimizer | **Low** | "Build me a schedule with no Friday classes" (not built) |
+| Corequisite warnings | **Low** | Schema supports it, UI logic not built |
+| End-to-end tests | **Low** | No automated tests exist yet |
 
-- running the Supabase hardening SQL in the real project
-- testing real Fisk student sign-up and login flows
-- testing transcript imports with multiple real transcript formats
-- testing the student-provided balance-sheet templates inside the app with real student plans
-- adding end-to-end tests for transcript import, planner save, requirements, and balance sheet
-- confirming production CORS, headers, and environment variables
-- validating account deletion and data removal behavior
-- reviewing privacy language with the final product policy
+---
 
 ## Product Direction
 
-FiskGrad can grow into a real system or startup if it stays focused on trust.
-
-The strongest wedge is not generic AI advising. The strongest wedge is accurate, student-owned degree progress:
+The strongest wedge is not generic AI advising. It is accurate, student-owned degree progress:
 
 - transcript-aware
 - major-aware
@@ -484,6 +371,6 @@ The strongest wedge is not generic AI advising. The strongest wedge is accurate,
 - schedule-aware
 - secure enough for student academic records
 
-If the system becomes the place where students can reliably answer "what do I need to graduate and what should I take next?", it can expand into advisor dashboards, department analytics, official degree-audit integrations, transfer evaluation support, and registration planning.
+If FiskGrad becomes the place where students can reliably answer *"what do I need to graduate and what should I take next?"*, it can expand into advisor dashboards, department analytics, official degree-audit integrations, transfer evaluation support, and registration planning.
 
-The product should keep one principle clear: FiskGrad helps students understand and prepare, while official academic decisions still belong to Fisk University advisors, departments, and registrar records.
+**The core principle:** FiskGrad helps students understand and prepare. Official academic decisions still belong to Fisk University advisors, departments, and the registrar.

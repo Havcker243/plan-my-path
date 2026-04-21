@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Loader2, Save, Trash2, LogOut, FileDown, Check, ChevronsUpDown } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getSupabase } from "@/lib/supabase";
 import { formatDisplayName } from "@/lib/utils";
-import { deleteAccount } from "@/lib/api";
+import { deleteAccount, fetchCourseLabels } from "@/lib/api";
 import { toast } from "sonner";
 
 const TERMS = ["fall", "spring", "summer", "winter"] as const;
@@ -56,6 +56,8 @@ export default function ProfilePage() {
     majors,
     majorsLoading,
     doUpdateProfile,
+    semesters,
+    planCatalog,
   } = usePlan();
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -73,9 +75,49 @@ export default function ProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [majorOpen, setMajorOpen] = useState(false);
   const [minorOpen, setMinorOpen] = useState(false);
+
+  // Major change impact
+  const [impactLoading, setImpactLoading] = useState(false);
+  const [impactData, setImpactData] = useState<{ carryOver: number; becomeElective: number; newGaps: number } | null>(null);
+
+  // All course codes in the plan
+  const allPlanCodes = useMemo(() => {
+    const codes: string[] = [];
+    for (const sem of semesters) {
+      for (const cid of sem.courseIds) {
+        const c = planCatalog[cid];
+        if (c) codes.push(c.code);
+      }
+    }
+    return codes;
+  }, [semesters, planCatalog]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const majorChanged = major !== (profile?.major_code ?? "");
+
+  // Compute impact when major selection changes
+  useEffect(() => {
+    if (!majorChanged || !major || major === "UNDECLARED" || allPlanCodes.length === 0) {
+      setImpactData(null);
+      return;
+    }
+    setImpactLoading(true);
+    fetchCourseLabels(major).then(({ labels }) => {
+      let carryOver = 0, becomeElective = 0;
+      const oldLabels = profile?.major_code && profile.major_code !== "UNDECLARED" ? null : null;
+      for (const code of allPlanCodes) {
+        const entry = labels[code];
+        if (!entry) continue;
+        if (entry.label === "required" || entry.label === "group") carryOver++;
+        else becomeElective++;
+      }
+      const newGaps = Object.values(labels).filter((e) => (e.label === "required") && !allPlanCodes.some((c) => {
+        const l = labels[c]; return l && c === Object.keys(labels).find((k) => labels[k] === e);
+      })).length;
+      setImpactData({ carryOver, becomeElective, newGaps: 0 });
+    }).catch(() => setImpactData(null)).finally(() => setImpactLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [major, majorChanged]);
 
   useEffect(() => {
     setAvatar(profile?.avatar_url ?? null);
@@ -395,9 +437,31 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {majorChanged && (
+          {majorChanged && major && major !== "UNDECLARED" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-800">Switching to {formatDisplayName(majors.find((m) => m.code === major)?.name ?? major)}</p>
+              {impactLoading ? (
+                <p className="text-xs text-amber-700">Calculating impact on your plan…</p>
+              ) : impactData ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
+                    <p className="text-base font-bold text-green-700">{impactData.carryOver}</p>
+                    <p className="text-[10px] text-amber-700">courses carry over as required/group</p>
+                  </div>
+                  <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
+                    <p className="text-base font-bold text-amber-700">{impactData.becomeElective}</p>
+                    <p className="text-[10px] text-amber-700">courses become electives</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-700">All course labels in your plan will refresh for the new major.</p>
+              )}
+              <p className="text-[10px] text-amber-600">Save to apply. You can always switch back.</p>
+            </div>
+          )}
+          {majorChanged && major === "UNDECLARED" && (
             <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              Switching major will refresh all course labels in your plan.
+              Setting to Undeclared will clear major-specific labels. Visit <strong>Explore Majors</strong> when you're ready to pick one.
             </p>
           )}
         </div>

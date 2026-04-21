@@ -250,6 +250,48 @@ def fetch_majors(pooler_url: str) -> List[dict]:
     ]
 
 
+def fetch_major_compatibility(pooler_url: str, course_codes: List[str]) -> List[dict]:
+    """For each major that has requirement data, return how many of the provided
+    course codes satisfy required (all_of) courses."""
+    if not course_codes:
+        return []
+    # Normalise codes: accept both "CSCI 110" and "CSCI-110" spellings
+    normalised = []
+    for c in course_codes:
+        c = c.strip().upper()
+        normalised.append(c)
+        normalised.append(c.replace("-", " ").replace(" ", "-"))  # both forms
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT m.code,
+                       m.name,
+                       m.degree_type,
+                       COUNT(DISTINCT rc.course_code)                                          AS total_required,
+                       COUNT(DISTINCT CASE WHEN rc.course_code = ANY(%s) THEN rc.course_code END) AS matched
+                FROM majors m
+                JOIN requirement_groups rg  ON rg.major_id = m.id AND rg.group_type = 'all_of'
+                JOIN requirement_courses rc ON rc.group_id = rg.id
+                GROUP BY m.code, m.name, m.degree_type
+                HAVING COUNT(DISTINCT rc.course_code) > 0
+                ORDER BY matched DESC, m.name
+                """,
+                (normalised,),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "code": row[0],
+            "name": row[1] or row[0],
+            "degree_type": row[2],
+            "total_required": row[3],
+            "matched": row[4],
+        }
+        for row in rows
+    ]
+
+
 def fetch_courses_by_subject(pooler_url: str, subject_code: str) -> List[CourseRow]:
     query = """
         select
@@ -1100,127 +1142,9 @@ def get_course_label(course_code: str, labels_data: CourseLabelsData) -> CourseL
 # Course reviews
 # ---------------------------------------------------------------------------
 
-def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
-    with connect(pooler_url) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
-                       c.title AS course_title
-                FROM course_reviews r
-                LEFT JOIN courses c ON c.course_code = r.course_code
-                WHERE r.course_code = %s
-                ORDER BY r.created_at DESC
-                LIMIT 50
-                """,
-                (course_code,),
-            )
-            rows = cur.fetchall()
-    return [
-        {
-            "id": str(row[0]),
-            "course_code": row[1],
-            "year_taken": row[2],
-            "term_taken": row[3],
-            "professor": row[4],
-            "comment": row[5],
-            "created_at": row[6].isoformat() if row[6] else None,
-            "course_title": row[7],
-        }
-        for row in rows
-    ]
-
-
-def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
-    with connect(pooler_url) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
-                       c.title AS course_title
-                FROM course_reviews r
-                LEFT JOIN courses c ON c.course_code = r.course_code
-                ORDER BY r.created_at DESC
-                LIMIT %s
-                """,
-                (min(limit, 100),),
-            )
-            rows = cur.fetchall()
-    return [
-        {
-            "id": str(row[0]),
-            "course_code": row[1],
-            "year_taken": row[2],
-            "term_taken": row[3],
-            "professor": row[4],
-            "comment": row[5],
-            "created_at": row[6].isoformat() if row[6] else None,
-            "course_title": row[7],
-        }
-        for row in rows
-    ]
-
-
-def get_reviews_for_subject(pooler_url: str, subject_code: str, limit: int = 60) -> list[dict]:
-    subject = subject_code.strip().upper()
-    if not subject:
-        return []
-    with connect(pooler_url) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
-                       c.title AS course_title
-                FROM course_reviews r
-                LEFT JOIN courses c ON c.course_code = r.course_code
-                WHERE r.course_code ILIKE %s OR r.course_code ILIKE %s
-                ORDER BY r.created_at DESC
-                LIMIT %s
-                """,
-                (f"{subject}-%", f"{subject} %", min(limit, 100)),
-            )
-            rows = cur.fetchall()
-    return [
-        {
-            "id": str(row[0]),
-            "course_code": row[1],
-            "year_taken": row[2],
-            "term_taken": row[3],
-            "professor": row[4],
-            "comment": row[5],
-            "created_at": row[6].isoformat() if row[6] else None,
-            "course_title": row[7],
-        }
-        for row in rows
-    ]
-
-
-def create_review(
-    pooler_url: str,
-    course_code: str,
-    year_taken: Optional[int],
-    term_taken: Optional[str],
-    professor: Optional[str],
-    comment: str,
-) -> dict:
-    with connect(pooler_url) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                WITH inserted AS (
-                    INSERT INTO course_reviews (course_code, year_taken, term_taken, professor, comment)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id, course_code, year_taken, term_taken, professor, comment, created_at
-                )
-                SELECT i.id, i.course_code, i.year_taken, i.term_taken, i.professor, i.comment, i.created_at,
-                       c.title AS course_title
-                FROM inserted i
-                LEFT JOIN courses c ON c.course_code = i.course_code
-                """,
-                (course_code, year_taken, term_taken, professor, comment),
-            )
-            row = cur.fetchone()
-        conn.commit()
+def _review_row(row: tuple) -> dict:
+    """Map a review SELECT row to a dict. Columns: id, course_code, year_taken, term_taken,
+    professor, comment, created_at, course_title, difficulty, quality, would_take_again, tags."""
     return {
         "id": str(row[0]),
         "course_code": row[1],
@@ -1230,4 +1154,144 @@ def create_review(
         "comment": row[5],
         "created_at": row[6].isoformat() if row[6] else None,
         "course_title": row[7],
+        "difficulty": row[8],
+        "quality": row[9],
+        "would_take_again": row[10],
+        "tags": row[11] or [],
     }
+
+_REVIEW_SELECT = """
+    SELECT r.id, r.course_code, r.year_taken, r.term_taken, r.professor, r.comment, r.created_at,
+           c.title AS course_title,
+           r.difficulty, r.quality, r.would_take_again, r.tags
+    FROM course_reviews r
+    LEFT JOIN courses c ON c.course_code = r.course_code
+"""
+
+
+def get_reviews(pooler_url: str, course_code: str) -> list[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                _REVIEW_SELECT + "WHERE r.course_code = %s ORDER BY r.created_at DESC LIMIT 50",
+                (course_code,),
+            )
+            rows = cur.fetchall()
+    return [_review_row(r) for r in rows]
+
+
+def get_recent_reviews(pooler_url: str, limit: int = 20) -> list[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                _REVIEW_SELECT + "ORDER BY r.created_at DESC LIMIT %s",
+                (min(limit, 100),),
+            )
+            rows = cur.fetchall()
+    return [_review_row(r) for r in rows]
+
+
+def get_reviews_for_subject(pooler_url: str, subject_code: str, limit: int = 60) -> list[dict]:
+    subject = subject_code.strip().upper()
+    if not subject:
+        return []
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                _REVIEW_SELECT + "WHERE r.course_code ILIKE %s OR r.course_code ILIKE %s ORDER BY r.created_at DESC LIMIT %s",
+                (f"{subject}-%", f"{subject} %", min(limit, 100)),
+            )
+            rows = cur.fetchall()
+    return [_review_row(r) for r in rows]
+
+
+def create_review(
+    pooler_url: str,
+    course_code: str,
+    year_taken: Optional[int],
+    term_taken: Optional[str],
+    professor: Optional[str],
+    comment: str,
+    difficulty: Optional[int] = None,
+    quality: Optional[int] = None,
+    would_take_again: Optional[bool] = None,
+    tags: Optional[list] = None,
+) -> dict:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                WITH inserted AS (
+                    INSERT INTO course_reviews
+                        (course_code, year_taken, term_taken, professor, comment,
+                         difficulty, quality, would_take_again, tags)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id, course_code, year_taken, term_taken, professor, comment, created_at,
+                              difficulty, quality, would_take_again, tags
+                )
+                SELECT i.id, i.course_code, i.year_taken, i.term_taken, i.professor, i.comment, i.created_at,
+                       c.title AS course_title,
+                       i.difficulty, i.quality, i.would_take_again, i.tags
+                FROM inserted i
+                LEFT JOIN courses c ON c.course_code = i.course_code
+                """,
+                (course_code, year_taken, term_taken, professor, comment,
+                 difficulty, quality, would_take_again, tags or []),
+            )
+            row = cur.fetchone()
+        conn.commit()
+    return _review_row(row)
+
+
+def get_professors(pooler_url: str, search: Optional[str] = None) -> list[dict]:
+    """Return aggregated professor stats from reviews."""
+    where = "WHERE professor IS NOT NULL AND professor <> ''"
+    params: list = []
+    if search:
+        where += " AND professor ILIKE %s"
+        params.append(f"%{search.strip()}%")
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT professor,
+                       COUNT(*)                                                        AS review_count,
+                       ROUND(AVG(quality)::numeric, 1)                                AS avg_quality,
+                       ROUND(AVG(difficulty)::numeric, 1)                             AS avg_difficulty,
+                       ROUND(
+                           100.0 * SUM(CASE WHEN would_take_again THEN 1 ELSE 0 END)
+                           / NULLIF(SUM(CASE WHEN would_take_again IS NOT NULL THEN 1 ELSE 0 END), 0),
+                           0
+                       )                                                               AS would_take_again_pct,
+                       ARRAY_AGG(DISTINCT course_code ORDER BY course_code)            AS courses
+                FROM course_reviews
+                {where}
+                GROUP BY professor
+                ORDER BY review_count DESC, professor
+                LIMIT 100
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "professor": row[0],
+            "review_count": row[1],
+            "avg_quality": float(row[2]) if row[2] is not None else None,
+            "avg_difficulty": float(row[3]) if row[3] is not None else None,
+            "would_take_again_pct": int(row[4]) if row[4] is not None else None,
+            "courses": row[5] or [],
+        }
+        for row in rows
+    ]
+
+
+def get_professor_reviews(pooler_url: str, professor: str) -> list[dict]:
+    with connect(pooler_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                _REVIEW_SELECT + "WHERE r.professor ILIKE %s ORDER BY r.created_at DESC LIMIT 50",
+                (professor.strip(),),
+            )
+            rows = cur.fetchall()
+    return [_review_row(r) for r in rows]

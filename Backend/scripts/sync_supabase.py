@@ -22,10 +22,7 @@ import psycopg2
 import requests
 
 
-BASE_API = "https://api.parse.bot/scraper/ecb0bdcd-eab4-457e-9a6b-702a2da4a411"
-ENDPOINTS = {
-    "all": f"{BASE_API}/get_all_courses_with_sections",
-}
+DEFAULT_BASE_API = "https://api.parse.bot/scraper/37fd40d8-afe7-4fa5-80dc-adcbc4147728"
 
 
 def load_env_lines(path: Path) -> List[Tuple[str, str]]:
@@ -50,6 +47,24 @@ def resolve_scraper_key(env_path: Path) -> str:
         if key in ("SCRAPPER_ENV_KEY", "PARSE_BOT_API_KEY", "X_API_KEY") and value:
             return value
     raise RuntimeError("SCRAPPER_ENV_KEY not found in environment or scripts/.env")
+
+
+def resolve_base_api(env_path: Path) -> str:
+    env_pairs = load_env_lines(env_path)
+    for key in ("PARSE_BOT_BASE_URL", "SCRAPER_BASE_URL", "PARSE_BOT_SCRAPER_URL"):
+        if key in os.environ and os.environ[key]:
+            return os.environ[key].rstrip("/")
+    for key, value in env_pairs:
+        if key in ("PARSE_BOT_BASE_URL", "SCRAPER_BASE_URL", "PARSE_BOT_SCRAPER_URL") and value:
+            return value.rstrip("/")
+    return DEFAULT_BASE_API
+
+
+def build_endpoints(base_api: str) -> Dict[str, str]:
+    return {
+        "all": f"{base_api}/get_all_courses_with_sections",
+        "snapshot": f"{base_api}/get_catalog_snapshot",
+    }
 
 
 def resolve_pooler_url(env_path: Path) -> str:
@@ -125,16 +140,21 @@ def extract_subject_from_url(url: str) -> str:
 
 
 def iter_courses(payload: Any) -> Iterable[Dict[str, Any]]:
-    if isinstance(payload, dict) and "data" in payload:
-        data = payload["data"]
-    else:
-        data = payload
-    if isinstance(data, list):
-        for item in data:
+    if isinstance(payload, dict):
+        if isinstance(payload.get("courses"), list):
+            for item in payload["courses"]:
+                if isinstance(item, dict):
+                    yield item
+            return
+        if isinstance(payload.get("data"), list):
+            for item in payload["data"]:
+                if isinstance(item, dict):
+                    yield item
+            return
+    if isinstance(payload, list):
+        for item in payload:
             if isinstance(item, dict):
                 yield item
-    elif isinstance(data, dict):
-        yield data
 
 
 def normalize_requisites(value: Any) -> Optional[Any]:
@@ -152,7 +172,14 @@ def normalize_text(value: Any) -> Optional[str]:
     return text if text else None
 
 
-def normalize_credits(raw: Any) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+def normalize_credits(course: Dict[str, Any]) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+    credits_min = course.get("credits_min")
+    credits_max = course.get("credits_max")
+    credit_type = normalize_text(course.get("credit_type"))
+    if credits_min is not None or credits_max is not None or credit_type is not None:
+        return (credits_min, credits_max, credit_type)
+
+    raw = course.get("credits")
     if isinstance(raw, dict):
         return (
             raw.get("min_credits"),
@@ -160,11 +187,70 @@ def normalize_credits(raw: Any) -> Tuple[Optional[float], Optional[float], Optio
             normalize_text(raw.get("credit_type")),
         )
     if raw is None or raw == "":
-        return (None, None, None)
+        return (None, None, credit_type)
     try:
-        return (float(raw), None, "fixed")
+        return (float(raw), None, credit_type or "fixed")
     except (TypeError, ValueError):
-        return (None, None, None)
+        return (None, None, credit_type)
+
+
+def build_course_requisites(course: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    requisites = {
+        "raw": normalize_text(course.get("requisites_raw")),
+        "prerequisites": course.get("prerequisites") or [],
+        "corequisites": course.get("corequisites") or [],
+    }
+    return normalize_requisites(requisites if any(requisites.values()) else None)
+
+
+def build_course_locations(course: Dict[str, Any]) -> Optional[str]:
+    locations = course.get("locations")
+    if isinstance(locations, list):
+        return ", ".join(str(value).strip() for value in locations if str(value).strip()) or None
+    return normalize_text(course.get("locations_raw") or locations)
+
+
+def iter_sections(course: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+    terms = course.get("terms")
+    if isinstance(terms, list):
+        for term in terms:
+            if not isinstance(term, dict):
+                continue
+            sections = term.get("sections") or []
+            for section in sections:
+                if not isinstance(section, dict):
+                    continue
+                merged = dict(section)
+                merged.setdefault("term", term.get("term"))
+                merged.setdefault("term_code", term.get("term_code"))
+                yield merged
+        return
+
+    sections = course.get("sections") or []
+    for section in sections:
+        if isinstance(section, dict):
+            yield section
+
+
+def build_section_seats(section: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(section.get("seats"), dict):
+        seats = dict(section["seats"])
+    else:
+        seats = {
+            "available": section.get("seats_available"),
+            "capacity": section.get("seats_capacity"),
+            "enrolled": section.get("seats_enrolled"),
+            "waitlisted": section.get("seats_waitlisted"),
+        }
+    seats["raw"] = normalize_text(section.get("seats_raw")) or seats.get("raw")
+    return seats
+
+
+def normalize_meeting_days(value: Any) -> Optional[str]:
+    if isinstance(value, list):
+        parts = [str(item).strip() for item in value if str(item).strip()]
+        return ", ".join(parts) if parts else None
+    return normalize_text(value)
 
 
 def ensure_indexes(cur) -> None:
@@ -206,7 +292,7 @@ def upsert_subject(cur, code: str, name: Optional[str]) -> str:
 
 
 def upsert_course(cur, subject_id: str, course: Dict[str, Any]) -> str:
-    credits_min, credits_max, credit_type = normalize_credits(course.get("credits"))
+    credits_min, credits_max, credit_type = normalize_credits(course)
     cur.execute(
         """
         insert into courses (
@@ -245,18 +331,18 @@ def upsert_course(cur, subject_id: str, course: Dict[str, Any]) -> str:
             credits_min,
             credits_max,
             credit_type,
-            json.dumps(normalize_requisites(course.get("requisites"))),
-            normalize_text(course.get("locations")),
+            json.dumps(build_course_requisites(course)),
+            build_course_locations(course),
             json.dumps(course.get("attributes")),
             normalize_text(course.get("source_url")),
-            course.get("last_updated"),
+            course.get("scraped_at") or course.get("last_updated"),
         ),
     )
     return cur.fetchone()[0]
 
 
 def upsert_section(cur, course_id: str, section: Dict[str, Any]) -> str:
-    seats = section.get("seats") or {}
+    seats = build_section_seats(section)
     cur.execute(
         """
         insert into sections (
@@ -308,7 +394,7 @@ def upsert_section(cur, course_id: str, section: Dict[str, Any]) -> str:
             seats.get("enrolled"),
             seats.get("waitlisted"),
             normalize_text(section.get("source_url")),
-            section.get("last_updated"),
+            section.get("scraped_at") or section.get("last_updated"),
         ),
     )
     return cur.fetchone()[0]
@@ -366,10 +452,10 @@ def upsert_meeting_time(cur, section_id: str, meeting: Dict[str, Any]) -> None:
         """,
         (
             section_id,
-            normalize_text(meeting.get("days")),
+            normalize_meeting_days(meeting.get("days")),
             normalize_text(meeting.get("start_time")),
             normalize_text(meeting.get("end_time")),
-            normalize_text(meeting.get("location")),
+            normalize_text(meeting.get("location") or meeting.get("location_raw")),
             normalize_text(meeting.get("building")),
             normalize_text(meeting.get("room")),
             meeting.get("start_date"),
@@ -384,8 +470,9 @@ def sync_subject(
     subject_code: str,
     subject_name: Optional[str],
     api_key: str,
+    endpoints: Dict[str, str],
 ) -> Tuple[int, int]:
-    payload = request_json(ENDPOINTS["all"], {"subject_code": subject_code}, api_key)
+    payload = request_json(endpoints["all"], {"subject_code": subject_code}, api_key)
     subject_id = upsert_subject(cur, subject_code, subject_name)
     course_count = 0
     section_count = 0
@@ -393,7 +480,7 @@ def sync_subject(
     for course in iter_courses(payload):
         course_id = upsert_course(cur, subject_id, course)
         course_count += 1
-        for section in course.get("sections") or []:
+        for section in iter_sections(course):
             section_id = upsert_section(cur, course_id, section)
             section_count += 1
 
@@ -431,6 +518,7 @@ def main() -> int:
             return 0
 
     api_key = resolve_scraper_key(env_path)
+    endpoints = build_endpoints(resolve_base_api(env_path))
     pooler_url = resolve_pooler_url(env_path)
 
     subjects = parse_courses_file(courses_path, subject_filter)
@@ -447,7 +535,7 @@ def main() -> int:
                 total_sections = 0
                 for subject_code, subject_name in subjects:
                     time.sleep(2)  # 2s between subjects to avoid rate limiting
-                    courses, sections = sync_subject(cur, subject_code, subject_name, api_key)
+                    courses, sections = sync_subject(cur, subject_code, subject_name, api_key, endpoints)
                     total_courses += courses
                     total_sections += sections
         print(f"Synced {total_courses} courses and {total_sections} sections.")

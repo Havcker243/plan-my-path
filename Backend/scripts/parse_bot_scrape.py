@@ -22,13 +22,27 @@ import time
 import requests
 
 
-BASE_API = "https://api.parse.bot/scraper/ecb0bdcd-eab4-457e-9a6b-702a2da4a411"
-ENDPOINTS = {
-    "list": f"{BASE_API}/get_course_list",
-    "details": f"{BASE_API}/get_course_details",
-    "sections": f"{BASE_API}/get_available_sections",
-    "all": f"{BASE_API}/get_all_courses_with_sections",
-}
+DEFAULT_BASE_API = "https://api.parse.bot/scraper/37fd40d8-afe7-4fa5-80dc-adcbc4147728"
+
+
+def resolve_base_api(env_path: Path) -> str:
+    env = load_env_file(env_path)
+    for key in ("PARSE_BOT_BASE_URL", "SCRAPER_BASE_URL", "PARSE_BOT_SCRAPER_URL"):
+        if key in os.environ and os.environ[key]:
+            return os.environ[key].rstrip("/")
+        if key in env and env[key]:
+            return env[key].rstrip("/")
+    return DEFAULT_BASE_API
+
+
+def build_endpoints(base_api: str) -> Dict[str, str]:
+    return {
+        "list": f"{base_api}/get_course_list",
+        "details": f"{base_api}/get_course_details",
+        "sections": f"{base_api}/get_available_sections",
+        "all": f"{base_api}/get_all_courses_with_sections",
+        "snapshot": f"{base_api}/get_catalog_snapshot",
+    }
 
 
 def load_env_file(path: Path) -> Dict[str, str]:
@@ -140,14 +154,15 @@ def write_output(path: Path, fmt: str, payload: Any) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Parse.bot course fetcher")
-    parser.add_argument("--subject", required=True, help="Subject code, e.g. CSCI")
+    parser.add_argument("--subject", help="Subject code, e.g. CSCI")
     parser.add_argument(
         "--mode",
-        choices=["list", "details", "sections", "all"],
+        choices=["list", "details", "sections", "all", "snapshot"],
         default="list",
         help="API endpoint mode to use",
     )
     parser.add_argument("--course", help="Course code for details/sections, e.g. CSCI-100")
+    parser.add_argument("--subjects", help="Comma-separated subject codes for snapshot mode")
     parser.add_argument("--out", required=True, help="Output file path")
     parser.add_argument("--format", choices=["txt", "json"], default="txt")
     parser.add_argument("--api-key", default=None, help="Override API key")
@@ -169,17 +184,25 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    api_key = resolve_api_key(Path(args.env_path), args.api_key)
+    env_path = Path(args.env_path)
+    api_key = resolve_api_key(env_path, args.api_key)
+    endpoints = build_endpoints(resolve_base_api(env_path))
     mode = args.mode
-    endpoint = ENDPOINTS[mode]
+    endpoint = endpoints[mode]
 
+    if mode in ("list", "all") and not args.subject:
+        raise SystemExit("--subject is required when using --mode list or --mode all")
     if mode in ("details", "sections") and not args.course:
         raise SystemExit("--course is required when using --mode details or --mode sections")
+    if mode == "snapshot" and not args.subjects:
+        raise SystemExit("--subjects is required when using --mode snapshot")
 
     if mode == "list":
         payload = request_json(endpoint, {"subject_code": args.subject}, api_key)
     elif mode == "all":
         payload = request_json(endpoint, {"subject_code": args.subject}, api_key)
+    elif mode == "snapshot":
+        payload = request_json(endpoint, {"subject_codes": args.subjects}, api_key)
     else:
         payload = request_json(endpoint, {"course_code": args.course}, api_key)
 

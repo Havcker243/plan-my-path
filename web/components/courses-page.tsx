@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/accordion";
 
 type StatusFilter = "all" | "needed" | "in-plan" | "completed";
+type SortDirection = "asc" | "desc";
 
 const LEVELS = [100, 200, 300, 400] as const;
 const TERMS: SemesterTerm[] = ["Fall", "Spring", "Summer", "Winter"];
@@ -59,6 +60,7 @@ export default function CoursesPage() {
   const [levelFilter, setLevelFilter] = useState<number | null>(null);
   const [termFilter, setTermFilter] = useState<SemesterTerm | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selected, setSelected] = useState<Course | null>(null);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<Course[]>([]);
@@ -198,8 +200,31 @@ export default function CoursesPage() {
     return true;
   });
 
-  const grouped = derivedSubjects.reduce<Record<string, Course[]>>((acc, subj) => {
-    const courses = filtered.filter((c) => c.subject === subj);
+  const sortedSubjects = useMemo(() => {
+    const next = [...derivedSubjects];
+    next.sort((a, b) => sortDirection === "asc" ? a.localeCompare(b) : b.localeCompare(a));
+    return next;
+  }, [derivedSubjects, sortDirection]);
+
+  const sortedFiltered = useMemo(() => {
+    const next = [...filtered];
+    next.sort((a, b) => {
+      const bySubject = a.subject.localeCompare(b.subject);
+      if (bySubject !== 0) return sortDirection === "asc" ? bySubject : -bySubject;
+
+      const codeA = a.code.toUpperCase();
+      const codeB = b.code.toUpperCase();
+      const byCode = codeA.localeCompare(codeB, undefined, { numeric: true });
+      if (byCode !== 0) return sortDirection === "asc" ? byCode : -byCode;
+
+      const byTitle = a.title.localeCompare(b.title);
+      return sortDirection === "asc" ? byTitle : -byTitle;
+    });
+    return next;
+  }, [filtered, sortDirection]);
+
+  const grouped = sortedSubjects.reduce<Record<string, Course[]>>((acc, subj) => {
+    const courses = sortedFiltered.filter((c) => c.subject === subj);
     if (courses.length) acc[subj] = courses;
     return acc;
   }, {});
@@ -263,6 +288,13 @@ export default function CoursesPage() {
                 <X className="w-3 h-3" /> Clear
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
+              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-border"
+            >
+              Sort: {sortDirection === "asc" ? "A-Z" : "Z-A"}
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-2">

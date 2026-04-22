@@ -33,7 +33,8 @@ const GRADE_COLOR: Record<string, string> = {
   "B+": "text-blue-600", B: "text-blue-600", "B-": "text-blue-600",
   "C+": "text-yellow-600", C: "text-yellow-600", "C-": "text-yellow-600",
   "D+": "text-orange-500", D: "text-orange-500", "D-": "text-orange-500",
-  F: "text-red-600",
+  F: "text-red-600", NP: "text-red-600", U: "text-red-600",
+  S: "text-green-600", P: "text-green-600",
 };
 
 function termKey(course: ParsedTranscriptCourse) {
@@ -234,21 +235,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         {state.phase === "error" && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <div className="min-w-0">
-              {state.message.includes("Extracted text preview") ? (
-                <>
-                  <p className="font-medium mb-1">{state.message.split("\n\n")[0]}</p>
-                  <details className="text-[11px]">
-                    <summary className="cursor-pointer text-destructive/70 hover:text-destructive">Show extracted text (for debugging)</summary>
-                    <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-[10px] bg-destructive/5 rounded p-2 max-h-32 overflow-y-auto">
-                      {state.message.split("\n\n").slice(1).join("\n\n")}
-                    </pre>
-                  </details>
-                </>
-              ) : (
-                <p>{state.message}</p>
-              )}
-            </div>
+            <p>{state.message.split("\n\n")[0]}</p>
           </div>
         )}
 
@@ -358,6 +345,11 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
                         {course.status === "planned" && (
                           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
                             In progress
+                          </span>
+                        )}
+                        {course.status === "failed" && (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                            Failed — may need retake
                           </span>
                         )}
                         {unmatchedRowIds.has(course.rowId) && (

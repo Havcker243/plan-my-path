@@ -314,7 +314,7 @@ export interface ParsedTranscriptCourse {
   credits: number | null;
   term: string | null;       // "Fall" | "Spring" | "Summer" | "Winter" | null for transfer
   year: number | null;
-  status: "completed" | "planned";
+  status: "completed" | "planned" | "failed";
   sourceType: "term" | "transfer";
 }
 

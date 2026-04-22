@@ -20,7 +20,7 @@ import { parseCodeParts, normalizeCourseCode, resolveLabel, capitalizeTerm } fro
 /** A course row produced by transcript parsing or manual entry during onboarding. */
 export interface OnboardingCourse {
   code: string;
-  status?: "completed" | "planned";
+  status?: "completed" | "planned" | "failed";
   grade: string | null;
   /** null means "unknown" (manual entry — will be grouped into one pre-start semester) */
   term: string | null;
@@ -78,7 +78,8 @@ export function buildCourseEntry(
 ): Course {
   const { subject, level } = parseCodeParts(plannerCode);
   const courseStatus = oc.status ?? (oc.grade ? "completed" : "planned");
-  const grade = courseStatus === "completed" ? (oc.grade ?? null) : null;
+  // Preserve grade for both completed and failed courses
+  const grade = (courseStatus === "completed" || courseStatus === "failed") ? (oc.grade ?? null) : null;
 
   if (meta) {
     return {

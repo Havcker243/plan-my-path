@@ -361,16 +361,17 @@ async def parse_transcript_endpoint(
         raise HTTPException(status_code=422, detail=f"Could not parse transcript: {exc}")
 
     if not result.get("courses"):
-        # Return extracted text preview to help diagnose format mismatches
+        # Log extracted text to server console to help diagnose format mismatches
         from app.transcript import _extract_pdf_text, _split_into_lines
         try:
             raw = _extract_pdf_text(contents)
-            preview = raw[:600] if raw else "(empty)"
-        except Exception:
-            preview = "(extraction failed)"
+            preview = raw[:800] if raw else "(empty)"
+            print(f"[transcript] No courses found. Extracted text preview:\n{preview}\n---")
+        except Exception as preview_exc:
+            print(f"[transcript] No courses found and text preview failed: {preview_exc}")
         raise HTTPException(
             status_code=422,
-            detail=f"No courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.\n\nExtracted text preview:\n{preview}",
+            detail="No courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.",
         )
 
     return {"data": result}

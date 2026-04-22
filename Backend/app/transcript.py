@@ -14,7 +14,11 @@ Totals line:        TOTALS CRED.ATT = XX.XX ... GPA = X.XXX
 from __future__ import annotations
 
 import io
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 from typing import Optional
 
 TERM_CODE_MAP = {
@@ -98,6 +102,33 @@ def _extract_pdf_text(file_bytes: bytes) -> str:
     text = "\n".join(pages).strip()
     if len(text) >= 80:
         return text
+
+    pdftotext_path = shutil.which("pdftotext")
+    if pdftotext_path:
+        temp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as handle:
+                handle.write(file_bytes)
+                temp_path = handle.name
+            result = subprocess.run(
+                [pdftotext_path, "-layout", temp_path, "-"],
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="ignore",
+            )
+            cli_text = (result.stdout or "").strip()
+            if len(cli_text) > len(text):
+                text = cli_text
+        except Exception:
+            pass
+        finally:
+            if temp_path:
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
 
     try:
         import fitz  # PyMuPDF

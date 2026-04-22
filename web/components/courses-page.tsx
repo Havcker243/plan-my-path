@@ -271,7 +271,7 @@ export default function CoursesPage() {
       <div className={cn("flex flex-col flex-1 min-w-0 overflow-hidden", selected ? "hidden md:flex" : "flex")}>
         {/* Filter bar */}
         <div className="px-5 py-3 border-b border-border bg-background flex flex-col gap-3 flex-shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               {searching && (
@@ -299,84 +299,114 @@ export default function CoursesPage() {
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {/* Subject chips */}
-            <div className="flex flex-wrap gap-1">
-              {derivedSubjects.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSubjectFilter(subjectFilter === s ? null : s)}
-                  className={cn(
-                    "text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors",
-                    subjectFilter === s
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Select
+              value={subjectFilter ?? "all-subjects"}
+              onValueChange={(value) => setSubjectFilter(value === "all-subjects" ? null : value)}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-subjects">All subjects</SelectItem>
+                {sortedSubjects.map((subject) => (
+                  <SelectItem key={subject} value={subject}>
+                    {subject}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {derivedSubjects.length > 0 && <div className="h-5 w-px bg-border self-center" />}
+            <Select
+              value={levelFilter ? String(levelFilter) : "all-levels"}
+              onValueChange={(value) => setLevelFilter(value === "all-levels" ? null : Number(value))}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-levels">All levels</SelectItem>
+                {LEVELS.map((level) => (
+                  <SelectItem key={level} value={String(level)}>
+                    {level} level
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Level */}
-            {LEVELS.map((l) => (
-              <button
-                key={l}
-                onClick={() => setLevelFilter(levelFilter === l ? null : l)}
-                className={cn(
-                  "text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors",
-                  levelFilter === l
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                )}
-              >
-                {l}+
-              </button>
-            ))}
+            <Select
+              value={termFilter ?? "all-terms"}
+              onValueChange={(value) => setTermFilter(value === "all-terms" ? null : value as SemesterTerm)}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Semester" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all-terms">All semesters</SelectItem>
+                {TERMS.map((term) => (
+                  <SelectItem key={term} value={term}>
+                    {term}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <div className="h-5 w-px bg-border self-center" />
-
-            {/* Term */}
-            {TERMS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTermFilter(termFilter === t ? null : t)}
-                className={cn(
-                  "text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors",
-                  termFilter === t
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                )}
-              >
-                {t}
-              </button>
-            ))}
-
-            <div className="h-5 w-px bg-border self-center" />
-
-            {/* Status */}
-            {([
-              { key: "all", label: "All" },
-              { key: "needed", label: "Needed" },
-              { key: "in-plan", label: "In Plan" },
-              { key: "completed", label: "Done" },
-            ] as { key: StatusFilter; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setStatusFilter(key)}
-                className={cn(
-                  "text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors",
-                  statusFilter === key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as StatusFilter)}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All courses</SelectItem>
+                <SelectItem value="needed">Needed</SelectItem>
+                <SelectItem value="in-plan">In plan</SelectItem>
+                <SelectItem value="completed">Done</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {(subjectFilter || levelFilter || termFilter || statusFilter !== "all") && (
+            <div className="flex flex-wrap gap-2">
+              {subjectFilter && (
+                <button
+                  type="button"
+                  onClick={() => setSubjectFilter(null)}
+                  className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground"
+                >
+                  Subject: {subjectFilter} <span className="ml-1 text-muted-foreground">×</span>
+                </button>
+              )}
+              {levelFilter && (
+                <button
+                  type="button"
+                  onClick={() => setLevelFilter(null)}
+                  className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground"
+                >
+                  Level: {levelFilter}+ <span className="ml-1 text-muted-foreground">×</span>
+                </button>
+              )}
+              {termFilter && (
+                <button
+                  type="button"
+                  onClick={() => setTermFilter(null)}
+                  className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground"
+                >
+                  Semester: {termFilter} <span className="ml-1 text-muted-foreground">×</span>
+                </button>
+              )}
+              {statusFilter !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground"
+                >
+                  Status: {statusFilter === "in-plan" ? "In plan" : statusFilter === "completed" ? "Done" : "Needed"} <span className="ml-1 text-muted-foreground">×</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Results */}
@@ -444,7 +474,7 @@ export default function CoursesPage() {
                       key={course.id}
                       onClick={() => setSelected(course)}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                        "flex items-start gap-3 px-3 py-3 text-left transition-colors sm:items-center sm:px-4",
                         isDone
                           ? "bg-green-50/70 hover:bg-green-50"
                           : isPlanned
@@ -487,14 +517,14 @@ export default function CoursesPage() {
                           )}
                         </div>
                         <p className={cn(
-                          "text-xs truncate",
+                          "text-xs leading-relaxed sm:truncate",
                           isDone ? "text-green-700/70" : "text-muted-foreground"
                         )}>
                           {course.title}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-col items-end gap-2 self-start pl-2 sm:flex-row sm:items-center sm:self-center">
                         <div className="flex gap-0.5">
                           {(["Fall", "Spring", "Summer"] as SemesterTerm[]).map((t) => (
                             <span

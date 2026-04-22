@@ -79,29 +79,101 @@ RE_TOTALS_GPA = re.compile(r"GPA\s*=\s*([\d.]+)")
 
 
 def _extract_pdf_text(file_bytes: bytes) -> str:
-    """Extract all text from a PDF file using pypdf."""
-    from pypdf import PdfReader  # lazy import so missing dep fails gracefully
+    """Extract transcript text with layered fallbacks for scanned and awkward PDFs."""
+    pages: list[str] = []
 
-    reader = PdfReader(io.BytesIO(file_bytes))
-    # Fisk transcripts are encrypted (AES, empty password) — decrypt before reading.
-    if reader.is_encrypted:
-        reader.decrypt("")
-    pages = []
-    for page in reader.pages:
-        text = page.extract_text()
-        if text:
-            pages.append(text)
-    return "\n".join(pages)
+    try:
+        from pypdf import PdfReader  # lazy import so missing dep fails gracefully
+
+        reader = PdfReader(io.BytesIO(file_bytes))
+        if reader.is_encrypted:
+            reader.decrypt("")
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+    except Exception:
+        pages = []
+
+    text = "\n".join(pages).strip()
+    if len(text) >= 80:
+        return text
+
+    try:
+        import fitz  # PyMuPDF
+
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        fitz_pages: list[str] = []
+        for page in doc:
+            page_text = page.get_text("text")
+            if page_text:
+                fitz_pages.append(page_text)
+        doc.close()
+        fitz_text = "\n".join(fitz_pages).strip()
+        if len(fitz_text) > len(text):
+            text = fitz_text
+    except Exception:
+        pass
+
+    if len(text) >= 80:
+        return text
+
+    try:
+        import fitz  # PyMuPDF
+        import pytesseract
+        from PIL import Image
+
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        ocr_pages: list[str] = []
+        for page in doc:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+            image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            page_text = pytesseract.image_to_string(image)
+            if page_text:
+                ocr_pages.append(page_text)
+        doc.close()
+        ocr_text = "\n".join(ocr_pages).strip()
+        if len(ocr_text) > len(text):
+            text = ocr_text
+    except Exception:
+        pass
+
+    return text
 
 
 def _split_into_lines(text: str) -> list[str]:
     """Normalise whitespace and split into non-empty lines."""
     lines = []
     for raw in text.splitlines():
-        stripped = raw.strip()
+        stripped = re.sub(r"\s+", " ", raw).strip()
         if stripped:
             lines.append(stripped)
     return lines
+
+
+def _looks_like_course_tail(line: str) -> bool:
+    return bool(
+        re.search(r"\b[A-Z]{2,6}\s+\d+[A-Z0-9]*\b", line)
+        or re.search(r"\b[A-Z]{2,6}-\d+[A-Z0-9]*\b", line)
+    )
+
+
+def _combine_wrapped_line(lines: list[str], index: int, line: str) -> tuple[str, int]:
+    """
+    Some PDFs split course rows across two lines:
+      Intro to Computer Science I
+      CSCI 110 01 A N 3.0
+    Join those before matching the regexes.
+    """
+    if index >= len(lines):
+        return line, index
+
+    next_line = lines[index]
+    if not _looks_like_course_tail(next_line):
+        return line, index
+
+    combined = f"{line} {next_line}"
+    return combined, index + 1
 
 
 def parse_transcript(file_bytes: bytes) -> dict:
@@ -147,6 +219,7 @@ def parse_transcript(file_bytes: bytes) -> dict:
     while i < len(lines):
         line = lines[i]
         i += 1
+        line, i = _combine_wrapped_line(lines, i, line)
 
         # ── Student name heuristic ──────────────────────────────────────────
         if not _name_found and _name_re.match(line):
@@ -194,7 +267,8 @@ def parse_transcript(file_bytes: bytes) -> dict:
             # The remainder of the line (after term code) may be the first course
             remainder = term_match.group(3).strip()
             if remainder:
-                line = remainder  # fall through to course parsing below
+                line = remainder
+                line, i = _combine_wrapped_line(lines, i, line)
             else:
                 continue
 

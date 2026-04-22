@@ -31,7 +31,15 @@ import {
 } from "@/components/ui/select";
 import { usePlan } from "@/contexts/plan-context";
 import { fetchSubjects } from "@/lib/api";
+import { fetchCoursesBySubject } from "@/lib/api";
+import { subjectCourseToCourse } from "@/lib/api-adapters";
 import { toast } from "sonner";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type StatusFilter = "all" | "needed" | "in-plan" | "completed";
 
@@ -55,6 +63,8 @@ export default function CoursesPage() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<Course[]>([]);
   const [searching, setSearching] = useState(false);
+  const [catalogCourses, setCatalogCourses] = useState<Record<string, Course>>({});
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [semesterDialogOpen, setSemesterDialogOpen] = useState(false);
   const [targetCourse, setTargetCourse] = useState<Course | null>(null);
   const [targetSemesterId, setTargetSemesterId] = useState<string>("");
@@ -66,6 +76,42 @@ export default function CoursesPage() {
       .then((data) => setSubjects(data.map((s) => s.code).sort()))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setCatalogLoading(true);
+    fetchSubjects()
+      .then(async (data) => {
+        const subjectCodes = data.map((subject) => subject.code).sort();
+        const settled = await Promise.allSettled(
+          subjectCodes.map(async (subject) => ({
+            subject,
+            courses: await fetchCoursesBySubject(subject),
+          }))
+        );
+
+        if (!active) return;
+        const next: Record<string, Course> = {};
+        settled.forEach((result) => {
+          if (result.status !== "fulfilled") return;
+          result.value.courses.forEach((course) => {
+            const adapted = subjectCourseToCourse(course, labels);
+            next[adapted.code] = adapted;
+          });
+        });
+        setCatalogCourses(next);
+      })
+      .catch(() => {
+        if (active) setCatalogCourses({});
+      })
+      .finally(() => {
+        if (active) setCatalogLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [labels]);
 
   // Trigger API search when query changes (subject-only filtering uses planCatalog)
   useEffect(() => {
@@ -119,10 +165,10 @@ export default function CoursesPage() {
 
   // Combine plan catalog + search results (search results take precedence)
   const allCourses = useMemo(() => {
-    const base = { ...planCatalog };
+    const base = { ...catalogCourses, ...planCatalog };
     searchResults.forEach((c) => { base[c.code] = c; });
     return Object.values(base);
-  }, [planCatalog, searchResults]);
+  }, [catalogCourses, planCatalog, searchResults]);
 
   // Derive subjects from available courses if not loaded yet
   const derivedSubjects = useMemo(() => {
@@ -331,10 +377,17 @@ export default function CoursesPage() {
             </div>
           )}
 
-          {allCourses.length === 0 && !searching && (
+          {allCourses.length === 0 && !searching && !catalogLoading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <BookOpen className="w-8 h-8 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">Search for courses above to browse the catalog.</p>
+              <p className="text-sm text-muted-foreground">No catalog courses are available yet.</p>
+            </div>
+          )}
+
+          {catalogLoading && allCourses.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-8 h-8 text-muted-foreground/60 animate-spin" />
+              <p className="text-sm text-muted-foreground">Loading the course catalog…</p>
             </div>
           )}
 
@@ -447,22 +500,37 @@ export default function CoursesPage() {
             </div>
 
             <div className="mb-5">
-              <p className="text-xs font-semibold text-foreground mb-2">Offered Terms</p>
-              <div className="flex gap-2">
-                {TERMS.map((t) => (
-                  <span
-                    key={t}
-                    className={cn(
-                      "text-xs font-medium px-2.5 py-1 rounded-md border",
-                      selected.offeredTerms.includes(t)
-                        ? "bg-primary/10 text-primary border-primary/20"
-                        : "bg-muted text-muted-foreground/40 border-border"
-                    )}
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
+              <Accordion type="single" collapsible className="w-full rounded-lg border border-border px-3">
+                <AccordionItem value="offered-terms" className="border-b-0">
+                  <AccordionTrigger className="py-3 hover:no-underline">
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-semibold text-foreground">Offered Terms</span>
+                      <span className="text-xs text-muted-foreground">
+                        {selected.offeredTerms.length > 0
+                          ? selected.offeredTerms.join(", ")
+                          : "No term data available"}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {TERMS.map((t) => (
+                        <span
+                          key={t}
+                          className={cn(
+                            "text-xs font-medium px-2.5 py-1 rounded-md border",
+                            selected.offeredTerms.includes(t)
+                              ? "bg-primary/10 text-primary border-primary/20"
+                              : "bg-muted text-muted-foreground/40 border-border"
+                          )}
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
 
             {selected.prereqs.length > 0 && (

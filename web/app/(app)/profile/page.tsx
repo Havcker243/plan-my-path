@@ -111,7 +111,7 @@ export default function ProfilePage() {
         else becomeElective++;
       }
       setImpactData({ carryOver, becomeElective, newGaps: 0 });
-    }).catch(() => setImpactData(null)).finally(() => setImpactLoading(false));
+    }).catch((err) => { console.error("[profile] major impact calculation failed:", err); setImpactData(null); }).finally(() => setImpactLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [major, majorChanged]);
 
@@ -164,7 +164,8 @@ export default function ProfilePage() {
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from("ProfilePictures").getPublicUrl(path);
       setAvatar(data.publicUrl);
-    } catch {
+    } catch (err) {
+      console.error("[profile] avatar upload failed:", err);
       toast.error("Failed to upload avatar");
     } finally {
       setUploading(false);
@@ -195,7 +196,8 @@ export default function ProfilePage() {
           ? "Profile saved — course labels updated for your new major"
           : "Profile saved"
       );
-    } catch {
+    } catch (err) {
+      console.error("[profile] profile save failed:", err);
       toast.error("Failed to save profile");
     } finally {
       setSaving(false);
@@ -212,7 +214,8 @@ export default function ProfilePage() {
       await deleteAccount(token);
       await supabase.auth.signOut();
       router.push("/");
-    } catch {
+    } catch (err) {
+      console.error("[profile] delete account failed:", err);
       toast.error("Failed to delete account — try again");
       setDeleting(false);
     }

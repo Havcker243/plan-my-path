@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Search, X, ChevronRight, BookOpen, Check, AlertCircle, Loader2,
+  Search, X, ChevronRight, BookOpen, Check, AlertCircle, Loader2, CheckCircle2, Circle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -76,7 +76,7 @@ export default function CoursesPage() {
   useEffect(() => {
     fetchSubjects()
       .then((data) => setSubjects(data.map((s) => s.code).sort()))
-      .catch(() => {});
+      .catch((err) => console.error("[courses] subjects load failed:", err));
   }, []);
 
   useEffect(() => {
@@ -103,7 +103,8 @@ export default function CoursesPage() {
         });
         setCatalogCourses(next);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[courses] catalog load failed:", err);
         if (active) setCatalogCourses({});
       })
       .finally(() => {
@@ -126,7 +127,8 @@ export default function CoursesPage() {
       try {
         const results = await searchCoursesCatalog(search, subjectFilter ?? undefined);
         setSearchResults(results);
-      } catch {
+      } catch (err) {
+        console.error("[courses] search failed:", err);
         setSearchResults([]);
       } finally {
         setSearching(false);
@@ -434,52 +436,86 @@ export default function CoursesPage() {
                 <span className="text-xs text-muted-foreground">{courses.length} courses</span>
               </div>
               <div className="flex flex-col divide-y divide-border rounded-xl border border-border overflow-hidden">
-                {courses.map((course) => (
-                  <button
-                    key={course.id}
-                    onClick={() => setSelected(course)}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors",
-                      selected?.id === course.id && "bg-primary/5"
-                    )}
-                  >
-                    <span className={cn("w-2 h-2 rounded-full flex-shrink-0", LABEL_DOT[course.label])} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">{course.code}</span>
-                        <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full border", LABEL_BADGE[course.label])}>
-                          {LABEL_META[course.label].label}
-                        </span>
-                        {completedIds.has(course.id) && (
-                          <span className="text-[10px] text-green-600 font-medium">✓ Done</span>
-                        )}
-                        {plannedSemesters[course.id] && !completedIds.has(course.id) && (
-                          <span className="text-[10px] text-primary font-medium">{plannedSemesters[course.id]}</span>
+                {courses.map((course) => {
+                  const isDone    = completedIds.has(course.id);
+                  const isPlanned = !isDone && !!plannedSemesters[course.id];
+                  return (
+                    <button
+                      key={course.id}
+                      onClick={() => setSelected(course)}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                        isDone
+                          ? "bg-green-50/70 hover:bg-green-50"
+                          : isPlanned
+                          ? "bg-primary/3 hover:bg-primary/5"
+                          : "hover:bg-muted/50",
+                        selected?.id === course.id && "bg-primary/5"
+                      )}
+                    >
+                      {/* Completion indicator — left-edge column */}
+                      <div className="flex-shrink-0 w-5 flex items-center justify-center">
+                        {isDone ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        ) : isPlanned ? (
+                          <Circle className="w-3.5 h-3.5 text-primary" />
+                        ) : (
+                          <span className={cn("w-2 h-2 rounded-full", LABEL_DOT[course.label])} />
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground truncate">{course.title}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="flex gap-0.5">
-                        {(["Fall", "Spring", "Summer"] as SemesterTerm[]).map((t) => (
-                          <span
-                            key={t}
-                            className={cn(
-                              "text-[9px] font-semibold w-4 h-4 rounded flex items-center justify-center",
-                              course.offeredTerms.includes(t)
-                                ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground/40"
-                            )}
-                          >
-                            {TERM_SHORT[t]}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn(
+                            "text-sm font-semibold",
+                            isDone ? "text-green-700" : "text-foreground"
+                          )}>
+                            {course.code}
                           </span>
-                        ))}
+                          {isDone ? (
+                            <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                              Completed
+                            </span>
+                          ) : isPlanned ? (
+                            <span className="text-[10px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+                              {plannedSemesters[course.id]}
+                            </span>
+                          ) : (
+                            <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full border", LABEL_BADGE[course.label])}>
+                              {LABEL_META[course.label].label}
+                            </span>
+                          )}
+                        </div>
+                        <p className={cn(
+                          "text-xs truncate",
+                          isDone ? "text-green-700/70" : "text-muted-foreground"
+                        )}>
+                          {course.title}
+                        </p>
                       </div>
-                      <span className="text-xs font-mono text-muted-foreground">{course.credits}cr</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40" />
-                    </div>
-                  </button>
-                ))}
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex gap-0.5">
+                          {(["Fall", "Spring", "Summer"] as SemesterTerm[]).map((t) => (
+                            <span
+                              key={t}
+                              className={cn(
+                                "text-[9px] font-semibold w-4 h-4 rounded flex items-center justify-center",
+                                course.offeredTerms.includes(t)
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted text-muted-foreground/40"
+                              )}
+                            >
+                              {TERM_SHORT[t]}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-xs font-mono text-muted-foreground">{course.credits}cr</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40" />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

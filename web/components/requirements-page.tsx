@@ -66,7 +66,8 @@ export default function RequirementsPage() {
       const { labels: l, total_credits } = await fetchCourseLabels(code);
       setWhatIfLabels(l);
       setWhatIfCredits(total_credits);
-    } catch {
+    } catch (err) {
+      console.error("[requirements] what-if labels load failed:", err);
       setWhatIfError(true);
       setWhatIfLabels(null);
     } finally { setWhatIfLoading(false); }

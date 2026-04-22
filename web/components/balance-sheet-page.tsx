@@ -149,7 +149,8 @@ export default function BalanceSheetPage() {
         printDate: new Date().toLocaleDateString(),
       });
       downloadPdf(pdfBytes, `${safeFilePart(studentName)}-degree-audit.pdf`);
-    } catch {
+    } catch (err) {
+      console.error("[balance-sheet] PDF export failed:", err);
       toast.error("Could not generate the degree audit PDF");
     } finally {
       setExportingPdf(false);
@@ -198,7 +199,8 @@ export default function BalanceSheetPage() {
       }
 
       downloadPdf(pdfBytes, `${safeFilePart(studentName)}-balance-sheet-filled.pdf`);
-    } catch {
+    } catch (err) {
+      console.error("[balance-sheet] custom export failed:", err);
       toast.error("Could not export the filled balance sheet");
     } finally {
       setExportingCustomPdf(false);
@@ -262,6 +264,7 @@ export default function BalanceSheetPage() {
       })
       .catch((error) => {
         if (cancelled) return;
+        console.error("[balance-sheet] scan failed:", error);
         setCustomMatches([]);
         setCustomUnmatchedCount(0);
         setCustomScanMethod(null);

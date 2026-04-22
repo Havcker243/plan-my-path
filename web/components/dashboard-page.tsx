@@ -86,7 +86,8 @@ export default function DashboardPage() {
       toast.success(
         `Transcript imported — ${added} course${added !== 1 ? "s" : ""} added${skipped > 0 ? `, ${skipped} already in plan` : ""}${result.gpa !== null ? `, GPA updated to ${Number(result.gpa).toFixed(2)}` : ""}`
       );
-    } catch {
+    } catch (err) {
+      console.error("[dashboard] transcript import failed:", err);
       toast.error("Failed to import transcript");
     }
   };

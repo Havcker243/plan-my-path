@@ -61,7 +61,7 @@ export default function ExploreMajorsPage() {
     setCompatLoading(true);
     fetchMajorCompatibility(completedCodes)
       .then(setCompatibility)
-      .catch(() => setCompatibility([]))
+      .catch((err) => { console.error("[explore-majors] compatibility load failed:", err); setCompatibility([]); })
       .finally(() => setCompatLoading(false));
   }, [completedCodes.join(",")]);
 
@@ -94,7 +94,8 @@ export default function ExploreMajorsPage() {
     try {
       const { labels } = await fetchCourseLabels(code);
       setPreviewLabels(labels as Record<string, { label: string }>);
-    } catch {
+    } catch (err) {
+      console.error("[explore-majors] preview labels load failed:", err);
       setPreviewLabels({});
     } finally {
       setPreviewLoading(false);
@@ -108,7 +109,8 @@ export default function ExploreMajorsPage() {
       await doUpdateProfile({ major_code: code });
       toast.success(`Major set to ${formatDisplayName(majors.find((m) => m.code === code)?.name ?? code)}`);
       router.push("/requirements");
-    } catch {
+    } catch (err) {
+      console.error("[explore-majors] declare major failed:", err);
       toast.error("Couldn't update your major — try again");
       setDeclaring(null);
     }

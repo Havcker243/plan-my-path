@@ -118,7 +118,7 @@ function ReviewsPanel({ courseCode }: { courseCode: string }) {
     setLoading(true);
     fetchReviews(courseCode)
       .then(setReviews)
-      .catch(() => setReviews([]))
+      .catch((err) => { console.error("[explore] reviews load failed:", err); setReviews([]); })
       .finally(() => setLoading(false));
   }, [courseCode]);
 
@@ -282,7 +282,7 @@ export default function ExplorePage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchSubjects().then(setSubjects).catch(() => {});
+    fetchSubjects().then(setSubjects).catch((err) => console.error("[explore] subjects load failed:", err));
   }, []);
 
   const doSearch = useCallback(async (q: string, subj: string) => {
@@ -293,7 +293,8 @@ export default function ExplorePage() {
       const { data, total: t } = await searchCourses(q, subj || undefined, 1, 30);
       setResults(data);
       setTotal(t);
-    } catch {
+    } catch (err) {
+      console.error("[explore] search failed:", err);
       setResults([]);
     } finally {
       setLoading(false);

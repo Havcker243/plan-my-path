@@ -101,7 +101,8 @@ export default function OnboardingPage() {
       try {
         const results = await searchCoursesCatalog(courseSearch);
         setCourseResults(results.slice(0, 15));
-      } catch {
+      } catch (err) {
+        console.error("[onboarding] course search failed:", err);
         setCourseResults([]);
       } finally {
         setCourseSearching(false);
@@ -176,7 +177,8 @@ export default function OnboardingPage() {
         gpa: transcriptGpa,
       });
       router.push("/dashboard");
-    } catch {
+    } catch (err) {
+      console.error("[onboarding] complete onboarding failed:", err);
       toast.error("Failed to complete onboarding");
       setSubmitting(false);
     }

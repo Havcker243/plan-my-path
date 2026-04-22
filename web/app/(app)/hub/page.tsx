@@ -230,7 +230,7 @@ function SubmitForm({ defaultCourse, onSubmitted }: { defaultCourse?: string; on
         const { data } = await searchCourses(trimmed, undefined, 1, 8);
         setSuggestions(data);
         setShowSuggestions(data.length > 0);
-      } catch { setSuggestions([]); } finally { setSuggestLoading(false); }
+      } catch (err) { console.error("[hub] course autocomplete failed:", err); setSuggestions([]); } finally { setSuggestLoading(false); }
     }, 300);
   };
 
@@ -412,14 +412,14 @@ function ProfessorsTab() {
 
   useEffect(() => {
     setLoading(true);
-    fetchProfessors().then(setProfessors).catch(() => setProfessors([])).finally(() => setLoading(false));
+    fetchProfessors().then(setProfessors).catch((err) => { console.error("[hub] professors load failed:", err); setProfessors([]); }).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
       setLoading(true);
-      fetchProfessors(search || undefined).then(setProfessors).catch(() => setProfessors([])).finally(() => setLoading(false));
+      fetchProfessors(search || undefined).then(setProfessors).catch((err) => { console.error("[hub] professors search failed:", err); setProfessors([]); }).finally(() => setLoading(false));
     }, 300);
   }, [search]);
 
@@ -429,7 +429,7 @@ function ProfessorsTab() {
     try {
       const reviews = await fetchProfessorReviews(prof.professor);
       setProfReviews(reviews);
-    } catch { setProfReviews([]); } finally { setLoadingReviews(false); }
+    } catch (err) { console.error("[hub] professor reviews load failed:", err); setProfReviews([]); } finally { setLoadingReviews(false); }
   };
 
   if (selected) {
@@ -533,7 +533,7 @@ export default function HubPage() {
   useEffect(() => {
     fetchRecentReviews(30)
       .then(setRecentReviews)
-      .catch(() => { setRecentError(true); setRecentReviews([]); })
+      .catch((err) => { console.error("[hub] recent reviews load failed:", err); setRecentError(true); setRecentReviews([]); })
       .finally(() => setLoadingRecent(false));
   }, []);
 
@@ -546,7 +546,7 @@ export default function HubPage() {
       try {
         const results = await fetchReviews(trimmed);
         setSearchResults(results); setSearchError(false); setSearched(true);
-      } catch { setSearchResults([]); setSearchError(true); setSearched(true); }
+      } catch (err) { console.error("[hub] review search failed:", err); setSearchResults([]); setSearchError(true); setSearched(true); }
       finally { setSearching(false); }
     }, 400);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };

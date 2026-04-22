@@ -162,12 +162,13 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     setMajorsError(false);
     fetchMajors()
       .then(setMajors)
-      .catch(() => {
+      .catch((err) => {
+        console.error("[plan-context] majors load failed:", err);
         setMajors([]);
         setMajorsError(true);
       })
       .finally(() => setMajorsLoading(false));
-    loadTermCalendar().catch(() => {});
+    loadTermCalendar().catch((err) => console.error("[plan-context] term calendar load failed:", err));
   }, [loadTermCalendar]);
 
   // Fetch plan data when the signed-in user changes. Do not depend directly on
@@ -215,8 +216,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             setCoreqs(coreqsData);
             setElectiveRules(rulesData);
             setDegreeCreditTotal(res.total_credits ?? 120);
-          } catch {
-            // labels are optional
+          } catch (err) {
+            console.error("[plan-context] course labels load failed:", err);
           }
         }
 
@@ -229,7 +230,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           setPlanCatalog({});
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[plan-context] plan init failed:", err);
         setInitError(true);
       })
       .finally(() => {
@@ -345,8 +347,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             }
             return next;
           });
-        } catch {
-          // Labels are optional; keep the current UI usable if this fetch fails.
+        } catch (err) {
+          console.error("[plan-context] label refresh failed:", err);
         }
       }
     },
@@ -577,8 +579,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
           setCoreqs(coreqsData);
           setElectiveRules(rulesData);
           setDegreeCreditTotal(res.total_credits ?? 120);
-        } catch {
-          // labels are optional
+        } catch (err) {
+          console.error("[plan-context] onboarding labels load failed:", err);
         }
       }
 
@@ -732,8 +734,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             })
           );
         }
-      } catch {
-        // Plan save is best-effort
+      } catch (err) {
+        console.error("[plan-context] background plan save failed:", err);
       }
     },
     [accessToken, termCalendar]

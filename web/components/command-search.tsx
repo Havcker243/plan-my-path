@@ -45,7 +45,7 @@ export default function CommandSearch({ open, onOpenChange }: Props) {
     const timer = setTimeout(() => {
       searchCoursesCatalog(query)
         .then(setResults)
-        .catch(() => setResults([]))
+        .catch((err) => { console.error("[command-search] search failed:", err); setResults([]); })
         .finally(() => setSearching(false));
     }, 300);
     return () => clearTimeout(timer);

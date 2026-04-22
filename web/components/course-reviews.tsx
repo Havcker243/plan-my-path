@@ -14,7 +14,7 @@ export default function CourseReviews({ courseCode }: { courseCode: string }) {
     setLoading(true);
     fetchReviews(courseCode)
       .then(setReviews)
-      .catch(() => setReviews([]))
+      .catch((err) => { console.error("[course-reviews] load failed:", err); setReviews([]); })
       .finally(() => setLoading(false));
   }, [courseCode]);
 

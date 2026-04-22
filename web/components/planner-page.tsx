@@ -261,7 +261,7 @@ export default function PlannerPage() {
     }
     fetchSectionAlerts(accessToken)
       .then(setAlerts)
-      .catch(() => setAlerts([]));
+      .catch((err) => { console.error("[planner] alerts load failed:", err); setAlerts([]); });
   }, [accessToken]);
 
   // Search for courses to add
@@ -278,7 +278,8 @@ export default function PlannerPage() {
         // Re-compute allUsed inside the async callback to get the latest semesters
         const used = new Set(semesters.flatMap((s) => s.courseIds));
         setSearchResults(results.filter((c) => !used.has(c.code)));
-      } catch {
+      } catch (err) {
+        console.error("[planner] course search failed:", err);
         setSearchResults([]);
       } finally {
         setSearching(false);
@@ -304,7 +305,7 @@ export default function PlannerPage() {
         });
         setSearchSectionMatchCounts(nextCounts);
       })
-      .catch(() => setSearchSectionMatchCounts({}));
+      .catch((err) => { console.error("[planner] section counts failed:", err); setSearchSectionMatchCounts({}); });
   }, [addingTo, searchResults, semesters, loadSectionsForCourses, optimizer]);
 
   const triggerSave = useCallback(() => {
@@ -318,7 +319,8 @@ export default function PlannerPage() {
         // the latest semesters/planCatalog state at call time.
         await savePlanRef.current();
         setLastSaved(new Date());
-      } catch {
+      } catch (err) {
+        console.error("[planner] plan save failed:", err);
         toast.error("Your plan couldn't be saved. Check your connection and try again.");
       } finally {
         setSaving(false);
@@ -421,7 +423,7 @@ export default function PlannerPage() {
       .then((data) => {
         setSelectedCourseSections(data[selectedCourse.code] ?? []);
       })
-      .catch(() => setSelectedCourseSections([]))
+      .catch((err) => { console.error("[planner] sections load failed:", err); setSelectedCourseSections([]); })
       .finally(() => setSectionsLoading(false));
   }, [selectedCourse, selectedCourseSemester, loadSectionsForCourses]);
 
@@ -494,8 +496,8 @@ export default function PlannerPage() {
           }
         // If sections exist, the pending-section dialog opens (state already set above)
       })
-      .catch(async () => {
-        // Section fetch failed â€” add without a section
+      .catch(async (err: unknown) => {
+        console.error(“[planner] section fetch failed, adding without section:”, err);
         await addCourseToSemester(course, semId);
         setAddingTo(null);
         setSearchTerm("");

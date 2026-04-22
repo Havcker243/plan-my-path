@@ -497,7 +497,7 @@ export default function PlannerPage() {
         // If sections exist, the pending-section dialog opens (state already set above)
       })
       .catch(async (err: unknown) => {
-        console.error(“[planner] section fetch failed, adding without section:”, err);
+        console.error("[planner] section fetch failed, adding without section:", err);
         await addCourseToSemester(course, semId);
         setAddingTo(null);
         setSearchTerm("");
@@ -1609,5 +1609,4 @@ export default function PlannerPage() {
     </div>
   );
 }
-
 

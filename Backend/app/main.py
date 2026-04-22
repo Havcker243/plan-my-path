@@ -360,7 +360,36 @@ async def parse_transcript_endpoint(
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not parse transcript: {exc}")
 
+    if not result.get("courses"):
+        # Return extracted text preview to help diagnose format mismatches
+        from app.transcript import _extract_pdf_text, _split_into_lines
+        try:
+            raw = _extract_pdf_text(contents)
+            preview = raw[:600] if raw else "(empty)"
+        except Exception:
+            preview = "(extraction failed)"
+        raise HTTPException(
+            status_code=422,
+            detail=f"No courses found in this transcript. Make sure it's an unofficial transcript PDF from your registrar.\n\nExtracted text preview:\n{preview}",
+        )
+
     return {"data": result}
+
+
+@app.post("/api/transcript/debug")
+async def debug_transcript_text(
+    file: UploadFile = File(...),
+    user: Dict[str, object] = Depends(get_current_user),
+) -> Dict[str, object]:
+    """Returns the raw extracted text from a PDF — use this to diagnose parsing issues."""
+    contents = await file.read()
+    from app.transcript import _extract_pdf_text, _split_into_lines
+    try:
+        raw = _extract_pdf_text(contents)
+        lines = _split_into_lines(raw)
+    except Exception as exc:
+        return {"raw": "", "lines": [], "error": str(exc)}
+    return {"raw": raw[:2000], "lines": lines[:80], "char_count": len(raw)}
 
 
 @app.get("/api/plan")

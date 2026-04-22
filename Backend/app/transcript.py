@@ -40,8 +40,51 @@ VALID_GRADES = {
 
 GRADE_TOKENS = VALID_GRADES | {"IP", "I", "W", "AU", "P", "NP", "S", "U"}
 
-# Regex: a term-year prefix like "2024FA" or "2025SP"
-RE_TERM_HEADER = re.compile(r"^(\d{4})(FA|SP|SU|SM|WI)\s*(.*)", re.DOTALL)
+# Regex: term headers — matches several formats Colleague may render:
+#   2024FA  /  2024SP  /  2024SU  /  2024WI
+#   Fall 2024  /  Spring 2025  /  Summer 2024
+#   FALL 2024  /  SPRING 2024
+#   FA 2024  /  SP 2024
+
+RE_TERM_HEADER = re.compile(
+    r"^(?:"
+    r"(\d{4})(FA|SP|SU|SM|WI)"          # 2024FA  (standard Colleague)
+    r"|"
+    r"(FA|SP|SU|SM|WI)\s+(\d{4})"       # FA 2024
+    r"|"
+    r"(Fall|Spring|Summer|Winter)\s+(\d{4})"  # Fall 2024
+    r"|"
+    r"(FALL|SPRING|SUMMER|WINTER)\s+(\d{4})"  # FALL 2024
+    r")\s*(.*)",
+    re.DOTALL | re.IGNORECASE,
+)
+
+_WORD_TO_CODE = {
+    "fall": "FA", "spring": "SP", "summer": "SU", "winter": "WI",
+    "FA": "FA", "SP": "SP", "SU": "SU", "SM": "SU", "WI": "WI",
+}
+
+
+def _parse_term_header(m: re.Match) -> tuple[str, int] | None:
+    """Extract (term_name, year) from a RE_TERM_HEADER match."""
+    g = m.groups()
+    # Group layout: (yr4code, code2, code2_b, yr4_b, word, yr4_c, WORD, yr4_d, remainder)
+    if g[0] and g[1]:                  # 2024FA
+        code = g[1].upper()
+        year = int(g[0])
+    elif g[2] and g[3]:                # FA 2024
+        code = g[2].upper()
+        year = int(g[3])
+    elif g[4] and g[5]:                # Fall 2024
+        code = _WORD_TO_CODE.get(g[4].lower(), "FA")
+        year = int(g[5])
+    elif g[6] and g[7]:                # FALL 2024
+        code = _WORD_TO_CODE.get(g[6].lower(), "FA")
+        year = int(g[7])
+    else:
+        return None
+    term = TERM_CODE_MAP.get(code, code)
+    return term, year
 
 # Regex: a completed course line
 # Captures: title, subject, course_num, section, grade, credits
@@ -292,13 +335,14 @@ def parse_transcript(file_bytes: bytes) -> dict:
         # ── Term header ─────────────────────────────────────────────────────
         term_match = RE_TERM_HEADER.match(line)
         if term_match:
-            year = int(term_match.group(1))
-            code = term_match.group(2)
-            current_term = {"term": TERM_CODE_MAP.get(code, code), "year": year}
+            parsed = _parse_term_header(term_match)
+            if parsed:
+                term_name, year = parsed
+                current_term = {"term": term_name, "year": year}
             # The remainder of the line (after term code) may be the first course
-            remainder = term_match.group(3).strip()
-            if remainder:
-                line = remainder
+            remainder = term_match.groups()[-1]
+            if remainder and remainder.strip():
+                line = remainder.strip()
                 line, i = _combine_wrapped_line(lines, i, line)
             else:
                 continue

@@ -234,7 +234,21 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
         {state.phase === "error" && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <p>{state.message}</p>
+            <div className="min-w-0">
+              {state.message.includes("Extracted text preview") ? (
+                <>
+                  <p className="font-medium mb-1">{state.message.split("\n\n")[0]}</p>
+                  <details className="text-[11px]">
+                    <summary className="cursor-pointer text-destructive/70 hover:text-destructive">Show extracted text (for debugging)</summary>
+                    <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-[10px] bg-destructive/5 rounded p-2 max-h-32 overflow-y-auto">
+                      {state.message.split("\n\n").slice(1).join("\n\n")}
+                    </pre>
+                  </details>
+                </>
+              ) : (
+                <p>{state.message}</p>
+              )}
+            </div>
           </div>
         )}
 

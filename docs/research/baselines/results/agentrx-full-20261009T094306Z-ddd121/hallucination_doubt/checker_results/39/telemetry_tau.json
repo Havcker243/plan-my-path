@@ -1,0 +1,86 @@
+[
+  {
+    "task_id": "39",
+    "step_index": 4,
+    "assertion_name": "user_lookup_uses_provided_email",
+    "check_type": "python_check",
+    "check_time_sec": 0.0011,
+    "tokens_used": 0,
+    "success": true,
+    "error": null,
+    "check_input": {
+      "step_pos": 4,
+      "step_index": 5,
+      "function_name": "user_lookup_uses_provided_email",
+      "matched_substeps_count": 1,
+      "trajectory_length": 26
+    },
+    "check_output": {
+      "result": true,
+      "violated": false
+    }
+  },
+  {
+    "task_id": "39",
+    "step_index": 8,
+    "assertion_name": "name_zip_lookup_matches_user_details",
+    "check_type": "python_check",
+    "check_time_sec": 0.0009,
+    "tokens_used": 0,
+    "success": true,
+    "error": null,
+    "check_input": {
+      "step_pos": 8,
+      "step_index": 9,
+      "function_name": "name_zip_lookup_matches_user_details",
+      "matched_substeps_count": 1,
+      "trajectory_length": 26
+    },
+    "check_output": {
+      "result": true,
+      "violated": false
+    }
+  },
+  {
+    "task_id": "39",
+    "step_index": 11,
+    "assertion_name": "user_details_lookup_matches_authenticated_id",
+    "check_type": "python_check",
+    "check_time_sec": 0.0006,
+    "tokens_used": 0,
+    "success": true,
+    "error": null,
+    "check_input": {
+      "step_pos": 11,
+      "step_index": 12,
+      "function_name": "user_details_lookup_matches_authenticated_id",
+      "matched_substeps_count": 1,
+      "trajectory_length": 26
+    },
+    "check_output": {
+      "result": true,
+      "violated": false
+    }
+  },
+  {
+    "task_id": "39",
+    "step_index": 22,
+    "assertion_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+    "check_type": "python_check",
+    "check_time_sec": 0.0011,
+    "tokens_used": 0,
+    "success": true,
+    "error": null,
+    "check_input": {
+      "step_pos": 22,
+      "step_index": 23,
+      "function_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+      "matched_substeps_count": 1,
+      "trajectory_length": 26
+    },
+    "check_output": {
+      "result": true,
+      "violated": false
+    }
+  }
+]

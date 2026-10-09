@@ -1,0 +1,44 @@
+{
+  "action": "agentrx-full",
+  "started_at_utc": "2026-10-09T09:35:06.988677+00:00",
+  "upstream": {
+    "repository": "https://github.com/microsoft/AgentRx.git",
+    "commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+    "local_path": ".research-upstream/AgentRx",
+    "paper": "https://arxiv.org/abs/2602.02475v2",
+    "dataset": "https://huggingface.co/datasets/microsoft/AgentRx",
+    "dataset_access": "gated; not downloaded",
+    "initial_scope": "official public tau-retail samples; IR normalization only"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "execution_checkout": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean-20261009",
+  "copilot_binary_override": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\agentrx_copilot_text_only.cmd",
+  "copilot_model_override": null,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean-20261009\\trajectories\\tau-retail\\hallucination_doubt.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-full-20261009T093506Z-655e02\\hallucination_doubt",
+        "--endpoint",
+        "copilot"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean-20261009",
+      "started_at_utc": "2026-10-09T09:35:06.994821+00:00",
+      "ended_at_utc": "2026-10-09T09:35:12.095874+00:00",
+      "exit_code": 1,
+      "log": "hallucination_doubt.txt",
+      "log_sha256": "77711e57f4f100ed829aa3e1d386515a90aeb62681b50d65b97bd576383df865"
+    }
+  ],
+  "input_sha256": {
+    "trajectories\\tau-retail\\hallucination_doubt.json": "eca3a4465978af89ef384026d1ff94c8b7ba91ed2a88b4fdaf9f87c204d2ef0e"
+  },
+  "evidence_scope": "One fixed public sample, all official pipeline stages; full dataset accuracy not measured",
+  "endpoint": "copilot"
+}

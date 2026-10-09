@@ -1,0 +1,1165 @@
+
+You are an expert at analyzing agent trajectories and generating step-specific dynamic invariants which are programmable for trajectory verification. 
+Your task is to analyze the current step in an agent's execution trajectory and determine if any invariant should be generated for verification for this specific step.
+
+REUSE the previous assertions wherever possible, do NOT create new ones unless absolutely necessary. Prioritize computation checks wherever computation is required such as counting, summing, comparison, etc.
+
+You will be provided with the overall task instruction, the static invariants already generated, and the full agent trajectory up to the current step.
+
+**IMPORTANT**: Static invariants have already been generated to cover general policy violations, preconditions, sequential dependencies, and business rules. Focus ONLY on cases NOT covered by static invariants, such as:
+- Computation errors (counting, summing, calculations)
+- Step-specific validation that static invariants cannot capture
+
+## Context Information:
+**Task Instruction:** You are fatima_taylor_3452, and you just moved from Florida (32169) to Phoenix (85033). Unfortunately your address is still the old one, and you want to update it. Your current address should be in your order, and you do not want to reveal it. Also, you want to know what is the price of the cheapest available t-shirt right now, and if you can order it through the agent. You are a funny person with lots of jokes, and you want to make the agent laugh.
+
+**Current Step Index:** 18
+
+## Your Task:
+Analyze the current step in the trajectory and generate dynamic invariants that:
+1. Are simple enough to implement via python or NL checks.
+2. Can be checked at this specific step in the trajectory (e.g., computation checks from tool call results)
+3. Focus on **critical errors or policy violations** NOT already covered by static invariants
+4. Are objectively verifiable from trajectory data
+5. Fill gaps left by static invariants, particularly computation and step-specific validation
+6. Provide working Python code or Natural Language (NL) check for each dynamic assertion that can be executed
+
+## Focus Areas:
+Generate assertions for these key constraint types (ONLY if NOT covered by static invariants):
+
+### **Computation Checks**
+- Verify numerical calculations, aggregations, and data accuracy.
+- Examples:
+  - Financial: "Transaction total should equal sum of line items plus applicable fees"
+  - Inventory: "Remaining stock after reservation should be original stock minus reserved quantity"
+  - Healthcare: "Medication dosage calculations should be within safe therapeutic ranges"
+
+### **Context-Specific Business Logic**
+- Step-specific rules that depend on current trajectory state
+- Examples:
+  - Retail: "Discount calculations based on current cart contents and user loyalty level"
+  - Financial: "Credit limit checks based on current account status and transaction history"
+  - Healthcare: "Drug interaction checks based on current prescription list"
+  - Workflow: "Approval requirements based on current user role and request amount"
+
+### **Cross-Tool Data Validation**
+- Verify data integrity across multiple tool interactions in the same session
+- Examples:
+  - "Entity identifiers referenced in later steps must match those retrieved in earlier tool outputs"
+  - Retail: "Items added to cart must still be available when proceeding to checkout"
+  - "If the agent claims an action succeeded, subsequent tool outputs must show evidence consistent with the claim"
+  - Financial: "Exchange rates used in calculations must be consistent across related transactions"
+  - Healthcare: "Lab results referenced in diagnosis must match the lab results retrieved"
+  - System: "File permissions checked must match the permissions set in previous operations"
+
+Output MUST be valid JSON only (no markdown, no commentary), with EXACT keys and structure defined below.
+
+CRITICAL FORMATTING REQUIREMENTS:
+1. Output ONLY valid JSON - NO markdown code blocks (no ```json or ```)
+2. Use double quotes for all strings (not single quotes)
+3. Ensure all commas are placed correctly between array/object elements
+4. Ensure all brackets and braces are properly closed
+5. Follow the EXACT schema below - do not add or remove fields
+6. Validate your JSON before outputting
+7. TAXONOMY TARGETS: Use ONLY values from the allowed list.
+8. ONLY PRODUCE PYTHON_CHECK INVARIANTS: check type should ALWAYS be python check that is, "check_type": "python_check", the nl_check fields should ALWAYS be empty.
+
+================================================================================================
+TRAJECTORY FORMAT (IMPORTANT) - THIS WILL BE GIVEN AS AN INPUT PARAMETER
+================================================================================================
+
+TRAJECTORY:
+The runtime provides a trajectory dict in the following IR schema:
+
+{
+  "trajectory_id": "str",
+  "instruction": "str",  // The overall task instruction
+  "steps": [
+    {
+      "index": int,  // 1-based step index
+      "substeps": [
+        {
+          "sub_index": int,  // 1-based substep index within the step
+          "role": "str",  // The role of the substep
+          "content": "str"  // The content of this substep
+        }
+      ]
+    }
+  ]
+}
+
+IMPORTANT ACCESS PATTERNS:
+- To get instruction: trajectory["instruction"]
+- To access step N: trajectory["steps"][N-1] (steps list is 0-indexed, but step.index is 1-based)
+- To get substeps of a step: step.get("substeps", [])
+- To get content: substep.get("content")
+- To get role: substep.get("role")
+
+================================================================================================
+OUTPUT FORMAT
+================================================================================================
+
+Top-level JSON schema (EXACT):
+{
+  "step_num": <int>,
+  "decision": "NO_INVARIANT" | "INVARIANT",
+  "invariant":  [ <InvariantObject> ] | null,
+  "trigger_to_invariants_map": {
+    "agent:<AgentName>": ["assertion_name", "..."]
+  }
+}
+
+where <AgentName> is one of: assistant | system | tool | user | *
+  
+================================================================================================
+InvariantObject schema (EXACT)
+================================================================================================
+Each invariant object MUST have these keys (no extras):
+
+IMPORTANT: Follow this schema EXACTLY. Do not add extra fields. Use correct JSON formatting.
+
+{
+  "assertion_name": "string_unique_snake_case",
+
+   "taxonomy_targets": [
+    "Instruction/PlanAdherenceFailure: The agent fails to follow the directions or the agreed plan by ignoring directives and skipping policy steps. This covers both under-execution (missed steps) and over-execution (unplanned or unnecessary actions, e.g., extra tool calls) that deviate from the static plan, domain policy or orchestrator plan.",
+    "InventionOfNewInformation: The agent introduces, removes, or alters information that is not grounded in any available input, context, or tool output. This includes fabricating unsupported facts, hallucinating details, or omitting relevant information without justification.",
+    "InvalidInvocation: The agent encounters errors triggered by inputs that can't be parsed or validated e.g., syntax errors or tool calls with bad/missing arguments. Not involving wrong logic; just invalid inputs.",
+    "MisinterpretationOfToolOutput: The agent incorrectly reasons about its own or another agent's tool output (like computation errors), leading to incorrect assumptions or actions. This also includes cases where the agent considered only partial tool output.",
+    "IntentPlanMisalignment: The agent misreads the user's goal or constraints and produces the wrong step sequence or structure. Covers both bad ordering/structure and plans aimed at the wrong objective.",
+    "UnderspecifiedUserIntent: The agent was unable to complete the task due to lack of complete information at any point in the trajectory/plan execution.",
+    "IntentNotSupported: The agent/user is asking to perform an action for which a tool is not available, like listening to an audio file.",
+    "GuardrailsTriggered: The agent is blocked by safety/RAI policies or by external site access restrictions, preventing execution despite a valid plan. Examples include policy refusals (e.g., unsafe content, privacy-protected data), CAPTCHA/robot blocks, login/paywall/403/robots.txt denials, or site forbids automation. This is not an agent planning/execution error; it is an external/guardrail block.",
+    "SystemFailure: The agent faces a system connectivity issue while calling a particular tool like an endpoint not being reachable."
+    // Select 1-3 most relevant taxonomy targets for each invariant from the above list ONLY.
+ 
+    // Example: ["Instruction/PlanAdherenceFailure", "GuardrailsTriggered"]
+  ],
+
+  "invariant_type": "SCHEMA  // Ensures a structured payload (embedded JSON, tool args/result, ledger blob) is parseable and contains required fields.
+  | PROTOCOL                 // Ensures the correct division of labor and delegation conventions across agents
+  | RELATIONAL_POST          // Enforces cross-event linkage where later actions/claims must be supported by earlier tool outputs via token/field containment checks.
+  | PROVENANCE               // Enforces grounding claims or critical tokens must trace to earlier tool outputs
+  | TEMPORAL                 // Enforces ordering constraints ("X must happen before Y", "do not call tool before directive") without requiring full workflow state.
+  | CAPABILITY               // Ensures tools/agents are used only within their defined capabilities and I/O shapes.
+  | ANY",
+
+  "event_trigger": {
+    "step_index": "*|int|range",
+    "substep_index": "*|int|range",
+    "role_name": "assistant | system | tool | user | *"  // agent names inferred from substep.role; "*" matches all
+  },
+
+  "check_hint": "deterministic procedure description in 2-8 sentences",
+  "check_type": "python_check|nl_check",
+
+  "python_check": {
+    "function_name": "same_as_assertion_name",
+    "args": ["trajectory","current_step_index"],
+    "code_lines": [
+      "def same_as_assertion_name(trajectory, current_step_index):",
+      "    \"\"\"Return True iff invariant holds.\"\"\"",
+      "    # Access steps via trajectory['steps'][current_step_index]",
+      "    # Each step has 'substeps' with 'role' and 'content'",
+      "    # MUST include at least one explicit failure path: return False",
+      "    return True"
+    ]
+  },
+
+  "nl_check": {
+    "judge_system_prompt_template": "You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\nDo not infer intent beyond explicit statements.\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\nAmbiguity or missing evidence leads to PASS, not FAIL.",
+    "judge_user_prompt_template": "template using {POLICY_TEXT} {TASK_INSTRUCTION} {CURRENT_EVENT_JSON} {WINDOW_EVENTS_JSON}",
+    "judge_scope_notes": "what events are in scope and what counts as evidence",
+    "focus_steps_instruction": "REQUIRED: Clear, actionable instruction identifying which 2-4 specific events to examine. Must specify events by relative position (e.g., 'immediately prior user message', '2 steps back', 'most recent get_order_details result') and explain what to look for in each.",
+    "judge_rubric": ["objective criterion 1", "objective criterion 2", "..."],
+    "rubric_evaluation_algorithm_template": "Rubric Evaluation Algorithm:\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\n\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\n\nStep 3: Determine final verdict:\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\n\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.",
+    "output_format_template": "Output Format:\nYou MUST return a JSON response with this EXACT structure:\n{\n  "verdict": "pass" or "fail",\n  "rubric_results": [\n    {\n      "criterion_index": 0,\n      "criterion": "full text of the criterion from the rubric",\n      "evaluation": "CLEAR_PASS" or "CLEAR_FAIL" or "UNCLEAR",\n      "reasoning": "detailed explanation of why this evaluation was chosen, citing specific evidence from events"\n    }\n    // ... one entry per rubric criterion\n  ],\n  "final_reasoning": "explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision"\n}\n\nThis detailed output is critical for debugging and understanding the evaluation."
+  }
+}
+
+## Quality Guidelines:
+- **Policy-Derived**: Must be supported by the policy document content, include any user confirmation checks before critical actions if specified in policy
+- **Practical Impact**: Focus on assertions that prevent real operational problems
+- **Domain-Relevant**: Prioritize rules specific to this business domain
+- **Reasonable Scope**: Avoid both trivial sanity checks and overly complex checks that would be difficult to implement reliably.
+
+## Trigger Robustness Rules:
+- content_regex MUST be robust to formatting differences (markdown, punctuation, extra whitespace, casing).
+- NEVER hardcode markdown-sensitive exact strings like:
+    "Tool result:\s*Query successful"
+  because real traces often contain:
+    "**Tool result:**\nQuery successful. ..."
+- Prefer matching stable substrings that survive formatting changes.
+- Prefer SHORT regexes. Avoid overfitting to ":" vs "**:**" vs "." variations.
+- Avoid brittle patterns that depend on exact formatting or punctuation.
+- Make sure to match the role name perfectly and overapproximate if you are unsure.
+
+Each invariant should be as GENERAL as possible, if many specific invariants can be combined into one invariant function, do so.
+For example, an invariant which checks order status validity for various tool calls can be combined into one function.
+
+================================================================================================
+DECISION GUIDE: PYTHON_CHECK VS NL_CHECK
+================================================================================================
+Use python_check when:
+- Tool output is structured JSON with extractable fields (e.g., get_order_details, get_user_details)
+- Check involves counting, summing, or comparing numeric values
+- Check involves verifying exact field matches (IDs, status codes, amounts, dates)
+- Check involves parsing and validating data structure or schema
+- Check uses simple regex patterns (e.g., matching an order_id format like r"#W\d+" or extracting keys or specific count in the content message)
+- Check involves deterministic string containment or exact substring matching
+
+Use nl_check when:
+- Check requires understanding paraphrasing or semantic equivalence (e.g., "bigger size" = "larger size")
+- Check requires judging whether two different phrasings express the same intent
+- Check requires evaluating whether user agent messages align with task instruction semantically
+- The content is unstructured natural language without clear fields to extract
+- Check would require a long list of synonyms or variations to cover programmatically
+
+A naive python_check approach would try to match exact phrases like:
+  - "I want to return"
+  - "I'd like to exchange"
+  - "cancel my order"
+  - "modify my address"
+  - "get a refund"
+  - "change the items"
+But users express the same intent in many ways:
+  - "Could you help me send back..." (return)
+  - "I need to swap this for..." (exchange)
+  - "Please void the order" (cancel)
+  - "Update my shipping info" (modify address)
+Matching exact phrases is brittle and incomplete. Use nl_check for semantic intent.
+
+================================================================================================
+## PYTHON CHECK GUIDELINES
+================================================================================================
+
+## Python Code Guidelines:
+- Write complete, executable Python functions
+- You will be given 2 parameters - (trajectory and current_step_index), where trajectory is the full IR dict with "steps" field
+- Access steps via trajectory["steps"][current_step_index] - steps list is 0-indexed
+- Each step has "index" (1-based) and "substeps" array
+- Each substep has "sub_index", "role", and "content"
+- The current_step_index is 0-based. So if the current step being executed has index=7, current_step_index will be 6.
+- Include docstrings explaining the assertion
+- Look at the tool response key fields very carefully while writing the code.
+  1. First, identify which tool(s) you're working with in the current trajectory step
+  2. Pay attention to nested dictionaries (use chained .get() calls) and list structures (check length before indexing)
+  3. Note the data types (str, float, bool, list, dict) to avoid type errors
+  4. Use ONLY the exact field names shown in the tool structure - do NOT invent or assume field names
+- Handle edge cases and missing data gracefully - verify field existence and type before operations
+- Focus on computation validation and step-specific checks, avoid very trivial sanity checks
+- **Exception Handling**: Raise exceptions for safety check violations (KeyError, IndexError, TypeError, AttributeError, ValueError, etc.) instead of returning False. Let these exceptions propagate naturally. Only return boolean (True/False) for actual invariant logic violations
+- Return boolean values (True if assertion passes, False if invariant violation detected)
+- **Add print statements for debugging**: Start with printing the function name, then print all key variables, extracted JSON fields, and intermediate calculation results to aid in debugging and verification
+
+================================================================================================
+## PYTHON_CHECK ANTI-HALLUCINATION RULES
+================================================================================================
+- A python_check MUST implement ONLY the exact condition(s) described in this invariant's `check_hint`.
+- FORBIDDEN: adding "extra" checks that are not explicitly part of check_hint.
+  Examples of forbidden extras:
+  * checking additional URLs/IDs/regexes beyond the targeted substring(s)
+  * inferring "plan rules" not explicitly spelled out in check_hint
+  * scanning many steps for unrelated markers "just in case"
+  * inventing secondary conditions like "also must not contain X" unless required by check_hint
+- Keep python_check SMALL and TARGETED:
+  * prefer 1-3 simple extractions + 1 boolean condition
+  * avoid long keyword lists and complex regex (if you need that, it is probably a nl_check candidate)
+
+================================================================================================
+## NL CHECK GUIDELINES
+================================================================================================
+
+For nl_check invariants, MUST include a "focus_steps_instruction" field that tells the judge which specific events to pay attention to.
+
+The instruction should:
+1. Be clear and actionable - the judge should know exactly which events to look at
+2. Identify 2-4 critical events by their position relative to current_step_index
+3. Explain WHY each event is important for the evaluation
+4. Use relative positioning (e.g., "immediately prior", "2 steps back", "most recent X tool result")
+
+EXAMPLES OF GOOD FOCUS STEPS INSTRUCTIONS:
+
+For confirmation checks:
+"Focus your evaluation on these key events: (1) The immediately prior message - check for explicit confirmation keywords like 'yes', 'confirm', 'proceed', 'ok'. (2) The assistant message two to three steps back - verify that it describes the action of interest (cancel/modify/exchange/return) and mentions the relevant target entity identifier(s) and critical parameters (e.g., record/entity ID, amount, destination, items, scope). (3) The current tool call arguments - verify they match the order_id/incident_id and details mentioned by another agent."
+
+For information invention checks:
+"Focus on: (1) The current agent content message being evaluated. (2) The most recent relevant tool results in the window — extract the authoritative facts actually present (identifiers, key fields/attributes, timestamps, computed outputs). (3) Compare specific claims in the agent's message against these tool results."
+
+For temporal/prerequisite checks:
+"Focus on: (1) The current tool call event — identify what operation is being attempted and what prerequisites it implies (authentication, entity lookup, permission check, required context fetch, state precondition). (2) Scan backward through all prior events to find the most recent event(s) that satisfy each prerequisite. (3) Most recent state snapshot for the same target entity — locate the latest tool result that reports the entity's current state."
+
+KEY PRINCIPLES:
+- Be specific about WHICH events (by relative position or role+name)
+- Explain WHAT to look for in each event
+- Make it easy for the judge to locate and examine the right evidence
+- Reduce cognitive load by narrowing focus to what matters most
+
+================================================================================================
+COMPLETE NL_CHECK INVARIANT EXAMPLE
+================================================================================================
+Below is a complete example of an nl_check invariant. Use this as a template when the check requires semantic understanding, paraphrasing detection, intent alignment, or meaning-based evaluation that cannot be reliably done with keyword/regex matching.
+
+WHY THIS MUST BE NL_CHECK (NOT PYTHON_CHECK):
+A naive python_check approach would try to match exact phrases like:
+  - "I want to return"
+  - "I'd like to exchange"
+  - "cancel my order"
+  - "modify my address"
+  - "get a refund"
+  - "change the items"
+But users express the same intent in many ways:
+  - "Could you help me send back..." (return)
+  - "I need to swap this for..." (exchange)
+  - "Please void the order" (cancel)
+  - "Update my shipping info" (modify address)
+Matching exact phrases is brittle and incomplete. Use nl_check for semantic intent.
+
+Here's a complete example:
+{
+  "assertion_name": "user_agent_follows_task_instruction",
+  "taxonomy_targets": ["UnderspecifiedUserIntent"],
+  "invariant_type": "USER_INTENT_CHECK",
+  "check_phase": "ANY",
+  "event_trigger": {
+    "step_index": "*",
+    "substep_index": "*",
+    "role_name": "user",
+    "content_regex": "*",
+    "tool_name": "*"
+  },
+  "check_hint": "Verify that the simulated user agent's message is semantically consistent with the original task instruction. Check that the user is not introducing new requirements, contradicting the task instruction, or providing information that deviates from what was specified in the task.",
+  "check_type": "nl_check",
+  "python_check": {},
+  "nl_check": {
+    "judge_system_prompt_template": "You are a strict compliance judge. Evaluate only with evidence in the provided events and the task instruction. Do not infer intent beyond explicit statements. CRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.",
+    "judge_user_prompt_template": "POLICY TEXT: {POLICY_TEXT}\n\nTASK INSTRUCTION: {TASK_INSTRUCTION}\n\nCURRENT USER MESSAGE: {CURRENT_EVENT_JSON}\n\nEvaluate whether the user agent's message is consistent with the task instruction.",
+    "judge_scope_notes": "Compare the user agent's current message against the original task instruction to detect semantic drift, contradictions, or invention of new requirements not in the task.",
+    "focus_steps_instruction": "Focus on: (1) The current user message being evaluated - extract the specific request, preferences, or information being communicated. (2) The original task instruction provided at the start - identify the user's stated goals, constraints, and preferences. (3) Check for semantic alignment: is the user asking for what the task instruction specifies, or has the user agent drifted to a different request?",
+    "judge_rubric": [
+      "The user agent's request type (return/exchange/cancel/modify) matches what is specified in the task instruction",
+      "If the user mentions specific items, quantities, or attributes, they are consistent with those in the task instruction",
+      "The user agent does not introduce new constraints or preferences that were not present in the task instruction",
+      "The user agent does not contradict or reverse any requirement from the task instruction"
+    ],
+    "rubric_evaluation_algorithm_template": "{RUBRIC_EVALUATION_ALGORITHM}",
+    "output_format_template": "{OUTPUT_FORMAT}"
+  }
+}
+
+YOU NEED NOT GENERATE A DYNAMIC INVARIANT FOR EVERY STEP. IF NO NEW DYNAMIC INVARIANTS ARE NEEDED OR ARE ALREADY COVERED BY STATIC INVARIANTS, OUTPUT:
+
+{
+  "step_num": 18,
+  "decision": "NO_INVARIANT",
+  "invariant": null,
+  "trigger_to_invariants_map": {}
+}
+
+================================================================================================
+STATIC INVARIANTS ALREADY GENERATED
+================================================================================================
+
+{
+  "invariants": [
+    {
+      "assertion_name": "authenticate_before_user_data_access",
+      "check_hint": "Evaluate this assertion when the current assistant event invokes a tool that reads or changes user, order, or product data. Before that invocation, the trajectory must contain a successful find_user_id_by_email or find_user_id_by_name_zip call and its tool result. A user-provided user ID alone does not satisfy the authentication requirement.",
+      "check_type": "python_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "TEMPORAL",
+      "nl_check": {},
+      "python_check": {
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def authenticate_before_user_data_access(trajectory, current_step_index):",
+          "    \"\"\"Require successful identity lookup before accessing retail data.\"\"\"",
+          "    import json",
+          "    print('authenticate_before_user_data_access')",
+          "    steps = trajectory['steps']",
+          "    current = steps[current_step_index]",
+          "    def calls_in(step):",
+          "        calls = []",
+          "        for sub in step.get('substeps', []):",
+          "            if sub.get('role') != 'assistant':",
+          "                continue",
+          "            text = sub.get('content', '')",
+          "            if not isinstance(text, str):",
+          "                raise TypeError('assistant content must be a string')",
+          "            decoder = json.JSONDecoder()",
+          "            for pos, char in enumerate(text):",
+          "                if char not in '[{':",
+          "                    continue",
+          "                try:",
+          "                    value, _ = decoder.raw_decode(text[pos:])",
+          "                except json.JSONDecodeError:",
+          "                    continue",
+          "                candidates = value if isinstance(value, list) else [value]",
+          "                for item in candidates:",
+          "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+          "                        fn = item['function']",
+          "                        if isinstance(fn.get('name'), str):",
+          "                            calls.append(fn['name'])",
+          "                if calls:",
+          "                    break",
+          "        return calls",
+          "    current_calls = calls_in(current)",
+          "    protected = {'get_order_details', 'get_product_details', 'get_user_details', 'cancel_pending_order', 'exchange_delivered_order_items', 'modify_pending_order_address', 'modify_pending_order_items', 'modify_pending_order_payment', 'modify_user_address', 'return_delivered_order_items'}",
+          "    if not protected.intersection(current_calls):",
+          "        print('current_calls=', current_calls)",
+          "        return True",
+          "    authenticated = False",
+          "    for prior in steps[:current_step_index]:",
+          "        prior_calls = calls_in(prior)",
+          "        if not {'find_user_id_by_email', 'find_user_id_by_name_zip'}.intersection(prior_calls):",
+          "            continue",
+          "        result_steps = steps[steps.index(prior) + 1:current_step_index]",
+          "        for result_step in result_steps:",
+          "            for sub in result_step.get('substeps', []):",
+          "                if sub.get('role') == 'tool':",
+          "                    content = sub.get('content', '')",
+          "                    if not isinstance(content, str):",
+          "                        raise TypeError('tool content must be a string')",
+          "                    if content.strip() and not content.strip().lower().startswith('error:') and 'not found' not in content.strip().lower():",
+          "                        authenticated = True",
+          "                    break",
+          "            if authenticated:",
+          "                break",
+          "    print('current_calls=', current_calls, 'authenticated=', authenticated)",
+          "    if not authenticated:",
+          "        return False",
+          "    return True"
+        ],
+        "function_name": "authenticate_before_user_data_access"
+      },
+      "taxonomy_targets": [
+        "Instruction/PlanAdherenceFailure",
+        "IntentPlanMisalignment"
+      ]
+    },
+    {
+      "assertion_name": "check_order_status_before_order_action",
+      "check_hint": "For cancel and pending-order modification calls, require a prior get_order_details result for the same order reporting status pending. For return and exchange calls, require a prior result for that order reporting status delivered. Use the most recent matching order details result; a lookup for a different order or an absent/unparseable status does not establish the precondition.",
+      "check_type": "python_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "TEMPORAL",
+      "nl_check": {},
+      "python_check": {
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def check_order_status_before_order_action(trajectory, current_step_index):",
+          "    \"\"\"Require a matching, recent order-status result before an order action.\"\"\"",
+          "    import json",
+          "    print('check_order_status_before_order_action')",
+          "    steps = trajectory['steps']",
+          "    current = steps[current_step_index]",
+          "    def tool_calls(step):",
+          "        found = []",
+          "        for sub in step.get('substeps', []):",
+          "            if sub.get('role') != 'assistant':",
+          "                continue",
+          "            text = sub.get('content', '')",
+          "            if not isinstance(text, str):",
+          "                raise TypeError('assistant content must be a string')",
+          "            decoder = json.JSONDecoder()",
+          "            for pos, char in enumerate(text):",
+          "                if char not in '[{':",
+          "                    continue",
+          "                try:",
+          "                    value, _ = decoder.raw_decode(text[pos:])",
+          "                except json.JSONDecodeError:",
+          "                    continue",
+          "                for item in (value if isinstance(value, list) else [value]):",
+          "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+          "                        fn = item['function']",
+          "                        if isinstance(fn.get('name'), str):",
+          "                            raw = fn.get('arguments', '{}')",
+          "                            args = json.loads(raw) if isinstance(raw, str) else raw",
+          "                            if not isinstance(args, dict):",
+          "                                raise TypeError('tool arguments must decode to an object')",
+          "                            found.append((fn['name'], args))",
+          "                if found:",
+          "                    break",
+          "        return found",
+          "    actions = {'cancel_pending_order': 'pending', 'modify_pending_order_address': 'pending', 'modify_pending_order_items': 'pending', 'modify_pending_order_payment': 'pending', 'return_delivered_order_items': 'delivered', 'exchange_delivered_order_items': 'delivered'}",
+          "    current_calls = tool_calls(current)",
+          "    action = next(((name, args) for name, args in current_calls if name in actions), None)",
+          "    if action is None:",
+          "        print('current_calls=', current_calls)",
+          "        return True",
+          "    action_name, action_args = action",
+          "    order_id = action_args.get('order_id')",
+          "    if not isinstance(order_id, str) or not order_id:",
+          "        raise ValueError('order action is missing a valid order_id')",
+          "    expected = actions[action_name]",
+          "    latest_status = None",
+          "    for i in range(current_step_index):",
+          "        for name, args in tool_calls(steps[i]):",
+          "            if name == 'get_order_details' and args.get('order_id') == order_id:",
+          "                for result_step in steps[i + 1:current_step_index]:",
+          "                    for sub in result_step.get('substeps', []):",
+          "                        if sub.get('role') != 'tool':",
+          "                            continue",
+          "                        content = sub.get('content', '')",
+          "                        if not isinstance(content, str):",
+          "                            raise TypeError('tool content must be a string')",
+          "                        try:",
+          "                            data = json.loads(content)",
+          "                        except json.JSONDecodeError:",
+          "                            latest_status = None",
+          "                        else:",
+          "                            if not isinstance(data, dict):",
+          "                                latest_status = None",
+          "                            else:",
+          "                                info = data.get('order_info', data)",
+          "                                latest_status = info.get('status') if isinstance(info, dict) else None",
+          "                        break",
+          "    print('action=', action_name, 'order_id=', order_id, 'expected_status=', expected, 'latest_status=', latest_status)",
+          "    if latest_status != expected:",
+          "        return False",
+          "    return True"
+        ],
+        "function_name": "check_order_status_before_order_action"
+      },
+      "taxonomy_targets": [
+        "Instruction/PlanAdherenceFailure",
+        "InvalidInvocation"
+      ]
+    },
+    {
+      "assertion_name": "explicit_confirmation_before_consequential_write",
+      "check_hint": "Before a database-changing tool call, verify that the assistant previously stated the specific action and its relevant details, then received explicit user confirmation before the call. The confirmed target and scope must match the current call; silence, a question, or confirmation of a different action is not consent.",
+      "check_type": "nl_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "TEMPORAL",
+      "nl_check": {
+        "focus_steps_instruction": "Focus on: (1) The current assistant tool-call event to identify the write action, target order or user, and any item or address/payment details in its arguments. (2) The most recent user message before the call to find explicit agreement to proceed with that specific action. (3) The nearest preceding assistant message that describes the action and target, and, for item changes, whether it makes clear that the customer should confirm all items to be changed. Compare these events to ensure the consent covers the call's scope.",
+        "judge_rubric": [
+          "If the current event is a consequential write call, an earlier assistant message clearly described the same action and identified its target and relevant scope; otherwise this criterion is UNCLEAR.",
+          "If the current event is a consequential write call, a user explicitly agreed to proceed after the assistant's description and before the call; otherwise this criterion is CLEAR_FAIL only when the absence of that confirmation is evident in the provided event sequence, and UNCLEAR when the context is incomplete.",
+          "The action, target, and material scope in the current call do not clearly exceed or differ from what the user confirmed."
+        ],
+        "judge_scope_notes": "Evaluate only the current event and earlier events in the supplied context window. The current tool invocation identifies the action and target; prior assistant and user messages are evidence for what was explained and confirmed. Do not treat inferred agreement or unrelated confirmation as consent.",
+        "judge_system_prompt_template": "You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\nDo not infer intent beyond explicit statements.\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\nAmbiguity or missing evidence leads to PASS, not FAIL.",
+        "judge_user_prompt_template": "TASK INSTRUCTION:\n{TASK_INSTRUCTION}\n\nCURRENT EVENT:\n{CURRENT_EVENT_JSON}\n\nCONTEXT WINDOW EVENTS:\n{WINDOW_EVENTS_JSON}\n\nUsing the policy, assess whether the current event invokes a consequential write tool (cancel, modify, return, or exchange). If it does, determine whether the assistant stated the action and relevant target/scope, then received explicit user confirmation before the invocation, with no mismatch between the confirmed scope and current call. If it is not a consequential write call, mark the criteria UNCLEAR.",
+        "output_format_template": "Output Format:\nYou MUST return a JSON response with this EXACT structure:\n{\n  \"verdict\": \"pass\" or \"fail\",\n  \"rubric_results\": [\n    {\n      \"criterion_index\": 0,\n      \"criterion\": \"full text of the criterion from the rubric\",\n      \"evaluation\": \"CLEAR_PASS\" or \"CLEAR_FAIL\" or \"UNCLEAR\",\n      \"reasoning\": \"detailed explanation of why this evaluation was chosen, citing specific evidence from events\"\n    }\n  ],\n  \"final_reasoning\": \"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\"\n}",
+        "rubric_evaluation_algorithm_template": "Rubric Evaluation Algorithm:\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\n\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\n\nStep 3: Determine final verdict:\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\n\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard."
+      },
+      "python_check": {},
+      "taxonomy_targets": [
+        "Instruction/PlanAdherenceFailure",
+        "IntentPlanMisalignment"
+      ]
+    },
+    {
+      "assertion_name": "limit_item_modify_and_exchange_calls_per_order",
+      "check_hint": "When invoking modify_pending_order_items or exchange_delivered_order_items, reject a second invocation of that same operation for the same order in the trajectory. The one-time limit is per order and per operation; it does not prohibit unrelated operations or actions on another order.",
+      "check_type": "python_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "TEMPORAL",
+      "nl_check": {},
+      "python_check": {
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def limit_item_modify_and_exchange_calls_per_order(trajectory, current_step_index):",
+          "    \"\"\"Prevent repeating a one-time item modification or exchange for an order.\"\"\"",
+          "    import json",
+          "    print('limit_item_modify_and_exchange_calls_per_order')",
+          "    steps = trajectory['steps']",
+          "    current = steps[current_step_index]",
+          "    limited = {'modify_pending_order_items', 'exchange_delivered_order_items'}",
+          "    def calls_in(step):",
+          "        result = []",
+          "        for sub in step.get('substeps', []):",
+          "            if sub.get('role') != 'assistant':",
+          "                continue",
+          "            text = sub.get('content', '')",
+          "            if not isinstance(text, str):",
+          "                raise TypeError('assistant content must be a string')",
+          "            decoder = json.JSONDecoder()",
+          "            for pos, char in enumerate(text):",
+          "                if char not in '[{':",
+          "                    continue",
+          "                try:",
+          "                    value, _ = decoder.raw_decode(text[pos:])",
+          "                except json.JSONDecodeError:",
+          "                    continue",
+          "                for item in (value if isinstance(value, list) else [value]):",
+          "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+          "                        fn = item['function']",
+          "                        if fn.get('name') in limited:",
+          "                            raw = fn.get('arguments', '{}')",
+          "                            args = json.loads(raw) if isinstance(raw, str) else raw",
+          "                            if not isinstance(args, dict):",
+          "                                raise TypeError('tool arguments must decode to an object')",
+          "                            result.append((fn['name'], args.get('order_id')))",
+          "                if result:",
+          "                    break",
+          "        return result",
+          "    current_calls = calls_in(current)",
+          "    targets = [(name, order_id) for name, order_id in current_calls if name in limited]",
+          "    if not targets:",
+          "        print('current_calls=', current_calls)",
+          "        return True",
+          "    for name, order_id in targets:",
+          "        if not isinstance(order_id, str) or not order_id:",
+          "            raise ValueError('limited order action is missing a valid order_id')",
+          "        count = sum(1 for prior in steps[:current_step_index] for prior_name, prior_id in calls_in(prior) if prior_name == name and prior_id == order_id)",
+          "        print('tool=', name, 'order_id=', order_id, 'prior_matching_calls=', count)",
+          "        if count > 0:",
+          "            return False",
+          "    return True"
+        ],
+        "function_name": "limit_item_modify_and_exchange_calls_per_order"
+      },
+      "taxonomy_targets": [
+        "Instruction/PlanAdherenceFailure"
+      ]
+    },
+    {
+      "assertion_name": "one_tool_call_per_assistant_turn",
+      "check_hint": "When an assistant event contains tool calls, it must contain at most one call and must not also contain a user-facing response in the same assistant turn. Apply the check to the assistant substeps in the current trajectory step; ordinary assistant messages without a tool call pass.",
+      "check_type": "python_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "PROTOCOL",
+      "nl_check": {},
+      "python_check": {
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def one_tool_call_per_assistant_turn(trajectory, current_step_index):",
+          "    \"\"\"Require tool calls and user-facing responses to occupy separate turns.\"\"\"",
+          "    import json",
+          "    print('one_tool_call_per_assistant_turn')",
+          "    step = trajectory['steps'][current_step_index]",
+          "    call_count = 0",
+          "    has_non_call_assistant_message = False",
+          "    for sub in step.get('substeps', []):",
+          "        if sub.get('role') != 'assistant':",
+          "            continue",
+          "        text = sub.get('content', '')",
+          "        if not isinstance(text, str):",
+          "            raise TypeError('assistant content must be a string')",
+          "        found_here = 0",
+          "        decoder = json.JSONDecoder()",
+          "        for pos, char in enumerate(text):",
+          "            if char not in '[{':",
+          "                continue",
+          "            try:",
+          "                value, _ = decoder.raw_decode(text[pos:])",
+          "            except json.JSONDecodeError:",
+          "                continue",
+          "            candidates = value if isinstance(value, list) else [value]",
+          "            found_here = sum(1 for item in candidates if isinstance(item, dict) and isinstance(item.get('function'), dict) and isinstance(item['function'].get('name'), str))",
+          "            if found_here:",
+          "                break",
+          "        call_count += found_here",
+          "        if found_here == 0 and text.strip():",
+          "            has_non_call_assistant_message = True",
+          "    print('call_count=', call_count, 'has_non_call_assistant_message=', has_non_call_assistant_message)",
+          "    if call_count > 1 or (call_count > 0 and has_non_call_assistant_message):",
+          "        return False",
+          "    return True"
+        ],
+        "function_name": "one_tool_call_per_assistant_turn"
+      },
+      "taxonomy_targets": [
+        "Instruction/PlanAdherenceFailure",
+        "InvalidInvocation"
+      ]
+    },
+    {
+      "assertion_name": "follow_user_task_and_constraints",
+      "check_hint": "Assess whether the assistant's action and response address the user's stated task and respect explicit constraints in the trajectory instruction and subsequent user messages. Fail only on clear evidence that the assistant pursued a different task, violated a stated constraint, or performed an action the user did not request; do not fail merely because the task is incomplete or the supplied context is insufficient.",
+      "check_type": "nl_check",
+      "event_trigger": {
+        "role_name": "assistant",
+        "step_index": -1
+      },
+      "invariant_type": "ANY",
+      "nl_check": {
+        "focus_steps_instruction": "Focus on: (1) The task instruction at the beginning of the trajectory to identify the user's requested goal and explicit constraints. (2) The most recent user message relevant to the current event to capture updates, limits, or confirmation. (3) The current assistant event, and, if it is a tool call, the most recent relevant tool result to check that the action is for the requested user/task and is supported by available facts.",
+        "judge_rubric": [
+          "The current assistant event addresses the user's stated task rather than a materially different or unrelated goal.",
+          "The current action or response does not clearly violate an explicit user constraint or the retail policy, including the restriction to the authenticated user's own information and supported capabilities.",
+          "Factual claims or consequential actions in the current event are consistent with relevant prior tool outputs and user-provided information; unsupported claims are not presented as established facts."
+        ],
+        "judge_scope_notes": "Consider the task instruction, relevant user messages, current assistant event, and relevant earlier tool results in the supplied window. Evaluate task alignment and compliance with explicit user constraints; do not infer facts or intent not stated in those events.",
+        "judge_system_prompt_template": "You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\nDo not infer intent beyond explicit statements.\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\nAmbiguity or missing evidence leads to PASS, not FAIL.",
+        "judge_user_prompt_template": "TASK INSTRUCTION:\n{TASK_INSTRUCTION}\n\nCURRENT EVENT:\n{CURRENT_EVENT_JSON}\n\nCONTEXT WINDOW EVENTS:\n{WINDOW_EVENTS_JSON}\n\nEvaluate whether the assistant's current action or response follows the user's task and explicit constraints, using the retail policy. Identify clear deviations only; do not infer unstated preferences.",
+        "output_format_template": "Output Format:\nYou MUST return a JSON response with this EXACT structure:\n{\n  \"verdict\": \"pass\" or \"fail\",\n  \"rubric_results\": [\n    {\n      \"criterion_index\": 0,\n      \"criterion\": \"full text of the criterion from the rubric\",\n      \"evaluation\": \"CLEAR_PASS\" or \"CLEAR_FAIL\" or \"UNCLEAR\",\n      \"reasoning\": \"detailed explanation of why this evaluation was chosen, citing specific evidence from events\"\n    }\n  ],\n  \"final_reasoning\": \"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\"\n}",
+        "rubric_evaluation_algorithm_template": "Rubric Evaluation Algorithm:\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\n\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\n\nStep 3: Determine final verdict:\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\n\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard."
+      },
+      "python_check": {},
+      "taxonomy_targets": [
+        "IntentPlanMisalignment",
+        "Instruction/PlanAdherenceFailure"
+      ]
+    }
+  ]
+}
+
+================================================================================================
+DYNAMIC INVARIANTS GENERATED FOR PREVIOUS STEPS
+================================================================================================
+
+[
+  {
+    "assertion_name": "user_lookup_uses_provided_email",
+    "check_hint": "If the current assistant step invokes find_user_id_by_email, verify that the email argument exactly matches the email explicitly provided by the user in an earlier step. A mismatch or missing provided email fails this check; if that tool is not invoked in the current step, the check passes.",
+    "check_type": "python_check",
+    "event_trigger": {
+      "role_name": "assistant",
+      "step_index": 5,
+      "substep_index": "*"
+    },
+    "invariant_type": "RELATIONAL_POST",
+    "nl_check": {},
+    "python_check": {
+      "args": [
+        "trajectory",
+        "current_step_index"
+      ],
+      "code_lines": [
+        "def user_lookup_uses_provided_email(trajectory, current_step_index):",
+        "    \"\"\"Require an email lookup to use the email stated by the user.\"\"\"",
+        "    import json",
+        "    import re",
+        "    print('user_lookup_uses_provided_email')",
+        "    steps = trajectory['steps']",
+        "    calls = []",
+        "    decoder = json.JSONDecoder()",
+        "    for sub in steps[current_step_index].get('substeps', []):",
+        "        if sub.get('role') != 'assistant':",
+        "            continue",
+        "        text = sub.get('content', '')",
+        "        if not isinstance(text, str):",
+        "            raise TypeError('assistant content must be a string')",
+        "        for pos, char in enumerate(text):",
+        "            if char not in '[{':",
+        "                continue",
+        "            try:",
+        "                value, _ = decoder.raw_decode(text[pos:])",
+        "            except json.JSONDecodeError:",
+        "                continue",
+        "            for item in (value if isinstance(value, list) else [value]):",
+        "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_email':",
+        "                    raw_args = item['function'].get('arguments', '{}')",
+        "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+        "                    if not isinstance(args, dict):",
+        "                        raise TypeError('tool arguments must be an object')",
+        "                    calls.append(args.get('email'))",
+        "            if calls:",
+        "                break",
+        "    if not calls:",
+        "        print('lookup_calls=', calls)",
+        "        return True",
+        "    provided_emails = []",
+        "    for step in steps[:current_step_index]:",
+        "        for sub in step.get('substeps', []):",
+        "            if sub.get('role') == 'user':",
+        "                text = sub.get('content', '')",
+        "                if not isinstance(text, str):",
+        "                    raise TypeError('user content must be a string')",
+        "                provided_emails.extend(re.findall(r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}', text, re.IGNORECASE))",
+        "    expected_email = provided_emails[-1] if provided_emails else None",
+        "    matches = all(isinstance(email, str) and email == expected_email for email in calls)",
+        "    print('lookup_emails=', calls, 'provided_email=', expected_email, 'matches=', matches)",
+        "    if not matches:",
+        "        return False",
+        "    return True"
+      ],
+      "function_name": "user_lookup_uses_provided_email"
+    },
+    "taxonomy_targets": [
+      "InvalidInvocation",
+      "Instruction/PlanAdherenceFailure"
+    ]
+  },
+  {
+    "assertion_name": "name_zip_lookup_matches_user_details",
+    "check_hint": "If the current assistant step invokes find_user_id_by_name_zip, verify that first_name, last_name, and zip exactly match the name and ZIP code explicitly provided in an earlier user message. If this tool is not invoked in the current step, the check passes.",
+    "check_type": "python_check",
+    "event_trigger": {
+      "role_name": "assistant",
+      "step_index": 9,
+      "substep_index": "*"
+    },
+    "invariant_type": "RELATIONAL_POST",
+    "nl_check": {},
+    "python_check": {
+      "args": [
+        "trajectory",
+        "current_step_index"
+      ],
+      "code_lines": [
+        "def name_zip_lookup_matches_user_details(trajectory, current_step_index):",
+        "    \"\"\"Require a name-and-ZIP lookup to use the user's stated details.\"\"\"",
+        "    import json",
+        "    import re",
+        "    print('name_zip_lookup_matches_user_details')",
+        "    steps = trajectory['steps']",
+        "    calls = []",
+        "    decoder = json.JSONDecoder()",
+        "    for sub in steps[current_step_index].get('substeps', []):",
+        "        if sub.get('role') != 'assistant':",
+        "            continue",
+        "        text = sub.get('content', '')",
+        "        if not isinstance(text, str):",
+        "            raise TypeError('assistant content must be a string')",
+        "        for pos, char in enumerate(text):",
+        "            if char not in '[{':",
+        "                continue",
+        "            try:",
+        "                value, _ = decoder.raw_decode(text[pos:])",
+        "            except json.JSONDecodeError:",
+        "                continue",
+        "            for item in (value if isinstance(value, list) else [value]):",
+        "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_name_zip':",
+        "                    raw_args = item['function'].get('arguments', '{}')",
+        "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+        "                    if not isinstance(args, dict):",
+        "                        raise TypeError('tool arguments must be an object')",
+        "                    calls.append(args)",
+        "            if calls:",
+        "                break",
+        "    if not calls:",
+        "        print('lookup_calls=', calls)",
+        "        return True",
+        "    prior_user_text = ' '.join(sub.get('content', '') for step in steps[:current_step_index] for sub in step.get('substeps', []) if sub.get('role') == 'user')",
+        "    if not isinstance(prior_user_text, str):",
+        "        raise TypeError('user content must be a string')",
+        "    name_match = re.search(r\"name(?:'s|’s)\\s+([A-Za-z]+)\\s+([A-Za-z]+)\", prior_user_text, re.IGNORECASE)",
+        "    zip_match = re.search(r'zip code is\\s*(\\d{5})', prior_user_text, re.IGNORECASE)",
+        "    if not name_match or not zip_match:",
+        "        print('name_match=', name_match, 'zip_match=', zip_match)",
+        "        return False",
+        "    expected = {'first_name': name_match.group(1), 'last_name': name_match.group(2), 'zip': zip_match.group(1)}",
+        "    matches = all(args.get(key) == value for args in calls for key, value in expected.items())",
+        "    print('lookup_calls=', calls, 'expected=', expected, 'matches=', matches)",
+        "    if not matches:",
+        "        return False",
+        "    return True"
+      ],
+      "function_name": "name_zip_lookup_matches_user_details"
+    },
+    "taxonomy_targets": [
+      "InvalidInvocation",
+      "InventionOfNewInformation"
+    ]
+  },
+  {
+    "assertion_name": "user_details_lookup_matches_authenticated_id",
+    "check_hint": "When the current step returns user details following a get_user_details call, verify that the call's user_id exactly matches the ID returned by the most recent prior successful identity lookup. A mismatch or missing lookup result fails; if there is no preceding get_user_details call, the check passes.",
+    "check_type": "python_check",
+    "event_trigger": {
+      "role_name": "tool",
+      "step_index": 12,
+      "substep_index": "*"
+    },
+    "invariant_type": "RELATIONAL_POST",
+    "nl_check": {},
+    "python_check": {
+      "args": [
+        "trajectory",
+        "current_step_index"
+      ],
+      "code_lines": [
+        "def user_details_lookup_matches_authenticated_id(trajectory, current_step_index):",
+        "    \"\"\"Ensure user details are retrieved for the ID returned by identity lookup.\"\"\"",
+        "    import json",
+        "    print('user_details_lookup_matches_authenticated_id')",
+        "    steps = trajectory['steps']",
+        "    action_step_index = current_step_index - 1",
+        "    if action_step_index < 0:",
+        "        return True",
+        "    def calls_in(step):",
+        "        calls = []",
+        "        decoder = json.JSONDecoder()",
+        "        for sub in step.get('substeps', []):",
+        "            if sub.get('role') != 'assistant':",
+        "                continue",
+        "            text = sub.get('content', '')",
+        "            if not isinstance(text, str):",
+        "                raise TypeError('assistant content must be a string')",
+        "            for pos, char in enumerate(text):",
+        "                if char not in '[{':",
+        "                    continue",
+        "                try:",
+        "                    value, _ = decoder.raw_decode(text[pos:])",
+        "                except json.JSONDecodeError:",
+        "                    continue",
+        "                for item in (value if isinstance(value, list) else [value]):",
+        "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+        "                        fn = item['function']",
+        "                        raw_args = fn.get('arguments', '{}')",
+        "                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+        "                        if not isinstance(args, dict):",
+        "                            raise TypeError('tool arguments must be an object')",
+        "                        calls.append((fn.get('name'), args))",
+        "                if calls:",
+        "                    break",
+        "        return calls",
+        "    action_calls = calls_in(steps[action_step_index])",
+        "    detail_calls = [args for name, args in action_calls if name == 'get_user_details']",
+        "    if not detail_calls:",
+        "        print('get_user_details_calls=', detail_calls)",
+        "        return True",
+        "    requested_id = detail_calls[-1].get('user_id')",
+        "    lookup_result = None",
+        "    for lookup_index in range(action_step_index - 1, -1, -1):",
+        "        lookup_calls = calls_in(steps[lookup_index])",
+        "        if not any(name in {'find_user_id_by_email', 'find_user_id_by_name_zip'} for name, _ in lookup_calls):",
+        "            continue",
+        "        for result_step in steps[lookup_index + 1:action_step_index]:",
+        "            for sub in result_step.get('substeps', []):",
+        "                if sub.get('role') == 'tool':",
+        "                    content = sub.get('content', '')",
+        "                    if not isinstance(content, str):",
+        "                        raise TypeError('tool content must be a string')",
+        "                    lookup_result = content.strip()",
+        "                    break",
+        "            if lookup_result is not None:",
+        "                break",
+        "        if lookup_result is not None:",
+        "            break",
+        "    print('requested_id=', requested_id, 'lookup_result=', lookup_result)",
+        "    if not isinstance(requested_id, str) or not requested_id or lookup_result != requested_id:",
+        "        return False",
+        "    return True"
+      ],
+      "function_name": "user_details_lookup_matches_authenticated_id"
+    },
+    "taxonomy_targets": [
+      "MisinterpretationOfToolOutput",
+      "InventionOfNewInformation"
+    ]
+  }
+]
+
+================================================================================================
+TRAJECTORY STEPS TILL NOW
+================================================================================================
+
+[STEP 1]
+# Retail agent policy
+
+As a retail agent, you can help users cancel or modify pending orders, return or exchange delivered orders, modify their default user address, or provide information about their own profile, orders, and related products.
+
+- At the beginning of the conversation, you have to authenticate the user identity by locating their user id via email, or via name + zip code. This has to be done even when the user already provides the user id.
+
+- Once the user has been authenticated, you can provide the user with information about order, product, profile information, e.g. help the user look up order id.
+
+- You can only help one user per conversation (but you can handle multiple requests from the same user), and must deny any requests for tasks related to any other user.
+
+- Before taking consequential actions that update the database (cancel, modify, return, exchange), you have to list the action detail and obtain explicit user confirmation (yes) to proceed.
+
+- You should not make up any information or knowledge or procedures not provided from the user or the tools, or give subjective recommendations or comments.
+
+- You should at most make one tool call at a time, and if you take a tool call, you should not respond to the user at the same time. If you respond to the user, you should not make a tool call.
+
+- You should transfer the user to a human agent if and only if the request cannot be handled within the scope of your actions.
+
+## Domain basic
+
+- All times in the database are EST and 24 hour based. For example "02:30:00" means 2:30 AM EST.
+
+- Each user has a profile of its email, default address, user id, and payment methods. Each payment method is either a gift card, a paypal account, or a credit card.
+
+- Our retail store has 50 types of products. For each type of product, there are variant items of different options. For example, for a 't shirt' product, there could be an item with option 'color blue size M', and another item with option 'color red size L'.
+
+- Each product has an unique product id, and each item has an unique item id. They have no relations and should not be confused.
+
+- Each order can be in status 'pending', 'processed', 'delivered', or 'cancelled'. Generally, you can only take action on pending or delivered orders.
+
+- Exchange or modify order tools can only be called once. Be sure that all items to be changed are collected into a list before making the tool call!!!
+
+## Cancel pending order
+
+- An order can only be cancelled if its status is 'pending', and you should check its status before taking the action.
+
+- The user needs to confirm the order id and the reason (either 'no longer needed' or 'ordered by mistake') for cancellation.
+
+- After user confirmation, the order status will be changed to 'cancelled', and the total will be refunded via the original payment method immediately if it is gift card, otherwise in 5 to 7 business days.
+
+## Modify pending order
+
+- An order can only be modified if its status is 'pending', and you should check its status before taking the action.
+
+- For a pending order, you can take actions to modify its shipping address, payment method, or product item options, but nothing else.
+
+### Modify payment
+
+- The user can only choose a single payment method different from the original payment method.
+
+- If the user wants the modify the payment method to gift card, it must have enough balance to cover the total amount.
+
+- After user confirmation, the order status will be kept 'pending'. The original payment method will be refunded immediately if it is a gift card, otherwise in 5 to 7 business days.
+
+### Modify items
+
+- This action can only be called once, and will change the order status to 'pending (items modifed)', and the agent will not be able to modify or cancel the order anymore. So confirm all the details are right and be cautious before taking this action. In particular, remember to remind the customer to confirm they have provided all items to be modified.
+
+- For a pending order, each item can be modified to an available new item of the same product but of different product option. There cannot be any change of product types, e.g. modify shirt to shoe.
+
+- The user must provide a payment method to pay or receive refund of the price difference. If the user provides a gift card, it must have enough balance to cover the price difference.
+
+## Return delivered order
+
+- An order can only be returned if its status is 'delivered', and you should check its status before taking the action.
+
+- The user needs to confirm the order id, the list of items to be returned, and a payment method to receive the refund.
+
+- The refund must either go to the original payment method, or an existing gift card.
+
+- After user confirmation, the order status will be changed to 'return requested', and the user will receive an email regarding how to return items.
+
+## Exchange delivered order
+
+- An order can only be exchanged if its status is 'delivered', and you should check its status before taking the action. In particular, remember to remind the customer to confirm they have provided all items to be exchanged.
+
+- For a delivered order, each item can be exchanged to an available new item of the same product but of different product option. There cannot be any change of product types, e.g. modify shirt to shoe.
+
+- The user must provide a payment method to pay or receive refund of the price difference. If the user provides a gift card, it must have enough balance to cover the price difference.
+
+- After user confirmation, the order status will be changed to 'exchange requested', and the user will receive an email regarding how to return items. There is no need to place a new order.
+
+[STEP 2]
+Hey there! So, quick story—I recently moved from Florida to Phoenix. I need to update my address, or my packages will be living better than me in the sunshine state. Can you help me with that?
+
+[STEP 3]
+I can definitely help you update your address! First, I need to authenticate your identity. Could you please provide your email address? If you don't remember it, I can also locate your account using your first name, last name, and zip code.
+
+[STEP 4]
+Sure thing! My email is fatima_taylor_3452@example.com. And if you need my zip code, it’s the old one: 32169. Let me know if you need anything else—just don’t ask me for the square root of pi. I’m not ready for that kind of math trauma today!
+
+[STEP 5]
+[
+  {
+    "function": {
+      "arguments": "{\"email\":\"fatima_taylor_3452@example.com\"}",
+      "name": "find_user_id_by_email"
+    },
+    "id": "call_EJztH7HLjOwZijqT9CYXtCne",
+    "type": "function"
+  }
+]
+
+[STEP 6]
+Error: user not found
+
+[STEP 7]
+It seems I couldn't locate your account using the email address you provided. Let’s try another way. Could you share your first name, last name, and zip code (which you already mentioned as 32169)? This will help me find your account.
+
+[STEP 8]
+Oh no, my email must’ve pulled a disappearing act—classic technology, right? My name’s Fatima Taylor, and like I said, zip code is 32169. If that doesn’t work, maybe my account’s hiding somewhere in Arizona heat denial!
+
+[STEP 9]
+[
+  {
+    "function": {
+      "arguments": "{\"first_name\":\"Fatima\",\"last_name\":\"Taylor\",\"zip\":\"32169\"}",
+      "name": "find_user_id_by_name_zip"
+    },
+    "id": "call_c9JNVnYCOJ4nlTdNfvoR5LMj",
+    "type": "function"
+  }
+]
+
+[STEP 10]
+fatima_taylor_3452
+
+[STEP 11]
+[
+  {
+    "function": {
+      "arguments": "{\"user_id\":\"fatima_taylor_3452\"}",
+      "name": "get_user_details"
+    },
+    "id": "call_5ELwQEpUDVdfSAf5Dii2IXrC",
+    "type": "function"
+  }
+]
+
+[STEP 12]
+{
+  "name": {
+    "first_name": "Fatima",
+    "last_name": "Taylor"
+  },
+  "address": {
+    "address1": "922 Pine Lane",
+    "address2": "Suite 395",
+    "city": "Jacksonville",
+    "country": "USA",
+    "state": "FL",
+    "zip": "32169"
+  },
+  "email": "fatima.taylor7676@example.com",
+  "payment_methods": {
+    "credit_card_7952624": {
+      "source": "credit_card",
+      "brand": "visa",
+      "last_four": "7684",
+      "id": "credit_card_7952624"
+    }
+  },
+  "orders": [
+    "#W5285031"
+  ]
+}
+
+[STEP 13]
+Thanks, Fatima! I’ve located your account. Your current default address is:
+
+922 Pine Lane, Suite 395, Jacksonville, FL, 32169, USA.
+
+Could you please provide the new address you'd like to set as your default? Once I have that, I’ll update it for you!
+
+[STEP 14]
+Oh, you found my old digs—good ol' Pine Lane, where the mosquitoes were practically roommates. My new address is in Phoenix, zip code 85033. Could you update it to that, and leave out the mosquitoes this time? They weren’t paying rent anyway!
+
+[STEP 15]
+Got it! Could you please provide the full details of your new address, including:
+
+1. The first line of the address (e.g., street name and number).
+2. The second line (if applicable, like an apartment or suite number).
+3. The city (which I assume is Phoenix).
+4. The state (which I assume is Arizona, AZ).
+
+Once I have all the details, I’ll update your address for you!
+
+[STEP 16]
+Oh, look at me trying to defend my full address like it's a state secret! Actually, I’m not sure it's in any paperwork I have near me right now. Are you able to pick it up from my order details? Promise I’ll send you a joke about Phoenix being too hot to fry eggs—on the hood of a car, not my brain cells!
+
+[STEP 17]
+Unfortunately, I can't fetch your new address from your order details since they only reflect the current default address. If you can recall the full details of your new address, I can update it for you. Let me know when you're ready!
+
+[STEP 18]
+Ah, I see, no detective work allowed, huh? No problem—I’ll double-check my notes later and get back to you. Till then, can you help me with one more thing? What’s the price of the cheapest T-shirt you folks have right now? Phoenix fashion calls for T-shirts... and a fan strapped to my head!

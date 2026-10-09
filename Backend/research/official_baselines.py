@@ -25,8 +25,8 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def verify_checkout(spec: dict) -> Path:
-    checkout = ROOT / spec["local_path"]
+def verify_checkout(spec: dict, checkout_override: Path | None = None) -> Path:
+    checkout = checkout_override.resolve() if checkout_override else ROOT / spec["local_path"]
     revision = subprocess.check_output(
         ["git", "-C", str(checkout), "rev-parse", "HEAD"], text=True).strip()
     if revision != spec["commit"]:
@@ -53,10 +53,14 @@ def main() -> None:
     parser.add_argument("action", choices=("agentrx-ir", "agentrx-full", "tau-check", "tau-smoke"))
     parser.add_argument("--endpoint", choices=("copilot", "azure"), default="copilot")
     parser.add_argument("--model", default="gemini/gemini-3.5-flash-lite")
+    parser.add_argument("--checkout", type=Path, help="Separate clean checkout; pinned revision and cleanliness checks still apply")
+    parser.add_argument("--python", type=Path, help="Existing isolated AgentRx interpreter for a separate clean checkout")
     args = parser.parse_args()
     lock = json.loads((BASELINES / "upstream-lock.json").read_text())
     key = "agentrx" if args.action.startswith("agentrx") else "tau_bench"
-    upstream = verify_checkout(lock[key])
+    if args.python and args.action != "agentrx-full":
+        parser.error("--python is only used for agentrx-full")
+    upstream = verify_checkout(lock[key], args.checkout)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output = BASELINES / "results" / f"{args.action}-{stamp}-{uuid.uuid4().hex[:6]}"
     output.mkdir(parents=True)
@@ -69,6 +73,9 @@ def main() -> None:
     manifest = {
         "action": args.action, "started_at_utc": datetime.now(timezone.utc).isoformat(),
         "upstream": lock[key], "upstream_tracked_files_unchanged": True,
+        "execution_checkout": str(upstream),
+        "copilot_binary_override": env.get("AGENT_VERIFY_COPILOT_BIN"),
+        "copilot_model_override": env.get("AGENT_VERIFY_COPILOT_MODEL"),
         "assumption_register": "docs/research/assumptions.md", "executions": records,
         "input_sha256": files,
         "evidence_scope": "preprocessing/setup smoke test, not a benchmark-wide reproduction",
@@ -103,7 +110,7 @@ def main() -> None:
         samples = sorted((upstream / "trajectories/tau-retail").glob("*.json"))
         if args.action == "agentrx-full":
             samples = samples[:1]  # Fixed public sample pilot, not all gated trajectories.
-            python = upstream / ".venv/Scripts/python.exe"
+            python = args.python.resolve() if args.python else upstream / ".venv/Scripts/python.exe"
             if not python.exists() or not shutil.which("copilot" if args.endpoint == "copilot" else "az"):
                 manifest.update(status="blocked", evidence_scope="Full pipeline preflight only; no inference executed",
                                 limitation="Isolated environment or supported authenticated provider CLI unavailable; not a completed reproduction")

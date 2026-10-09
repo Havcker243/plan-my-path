@@ -1,0 +1,18 @@
+{
+  "completed_stages": [
+    "dynamic",
+    "judge",
+    "static",
+    "report",
+    "check",
+    "ir"
+  ],
+  "config": {
+    "input": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean-20261009\\trajectories\\tau-retail\\hallucination_doubt.json",
+    "domain": "tau",
+    "endpoint": "copilot",
+    "started": "2026-10-09T04:36:20.464804"
+  },
+  "ir_used_llm_fallback": false,
+  "ir_from_markdown": false
+}

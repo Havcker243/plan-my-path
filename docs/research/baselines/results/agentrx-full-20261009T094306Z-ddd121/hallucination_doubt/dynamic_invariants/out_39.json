@@ -1,0 +1,1608 @@
+{
+  "trajectory_id": "39",
+  "domain": "tau",
+  "input_path": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean\\trajectories\\tau-retail\\hallucination_doubt.json",
+  "task_instruction": "You are fatima_taylor_3452, and you just moved from Florida (32169) to Phoenix (85033). Unfortunately your address is still the old one, and you want to update it. Your current address should be in your order, and you do not want to reveal it. Also, you want to know what is the price of the cheapest available t-shirt right now, and if you can order it through the agent. You are a funny person with lots of jokes, and you want to make the agent laugh.",
+  "static_invariants_used": "{\n  \"invariants\": [\n    {\n      \"assertion_name\": \"authenticate_before_user_data_access\",\n      \"check_hint\": \"Evaluate this assertion when the current assistant event invokes a tool that reads or changes user, order, or product data. Before that invocation, the trajectory must contain a successful find_user_id_by_email or find_user_id_by_name_zip call and its tool result. A user-provided user ID alone does not satisfy the authentication requirement.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def authenticate_before_user_data_access(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require successful identity lookup before accessing retail data.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('authenticate_before_user_data_access')\",\n          \"    steps = trajectory['steps']\",\n          \"    current = steps[current_step_index]\",\n          \"    def calls_in(step):\",\n          \"        calls = []\",\n          \"        for sub in step.get('substeps', []):\",\n          \"            if sub.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            text = sub.get('content', '')\",\n          \"            if not isinstance(text, str):\",\n          \"                raise TypeError('assistant content must be a string')\",\n          \"            decoder = json.JSONDecoder()\",\n          \"            for pos, char in enumerate(text):\",\n          \"                if char not in '[{':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    value, _ = decoder.raw_decode(text[pos:])\",\n          \"                except json.JSONDecodeError:\",\n          \"                    continue\",\n          \"                candidates = value if isinstance(value, list) else [value]\",\n          \"                for item in candidates:\",\n          \"                    if isinstance(item, dict) and isinstance(item.get('function'), dict):\",\n          \"                        fn = item['function']\",\n          \"                        if isinstance(fn.get('name'), str):\",\n          \"                            calls.append(fn['name'])\",\n          \"                if calls:\",\n          \"                    break\",\n          \"        return calls\",\n          \"    current_calls = calls_in(current)\",\n          \"    protected = {'get_order_details', 'get_product_details', 'get_user_details', 'cancel_pending_order', 'exchange_delivered_order_items', 'modify_pending_order_address', 'modify_pending_order_items', 'modify_pending_order_payment', 'modify_user_address', 'return_delivered_order_items'}\",\n          \"    if not protected.intersection(current_calls):\",\n          \"        print('current_calls=', current_calls)\",\n          \"        return True\",\n          \"    authenticated = False\",\n          \"    for prior in steps[:current_step_index]:\",\n          \"        prior_calls = calls_in(prior)\",\n          \"        if not {'find_user_id_by_email', 'find_user_id_by_name_zip'}.intersection(prior_calls):\",\n          \"            continue\",\n          \"        result_steps = steps[steps.index(prior) + 1:current_step_index]\",\n          \"        for result_step in result_steps:\",\n          \"            for sub in result_step.get('substeps', []):\",\n          \"                if sub.get('role') == 'tool':\",\n          \"                    content = sub.get('content', '')\",\n          \"                    if not isinstance(content, str):\",\n          \"                        raise TypeError('tool content must be a string')\",\n          \"                    if content.strip() and not content.strip().lower().startswith('error:') and 'not found' not in content.strip().lower():\",\n          \"                        authenticated = True\",\n          \"                    break\",\n          \"            if authenticated:\",\n          \"                break\",\n          \"    print('current_calls=', current_calls, 'authenticated=', authenticated)\",\n          \"    if not authenticated:\",\n          \"        return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"authenticate_before_user_data_access\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"IntentPlanMisalignment\"\n      ]\n    },\n    {\n      \"assertion_name\": \"check_order_status_before_order_action\",\n      \"check_hint\": \"For cancel and pending-order modification calls, require a prior get_order_details result for the same order reporting status pending. For return and exchange calls, require a prior result for that order reporting status delivered. Use the most recent matching order details result; a lookup for a different order or an absent/unparseable status does not establish the precondition.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def check_order_status_before_order_action(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require a matching, recent order-status result before an order action.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('check_order_status_before_order_action')\",\n          \"    steps = trajectory['steps']\",\n          \"    current = steps[current_step_index]\",\n          \"    def tool_calls(step):\",\n          \"        found = []\",\n          \"        for sub in step.get('substeps', []):\",\n          \"            if sub.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            text = sub.get('content', '')\",\n          \"            if not isinstance(text, str):\",\n          \"                raise TypeError('assistant content must be a string')\",\n          \"            decoder = json.JSONDecoder()\",\n          \"            for pos, char in enumerate(text):\",\n          \"                if char not in '[{':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    value, _ = decoder.raw_decode(text[pos:])\",\n          \"                except json.JSONDecodeError:\",\n          \"                    continue\",\n          \"                for item in (value if isinstance(value, list) else [value]):\",\n          \"                    if isinstance(item, dict) and isinstance(item.get('function'), dict):\",\n          \"                        fn = item['function']\",\n          \"                        if isinstance(fn.get('name'), str):\",\n          \"                            raw = fn.get('arguments', '{}')\",\n          \"                            args = json.loads(raw) if isinstance(raw, str) else raw\",\n          \"                            if not isinstance(args, dict):\",\n          \"                                raise TypeError('tool arguments must decode to an object')\",\n          \"                            found.append((fn['name'], args))\",\n          \"                if found:\",\n          \"                    break\",\n          \"        return found\",\n          \"    actions = {'cancel_pending_order': 'pending', 'modify_pending_order_address': 'pending', 'modify_pending_order_items': 'pending', 'modify_pending_order_payment': 'pending', 'return_delivered_order_items': 'delivered', 'exchange_delivered_order_items': 'delivered'}\",\n          \"    current_calls = tool_calls(current)\",\n          \"    action = next(((name, args) for name, args in current_calls if name in actions), None)\",\n          \"    if action is None:\",\n          \"        print('current_calls=', current_calls)\",\n          \"        return True\",\n          \"    action_name, action_args = action\",\n          \"    order_id = action_args.get('order_id')\",\n          \"    if not isinstance(order_id, str) or not order_id:\",\n          \"        raise ValueError('order action is missing a valid order_id')\",\n          \"    expected = actions[action_name]\",\n          \"    latest_status = None\",\n          \"    for i in range(current_step_index):\",\n          \"        for name, args in tool_calls(steps[i]):\",\n          \"            if name == 'get_order_details' and args.get('order_id') == order_id:\",\n          \"                for result_step in steps[i + 1:current_step_index]:\",\n          \"                    for sub in result_step.get('substeps', []):\",\n          \"                        if sub.get('role') != 'tool':\",\n          \"                            continue\",\n          \"                        content = sub.get('content', '')\",\n          \"                        if not isinstance(content, str):\",\n          \"                            raise TypeError('tool content must be a string')\",\n          \"                        try:\",\n          \"                            data = json.loads(content)\",\n          \"                        except json.JSONDecodeError:\",\n          \"                            latest_status = None\",\n          \"                        else:\",\n          \"                            if not isinstance(data, dict):\",\n          \"                                latest_status = None\",\n          \"                            else:\",\n          \"                                info = data.get('order_info', data)\",\n          \"                                latest_status = info.get('status') if isinstance(info, dict) else None\",\n          \"                        break\",\n          \"    print('action=', action_name, 'order_id=', order_id, 'expected_status=', expected, 'latest_status=', latest_status)\",\n          \"    if latest_status != expected:\",\n          \"        return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"check_order_status_before_order_action\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\"\n      ]\n    },\n    {\n      \"assertion_name\": \"explicit_confirmation_before_consequential_write\",\n      \"check_hint\": \"Before a database-changing tool call, verify that the assistant previously stated the specific action and its relevant details, then received explicit user confirmation before the call. The confirmed target and scope must match the current call; silence, a question, or confirmation of a different action is not consent.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The current assistant tool-call event to identify the write action, target order or user, and any item or address/payment details in its arguments. (2) The most recent user message before the call to find explicit agreement to proceed with that specific action. (3) The nearest preceding assistant message that describes the action and target, and, for item changes, whether it makes clear that the customer should confirm all items to be changed. Compare these events to ensure the consent covers the call's scope.\",\n        \"judge_rubric\": [\n          \"If the current event is a consequential write call, an earlier assistant message clearly described the same action and identified its target and relevant scope; otherwise this criterion is UNCLEAR.\",\n          \"If the current event is a consequential write call, a user explicitly agreed to proceed after the assistant's description and before the call; otherwise this criterion is CLEAR_FAIL only when the absence of that confirmation is evident in the provided event sequence, and UNCLEAR when the context is incomplete.\",\n          \"The action, target, and material scope in the current call do not clearly exceed or differ from what the user confirmed.\"\n        ],\n        \"judge_scope_notes\": \"Evaluate only the current event and earlier events in the supplied context window. The current tool invocation identifies the action and target; prior assistant and user messages are evidence for what was explained and confirmed. Do not treat inferred agreement or unrelated confirmation as consent.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nUsing the policy, assess whether the current event invokes a consequential write tool (cancel, modify, return, or exchange). If it does, determine whether the assistant stated the action and relevant target/scope, then received explicit user confirmation before the invocation, with no mismatch between the confirmed scope and current call. If it is not a consequential write call, mark the criteria UNCLEAR.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"IntentPlanMisalignment\"\n      ]\n    },\n    {\n      \"assertion_name\": \"limit_item_modify_and_exchange_calls_per_order\",\n      \"check_hint\": \"When invoking modify_pending_order_items or exchange_delivered_order_items, reject a second invocation of that same operation for the same order in the trajectory. The one-time limit is per order and per operation; it does not prohibit unrelated operations or actions on another order.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def limit_item_modify_and_exchange_calls_per_order(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Prevent repeating a one-time item modification or exchange for an order.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('limit_item_modify_and_exchange_calls_per_order')\",\n          \"    steps = trajectory['steps']\",\n          \"    current = steps[current_step_index]\",\n          \"    limited = {'modify_pending_order_items', 'exchange_delivered_order_items'}\",\n          \"    def calls_in(step):\",\n          \"        result = []\",\n          \"        for sub in step.get('substeps', []):\",\n          \"            if sub.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            text = sub.get('content', '')\",\n          \"            if not isinstance(text, str):\",\n          \"                raise TypeError('assistant content must be a string')\",\n          \"            decoder = json.JSONDecoder()\",\n          \"            for pos, char in enumerate(text):\",\n          \"                if char not in '[{':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    value, _ = decoder.raw_decode(text[pos:])\",\n          \"                except json.JSONDecodeError:\",\n          \"                    continue\",\n          \"                for item in (value if isinstance(value, list) else [value]):\",\n          \"                    if isinstance(item, dict) and isinstance(item.get('function'), dict):\",\n          \"                        fn = item['function']\",\n          \"                        if fn.get('name') in limited:\",\n          \"                            raw = fn.get('arguments', '{}')\",\n          \"                            args = json.loads(raw) if isinstance(raw, str) else raw\",\n          \"                            if not isinstance(args, dict):\",\n          \"                                raise TypeError('tool arguments must decode to an object')\",\n          \"                            result.append((fn['name'], args.get('order_id')))\",\n          \"                if result:\",\n          \"                    break\",\n          \"        return result\",\n          \"    current_calls = calls_in(current)\",\n          \"    targets = [(name, order_id) for name, order_id in current_calls if name in limited]\",\n          \"    if not targets:\",\n          \"        print('current_calls=', current_calls)\",\n          \"        return True\",\n          \"    for name, order_id in targets:\",\n          \"        if not isinstance(order_id, str) or not order_id:\",\n          \"            raise ValueError('limited order action is missing a valid order_id')\",\n          \"        count = sum(1 for prior in steps[:current_step_index] for prior_name, prior_id in calls_in(prior) if prior_name == name and prior_id == order_id)\",\n          \"        print('tool=', name, 'order_id=', order_id, 'prior_matching_calls=', count)\",\n          \"        if count > 0:\",\n          \"            return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"limit_item_modify_and_exchange_calls_per_order\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\"\n      ]\n    },\n    {\n      \"assertion_name\": \"one_tool_call_per_assistant_turn\",\n      \"check_hint\": \"When an assistant event contains tool calls, it must contain at most one call and must not also contain a user-facing response in the same assistant turn. Apply the check to the assistant substeps in the current trajectory step; ordinary assistant messages without a tool call pass.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"PROTOCOL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def one_tool_call_per_assistant_turn(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require tool calls and user-facing responses to occupy separate turns.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('one_tool_call_per_assistant_turn')\",\n          \"    step = trajectory['steps'][current_step_index]\",\n          \"    call_count = 0\",\n          \"    has_non_call_assistant_message = False\",\n          \"    for sub in step.get('substeps', []):\",\n          \"        if sub.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        text = sub.get('content', '')\",\n          \"        if not isinstance(text, str):\",\n          \"            raise TypeError('assistant content must be a string')\",\n          \"        found_here = 0\",\n          \"        decoder = json.JSONDecoder()\",\n          \"        for pos, char in enumerate(text):\",\n          \"            if char not in '[{':\",\n          \"                continue\",\n          \"            try:\",\n          \"                value, _ = decoder.raw_decode(text[pos:])\",\n          \"            except json.JSONDecodeError:\",\n          \"                continue\",\n          \"            candidates = value if isinstance(value, list) else [value]\",\n          \"            found_here = sum(1 for item in candidates if isinstance(item, dict) and isinstance(item.get('function'), dict) and isinstance(item['function'].get('name'), str))\",\n          \"            if found_here:\",\n          \"                break\",\n          \"        call_count += found_here\",\n          \"        if found_here == 0 and text.strip():\",\n          \"            has_non_call_assistant_message = True\",\n          \"    print('call_count=', call_count, 'has_non_call_assistant_message=', has_non_call_assistant_message)\",\n          \"    if call_count > 1 or (call_count > 0 and has_non_call_assistant_message):\",\n          \"        return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"one_tool_call_per_assistant_turn\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\"\n      ]\n    },\n    {\n      \"assertion_name\": \"follow_user_task_and_constraints\",\n      \"check_hint\": \"Assess whether the assistant's action and response address the user's stated task and respect explicit constraints in the trajectory instruction and subsequent user messages. Fail only on clear evidence that the assistant pursued a different task, violated a stated constraint, or performed an action the user did not request; do not fail merely because the task is incomplete or the supplied context is insufficient.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": -1\n      },\n      \"invariant_type\": \"ANY\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The task instruction at the beginning of the trajectory to identify the user's requested goal and explicit constraints. (2) The most recent user message relevant to the current event to capture updates, limits, or confirmation. (3) The current assistant event, and, if it is a tool call, the most recent relevant tool result to check that the action is for the requested user/task and is supported by available facts.\",\n        \"judge_rubric\": [\n          \"The current assistant event addresses the user's stated task rather than a materially different or unrelated goal.\",\n          \"The current action or response does not clearly violate an explicit user constraint or the retail policy, including the restriction to the authenticated user's own information and supported capabilities.\",\n          \"Factual claims or consequential actions in the current event are consistent with relevant prior tool outputs and user-provided information; unsupported claims are not presented as established facts.\"\n        ],\n        \"judge_scope_notes\": \"Consider the task instruction, relevant user messages, current assistant event, and relevant earlier tool results in the supplied window. Evaluate task alignment and compliance with explicit user constraints; do not infer facts or intent not stated in those events.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nEvaluate whether the assistant's current action or response follows the user's task and explicit constraints, using the retail policy. Identify clear deviations only; do not infer unstated preferences.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"IntentPlanMisalignment\",\n        \"Instruction/PlanAdherenceFailure\"\n      ]\n    }\n  ]\n}",
+  "per_step_outputs": [
+    {
+      "step_num": 1,
+      "raw_model_text": "{\"step_num\":1,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 1,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "2bca0fbd-aab2-407b-b73a-23bdd43e7603",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 14821,
+          "output_tokens": 22,
+          "total_tokens": 14843
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:10",
+          "end_time": "2026-10-09T04:44:17",
+          "execution_time_sec": 6.9741
+        }
+      }
+    },
+    {
+      "step_num": 2,
+      "raw_model_text": "{\"step_num\":2,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 2,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "74577623-64d5-4b3c-8792-4cb60b8f9333",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 14871,
+          "output_tokens": 22,
+          "total_tokens": 14893
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:17",
+          "end_time": "2026-10-09T04:44:23",
+          "execution_time_sec": 5.6574
+        }
+      }
+    },
+    {
+      "step_num": 3,
+      "raw_model_text": "{\"step_num\":3,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 3,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "774ca225-fe92-42eb-83f2-226acd16a3b3",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 14934,
+          "output_tokens": 22,
+          "total_tokens": 14956
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:23",
+          "end_time": "2026-10-09T04:44:29",
+          "execution_time_sec": 5.9693
+        }
+      }
+    },
+    {
+      "step_num": 4,
+      "raw_model_text": "{\"step_num\":4,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 4,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "d4fca4d8-f502-4a59-a4d7-22cf0bce41ff",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 14998,
+          "output_tokens": 22,
+          "total_tokens": 15020
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:29",
+          "end_time": "2026-10-09T04:44:35",
+          "execution_time_sec": 6.3452
+        }
+      }
+    },
+    {
+      "step_num": 5,
+      "raw_model_text": "{\n  \"step_num\": 5,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"user_lookup_uses_provided_email\",\n      \"taxonomy_targets\": [\n        \"InvalidInvocation\",\n        \"Instruction/PlanAdherenceFailure\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 5,\n        \"substep_index\": \"*\",\n        \"role_name\": \"assistant\"\n      },\n      \"check_hint\": \"If the current assistant step invokes find_user_id_by_email, verify that the email argument exactly matches the email explicitly provided by the user in an earlier step. A mismatch or missing provided email fails this check; if that tool is not invoked in the current step, the check passes.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"user_lookup_uses_provided_email\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def user_lookup_uses_provided_email(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require an email lookup to use the email stated by the user.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    import re\",\n          \"    print('user_lookup_uses_provided_email')\",\n          \"    steps = trajectory['steps']\",\n          \"    calls = []\",\n          \"    decoder = json.JSONDecoder()\",\n          \"    for sub in steps[current_step_index].get('substeps', []):\",\n          \"        if sub.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        text = sub.get('content', '')\",\n          \"        if not isinstance(text, str):\",\n          \"            raise TypeError('assistant content must be a string')\",\n          \"        for pos, char in enumerate(text):\",\n          \"            if char not in '[{':\",\n          \"                continue\",\n          \"            try:\",\n          \"                value, _ = decoder.raw_decode(text[pos:])\",\n          \"            except json.JSONDecodeError:\",\n          \"                continue\",\n          \"            for item in (value if isinstance(value, list) else [value]):\",\n          \"                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_email':\",\n          \"                    raw_args = item['function'].get('arguments', '{}')\",\n          \"                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args\",\n          \"                    if not isinstance(args, dict):\",\n          \"                        raise TypeError('tool arguments must be an object')\",\n          \"                    calls.append(args.get('email'))\",\n          \"            if calls:\",\n          \"                break\",\n          \"    if not calls:\",\n          \"        print('lookup_calls=', calls)\",\n          \"        return True\",\n          \"    provided_emails = []\",\n          \"    for step in steps[:current_step_index]:\",\n          \"        for sub in step.get('substeps', []):\",\n          \"            if sub.get('role') == 'user':\",\n          \"                text = sub.get('content', '')\",\n          \"                if not isinstance(text, str):\",\n          \"                    raise TypeError('user content must be a string')\",\n          \"                provided_emails.extend(re.findall(r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\\\\.[A-Z]{2,}', text, re.IGNORECASE))\",\n          \"    expected_email = provided_emails[-1] if provided_emails else None\",\n          \"    matches = all(isinstance(email, str) and email == expected_email for email in calls)\",\n          \"    print('lookup_emails=', calls, 'provided_email=', expected_email, 'matches=', matches)\",\n          \"    if not matches:\",\n          \"        return False\",\n          \"    return True\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"agent:assistant\": [\n      \"user_lookup_uses_provided_email\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 5,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "user_lookup_uses_provided_email",
+            "taxonomy_targets": [
+              "InvalidInvocation",
+              "Instruction/PlanAdherenceFailure"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 5,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "If the current assistant step invokes find_user_id_by_email, verify that the email argument exactly matches the email explicitly provided by the user in an earlier step. A mismatch or missing provided email fails this check; if that tool is not invoked in the current step, the check passes.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "user_lookup_uses_provided_email",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def user_lookup_uses_provided_email(trajectory, current_step_index):",
+                "    \"\"\"Require an email lookup to use the email stated by the user.\"\"\"",
+                "    import json",
+                "    import re",
+                "    print('user_lookup_uses_provided_email')",
+                "    steps = trajectory['steps']",
+                "    calls = []",
+                "    decoder = json.JSONDecoder()",
+                "    for sub in steps[current_step_index].get('substeps', []):",
+                "        if sub.get('role') != 'assistant':",
+                "            continue",
+                "        text = sub.get('content', '')",
+                "        if not isinstance(text, str):",
+                "            raise TypeError('assistant content must be a string')",
+                "        for pos, char in enumerate(text):",
+                "            if char not in '[{':",
+                "                continue",
+                "            try:",
+                "                value, _ = decoder.raw_decode(text[pos:])",
+                "            except json.JSONDecodeError:",
+                "                continue",
+                "            for item in (value if isinstance(value, list) else [value]):",
+                "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_email':",
+                "                    raw_args = item['function'].get('arguments', '{}')",
+                "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+                "                    if not isinstance(args, dict):",
+                "                        raise TypeError('tool arguments must be an object')",
+                "                    calls.append(args.get('email'))",
+                "            if calls:",
+                "                break",
+                "    if not calls:",
+                "        print('lookup_calls=', calls)",
+                "        return True",
+                "    provided_emails = []",
+                "    for step in steps[:current_step_index]:",
+                "        for sub in step.get('substeps', []):",
+                "            if sub.get('role') == 'user':",
+                "                text = sub.get('content', '')",
+                "                if not isinstance(text, str):",
+                "                    raise TypeError('user content must be a string')",
+                "                provided_emails.extend(re.findall(r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}', text, re.IGNORECASE))",
+                "    expected_email = provided_emails[-1] if provided_emails else None",
+                "    matches = all(isinstance(email, str) and email == expected_email for email in calls)",
+                "    print('lookup_emails=', calls, 'provided_email=', expected_email, 'matches=', matches)",
+                "    if not matches:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:assistant": [
+            "user_lookup_uses_provided_email"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "eb767525-1908-4d1e-b9b4-04e482d6d060",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 15053,
+          "output_tokens": 986,
+          "total_tokens": 16039
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:35",
+          "end_time": "2026-10-09T04:44:50",
+          "execution_time_sec": 14.9388
+        }
+      }
+    },
+    {
+      "step_num": 6,
+      "raw_model_text": "{\"step_num\":6,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 6,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "e51b237c-49c0-4c10-be83-7fc4ccae58a6",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 15967,
+          "output_tokens": 22,
+          "total_tokens": 15989
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:50",
+          "end_time": "2026-10-09T04:44:58",
+          "execution_time_sec": 7.8457
+        }
+      }
+    },
+    {
+      "step_num": 7,
+      "raw_model_text": "{\"step_num\":7,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 7,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "93e78fa2-9328-4400-b5bd-ed10fe82c581",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 16028,
+          "output_tokens": 22,
+          "total_tokens": 16050
+        },
+        "time": {
+          "start_time": "2026-10-09T04:44:58",
+          "end_time": "2026-10-09T04:45:06",
+          "execution_time_sec": 8.7378
+        }
+      }
+    },
+    {
+      "step_num": 8,
+      "raw_model_text": "{\"step_num\":8,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 8,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "375b19d2-6420-43c9-886a-cb5ee0d1b8c7",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 16085,
+          "output_tokens": 22,
+          "total_tokens": 16107
+        },
+        "time": {
+          "start_time": "2026-10-09T04:45:06",
+          "end_time": "2026-10-09T04:45:15",
+          "execution_time_sec": 8.2589
+        }
+      }
+    },
+    {
+      "step_num": 9,
+      "raw_model_text": "{\n  \"step_num\": 9,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"name_zip_lookup_matches_user_details\",\n      \"taxonomy_targets\": [\n        \"InvalidInvocation\",\n        \"InventionOfNewInformation\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 9,\n        \"substep_index\": \"*\",\n        \"role_name\": \"assistant\"\n      },\n      \"check_hint\": \"If the current assistant step invokes find_user_id_by_name_zip, verify that first_name, last_name, and zip exactly match the name and ZIP code explicitly provided in an earlier user message. If this tool is not invoked in the current step, the check passes.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"name_zip_lookup_matches_user_details\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def name_zip_lookup_matches_user_details(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require a name-and-ZIP lookup to use the user's stated details.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    import re\",\n          \"    print('name_zip_lookup_matches_user_details')\",\n          \"    steps = trajectory['steps']\",\n          \"    calls = []\",\n          \"    decoder = json.JSONDecoder()\",\n          \"    for sub in steps[current_step_index].get('substeps', []):\",\n          \"        if sub.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        text = sub.get('content', '')\",\n          \"        if not isinstance(text, str):\",\n          \"            raise TypeError('assistant content must be a string')\",\n          \"        for pos, char in enumerate(text):\",\n          \"            if char not in '[{':\",\n          \"                continue\",\n          \"            try:\",\n          \"                value, _ = decoder.raw_decode(text[pos:])\",\n          \"            except json.JSONDecodeError:\",\n          \"                continue\",\n          \"            for item in (value if isinstance(value, list) else [value]):\",\n          \"                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_name_zip':\",\n          \"                    raw_args = item['function'].get('arguments', '{}')\",\n          \"                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args\",\n          \"                    if not isinstance(args, dict):\",\n          \"                        raise TypeError('tool arguments must be an object')\",\n          \"                    calls.append(args)\",\n          \"            if calls:\",\n          \"                break\",\n          \"    if not calls:\",\n          \"        print('lookup_calls=', calls)\",\n          \"        return True\",\n          \"    prior_user_text = ' '.join(sub.get('content', '') for step in steps[:current_step_index] for sub in step.get('substeps', []) if sub.get('role') == 'user')\",\n          \"    if not isinstance(prior_user_text, str):\",\n          \"        raise TypeError('user content must be a string')\",\n          \"    name_match = re.search(r\\\"name(?:'s|’s)\\\\s+([A-Za-z]+)\\\\s+([A-Za-z]+)\\\", prior_user_text, re.IGNORECASE)\",\n          \"    zip_match = re.search(r'zip code is\\\\s*(\\\\d{5})', prior_user_text, re.IGNORECASE)\",\n          \"    if not name_match or not zip_match:\",\n          \"        print('name_match=', name_match, 'zip_match=', zip_match)\",\n          \"        return False\",\n          \"    expected = {'first_name': name_match.group(1), 'last_name': name_match.group(2), 'zip': zip_match.group(1)}\",\n          \"    matches = all(args.get(key) == value for args in calls for key, value in expected.items())\",\n          \"    print('lookup_calls=', calls, 'expected=', expected, 'matches=', matches)\",\n          \"    if not matches:\",\n          \"        return False\",\n          \"    return True\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"assistant\": [\n      \"name_zip_lookup_matches_user_details\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 9,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "name_zip_lookup_matches_user_details",
+            "taxonomy_targets": [
+              "InvalidInvocation",
+              "InventionOfNewInformation"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 9,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "If the current assistant step invokes find_user_id_by_name_zip, verify that first_name, last_name, and zip exactly match the name and ZIP code explicitly provided in an earlier user message. If this tool is not invoked in the current step, the check passes.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "name_zip_lookup_matches_user_details",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def name_zip_lookup_matches_user_details(trajectory, current_step_index):",
+                "    \"\"\"Require a name-and-ZIP lookup to use the user's stated details.\"\"\"",
+                "    import json",
+                "    import re",
+                "    print('name_zip_lookup_matches_user_details')",
+                "    steps = trajectory['steps']",
+                "    calls = []",
+                "    decoder = json.JSONDecoder()",
+                "    for sub in steps[current_step_index].get('substeps', []):",
+                "        if sub.get('role') != 'assistant':",
+                "            continue",
+                "        text = sub.get('content', '')",
+                "        if not isinstance(text, str):",
+                "            raise TypeError('assistant content must be a string')",
+                "        for pos, char in enumerate(text):",
+                "            if char not in '[{':",
+                "                continue",
+                "            try:",
+                "                value, _ = decoder.raw_decode(text[pos:])",
+                "            except json.JSONDecodeError:",
+                "                continue",
+                "            for item in (value if isinstance(value, list) else [value]):",
+                "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_name_zip':",
+                "                    raw_args = item['function'].get('arguments', '{}')",
+                "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+                "                    if not isinstance(args, dict):",
+                "                        raise TypeError('tool arguments must be an object')",
+                "                    calls.append(args)",
+                "            if calls:",
+                "                break",
+                "    if not calls:",
+                "        print('lookup_calls=', calls)",
+                "        return True",
+                "    prior_user_text = ' '.join(sub.get('content', '') for step in steps[:current_step_index] for sub in step.get('substeps', []) if sub.get('role') == 'user')",
+                "    if not isinstance(prior_user_text, str):",
+                "        raise TypeError('user content must be a string')",
+                "    name_match = re.search(r\"name(?:'s|’s)\\s+([A-Za-z]+)\\s+([A-Za-z]+)\", prior_user_text, re.IGNORECASE)",
+                "    zip_match = re.search(r'zip code is\\s*(\\d{5})', prior_user_text, re.IGNORECASE)",
+                "    if not name_match or not zip_match:",
+                "        print('name_match=', name_match, 'zip_match=', zip_match)",
+                "        return False",
+                "    expected = {'first_name': name_match.group(1), 'last_name': name_match.group(2), 'zip': zip_match.group(1)}",
+                "    matches = all(args.get(key) == value for args in calls for key, value in expected.items())",
+                "    print('lookup_calls=', calls, 'expected=', expected, 'matches=', matches)",
+                "    if not matches:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "assistant": [
+            "name_zip_lookup_matches_user_details"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "fdaf3621-051e-4b2c-800d-a8211a67d138",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 16147,
+          "output_tokens": 1025,
+          "total_tokens": 17172
+        },
+        "time": {
+          "start_time": "2026-10-09T04:45:15",
+          "end_time": "2026-10-09T04:45:33",
+          "execution_time_sec": 17.8684
+        }
+      }
+    },
+    {
+      "step_num": 10,
+      "raw_model_text": "{\"step_num\":10,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 10,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "6dbca4f3-5e89-4b93-b98b-26dbccbfe8f8",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17101,
+          "output_tokens": 22,
+          "total_tokens": 17123
+        },
+        "time": {
+          "start_time": "2026-10-09T04:45:33",
+          "end_time": "2026-10-09T04:45:40",
+          "execution_time_sec": 7.1945
+        }
+      }
+    },
+    {
+      "step_num": 11,
+      "raw_model_text": "{\"step_num\":11,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 11,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "fbb94fb3-af0d-4ffc-908f-0b3b0bdfbfa4",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17152,
+          "output_tokens": 22,
+          "total_tokens": 17174
+        },
+        "time": {
+          "start_time": "2026-10-09T04:45:40",
+          "end_time": "2026-10-09T04:45:46",
+          "execution_time_sec": 5.9186
+        }
+      }
+    },
+    {
+      "step_num": 12,
+      "raw_model_text": "{\n  \"step_num\": 12,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"user_details_lookup_matches_authenticated_id\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\",\n        \"InventionOfNewInformation\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 12,\n        \"substep_index\": \"*\",\n        \"role_name\": \"tool\"\n      },\n      \"check_hint\": \"When the current step returns user details following a get_user_details call, verify that the call's user_id exactly matches the ID returned by the most recent prior successful identity lookup. A mismatch or missing lookup result fails; if there is no preceding get_user_details call, the check passes.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"user_details_lookup_matches_authenticated_id\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def user_details_lookup_matches_authenticated_id(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Ensure user details are retrieved for the ID returned by identity lookup.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('user_details_lookup_matches_authenticated_id')\",\n          \"    steps = trajectory['steps']\",\n          \"    action_step_index = current_step_index - 1\",\n          \"    if action_step_index < 0:\",\n          \"        return True\",\n          \"    def calls_in(step):\",\n          \"        calls = []\",\n          \"        decoder = json.JSONDecoder()\",\n          \"        for sub in step.get('substeps', []):\",\n          \"            if sub.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            text = sub.get('content', '')\",\n          \"            if not isinstance(text, str):\",\n          \"                raise TypeError('assistant content must be a string')\",\n          \"            for pos, char in enumerate(text):\",\n          \"                if char not in '[{':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    value, _ = decoder.raw_decode(text[pos:])\",\n          \"                except json.JSONDecodeError:\",\n          \"                    continue\",\n          \"                for item in (value if isinstance(value, list) else [value]):\",\n          \"                    if isinstance(item, dict) and isinstance(item.get('function'), dict):\",\n          \"                        fn = item['function']\",\n          \"                        raw_args = fn.get('arguments', '{}')\",\n          \"                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args\",\n          \"                        if not isinstance(args, dict):\",\n          \"                            raise TypeError('tool arguments must be an object')\",\n          \"                        calls.append((fn.get('name'), args))\",\n          \"                if calls:\",\n          \"                    break\",\n          \"        return calls\",\n          \"    action_calls = calls_in(steps[action_step_index])\",\n          \"    detail_calls = [args for name, args in action_calls if name == 'get_user_details']\",\n          \"    if not detail_calls:\",\n          \"        print('get_user_details_calls=', detail_calls)\",\n          \"        return True\",\n          \"    requested_id = detail_calls[-1].get('user_id')\",\n          \"    lookup_result = None\",\n          \"    for lookup_index in range(action_step_index - 1, -1, -1):\",\n          \"        lookup_calls = calls_in(steps[lookup_index])\",\n          \"        if not any(name in {'find_user_id_by_email', 'find_user_id_by_name_zip'} for name, _ in lookup_calls):\",\n          \"            continue\",\n          \"        for result_step in steps[lookup_index + 1:action_step_index]:\",\n          \"            for sub in result_step.get('substeps', []):\",\n          \"                if sub.get('role') == 'tool':\",\n          \"                    content = sub.get('content', '')\",\n          \"                    if not isinstance(content, str):\",\n          \"                        raise TypeError('tool content must be a string')\",\n          \"                    lookup_result = content.strip()\",\n          \"                    break\",\n          \"            if lookup_result is not None:\",\n          \"                break\",\n          \"        if lookup_result is not None:\",\n          \"            break\",\n          \"    print('requested_id=', requested_id, 'lookup_result=', lookup_result)\",\n          \"    if not isinstance(requested_id, str) or not requested_id or lookup_result != requested_id:\",\n          \"        return False\",\n          \"    return True\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"agent:tool\": [\n      \"user_details_lookup_matches_authenticated_id\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 12,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "user_details_lookup_matches_authenticated_id",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput",
+              "InventionOfNewInformation"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 12,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "When the current step returns user details following a get_user_details call, verify that the call's user_id exactly matches the ID returned by the most recent prior successful identity lookup. A mismatch or missing lookup result fails; if there is no preceding get_user_details call, the check passes.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "user_details_lookup_matches_authenticated_id",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def user_details_lookup_matches_authenticated_id(trajectory, current_step_index):",
+                "    \"\"\"Ensure user details are retrieved for the ID returned by identity lookup.\"\"\"",
+                "    import json",
+                "    print('user_details_lookup_matches_authenticated_id')",
+                "    steps = trajectory['steps']",
+                "    action_step_index = current_step_index - 1",
+                "    if action_step_index < 0:",
+                "        return True",
+                "    def calls_in(step):",
+                "        calls = []",
+                "        decoder = json.JSONDecoder()",
+                "        for sub in step.get('substeps', []):",
+                "            if sub.get('role') != 'assistant':",
+                "                continue",
+                "            text = sub.get('content', '')",
+                "            if not isinstance(text, str):",
+                "                raise TypeError('assistant content must be a string')",
+                "            for pos, char in enumerate(text):",
+                "                if char not in '[{':",
+                "                    continue",
+                "                try:",
+                "                    value, _ = decoder.raw_decode(text[pos:])",
+                "                except json.JSONDecodeError:",
+                "                    continue",
+                "                for item in (value if isinstance(value, list) else [value]):",
+                "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+                "                        fn = item['function']",
+                "                        raw_args = fn.get('arguments', '{}')",
+                "                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+                "                        if not isinstance(args, dict):",
+                "                            raise TypeError('tool arguments must be an object')",
+                "                        calls.append((fn.get('name'), args))",
+                "                if calls:",
+                "                    break",
+                "        return calls",
+                "    action_calls = calls_in(steps[action_step_index])",
+                "    detail_calls = [args for name, args in action_calls if name == 'get_user_details']",
+                "    if not detail_calls:",
+                "        print('get_user_details_calls=', detail_calls)",
+                "        return True",
+                "    requested_id = detail_calls[-1].get('user_id')",
+                "    lookup_result = None",
+                "    for lookup_index in range(action_step_index - 1, -1, -1):",
+                "        lookup_calls = calls_in(steps[lookup_index])",
+                "        if not any(name in {'find_user_id_by_email', 'find_user_id_by_name_zip'} for name, _ in lookup_calls):",
+                "            continue",
+                "        for result_step in steps[lookup_index + 1:action_step_index]:",
+                "            for sub in result_step.get('substeps', []):",
+                "                if sub.get('role') == 'tool':",
+                "                    content = sub.get('content', '')",
+                "                    if not isinstance(content, str):",
+                "                        raise TypeError('tool content must be a string')",
+                "                    lookup_result = content.strip()",
+                "                    break",
+                "            if lookup_result is not None:",
+                "                break",
+                "        if lookup_result is not None:",
+                "            break",
+                "    print('requested_id=', requested_id, 'lookup_result=', lookup_result)",
+                "    if not isinstance(requested_id, str) or not requested_id or lookup_result != requested_id:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:tool": [
+            "user_details_lookup_matches_authenticated_id"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4ae4c30e-03a2-451c-90d3-bbdc3a96bccf",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17280,
+          "output_tokens": 1227,
+          "total_tokens": 18507
+        },
+        "time": {
+          "start_time": "2026-10-09T04:45:46",
+          "end_time": "2026-10-09T04:46:13",
+          "execution_time_sec": 27.261
+        }
+      }
+    },
+    {
+      "step_num": 13,
+      "raw_model_text": "{\"step_num\":13,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 13,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "5c75a7c7-e06b-4a15-8d15-c48eff5b2302",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18483,
+          "output_tokens": 22,
+          "total_tokens": 18506
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:13",
+          "end_time": "2026-10-09T04:46:19",
+          "execution_time_sec": 6.1682
+        }
+      }
+    },
+    {
+      "step_num": 14,
+      "raw_model_text": "{\"step_num\":14,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 14,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4eee14ac-187f-4d4b-a6a0-2f2d82567b62",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18547,
+          "output_tokens": 22,
+          "total_tokens": 18569
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:19",
+          "end_time": "2026-10-09T04:46:28",
+          "execution_time_sec": 8.7128
+        }
+      }
+    },
+    {
+      "step_num": 15,
+      "raw_model_text": "{\"step_num\":15,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 15,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "926f7f3b-5358-42b9-9342-b629d16f6684",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18642,
+          "output_tokens": 22,
+          "total_tokens": 18664
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:28",
+          "end_time": "2026-10-09T04:46:34",
+          "execution_time_sec": 6.2482
+        }
+      }
+    },
+    {
+      "step_num": 16,
+      "raw_model_text": "{\"step_num\":16,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 16,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "5ce651a5-17dd-49ce-bd6e-1359f26ee7ec",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18721,
+          "output_tokens": 22,
+          "total_tokens": 18744
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:34",
+          "end_time": "2026-10-09T04:46:43",
+          "execution_time_sec": 8.9047
+        }
+      }
+    },
+    {
+      "step_num": 17,
+      "raw_model_text": "{\"step_num\":17,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 17,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "5d283a2d-dc69-45eb-8078-5f39aa590ce2",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18783,
+          "output_tokens": 22,
+          "total_tokens": 18805
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:43",
+          "end_time": "2026-10-09T04:46:50",
+          "execution_time_sec": 7.1529
+        }
+      }
+    },
+    {
+      "step_num": 18,
+      "raw_model_text": "{\"step_num\":18,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 18,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4890f801-62d5-4c54-90b2-0010e8b22233",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18859,
+          "output_tokens": 22,
+          "total_tokens": 18881
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:50",
+          "end_time": "2026-10-09T04:46:58",
+          "execution_time_sec": 7.4754
+        }
+      }
+    },
+    {
+      "step_num": 19,
+      "raw_model_text": "{\"step_num\":19,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 19,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "037f2184-0f1d-417c-bcea-1bbd375ac2c1",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18903,
+          "output_tokens": 22,
+          "total_tokens": 18925
+        },
+        "time": {
+          "start_time": "2026-10-09T04:46:58",
+          "end_time": "2026-10-09T04:47:04",
+          "execution_time_sec": 6.518
+        }
+      }
+    },
+    {
+      "step_num": 20,
+      "raw_model_text": "{\"step_num\":20,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 20,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "7008faa1-a3c4-48c7-82ec-1689cf12509d",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 19301,
+          "output_tokens": 22,
+          "total_tokens": 19323
+        },
+        "time": {
+          "start_time": "2026-10-09T04:47:04",
+          "end_time": "2026-10-09T04:47:14",
+          "execution_time_sec": 10.0173
+        }
+      }
+    },
+    {
+      "step_num": 21,
+      "raw_model_text": "{\n  \"step_num\": 21,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"product_details_uses_tshirt_id_from_product_list\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 20,\n        \"substep_index\": \"*\",\n        \"role_name\": \"assistant\"\n      },\n      \"check_hint\": \"If the current assistant step invokes get_product_details, verify its product_id exactly matches the ID mapped to T-Shirt in the most recent prior list_all_product_types tool result. If get_product_details is not invoked in this step, the check passes.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"product_details_uses_tshirt_id_from_product_list\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def product_details_uses_tshirt_id_from_product_list(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require product details lookup to use the listed T-Shirt product ID.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('product_details_uses_tshirt_id_from_product_list')\",\n          \"    steps = trajectory['steps']\",\n          \"    decoder = json.JSONDecoder()\",\n          \"    product_ids = []\",\n          \"    for sub in steps[current_step_index].get('substeps', []):\",\n          \"        if sub.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        text = sub.get('content', '')\",\n          \"        if not isinstance(text, str):\",\n          \"            raise TypeError('assistant content must be a string')\",\n          \"        for pos, char in enumerate(text):\",\n          \"            if char not in '[{':\",\n          \"                continue\",\n          \"            try:\",\n          \"                value, _ = decoder.raw_decode(text[pos:])\",\n          \"            except json.JSONDecodeError:\",\n          \"                continue\",\n          \"            for item in (value if isinstance(value, list) else [value]):\",\n          \"                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'get_product_details':\",\n          \"                    raw_args = item['function'].get('arguments', '{}')\",\n          \"                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args\",\n          \"                    if not isinstance(args, dict):\",\n          \"                        raise TypeError('tool arguments must be an object')\",\n          \"                    product_ids.append(args.get('product_id'))\",\n          \"            if product_ids:\",\n          \"                break\",\n          \"    if not product_ids:\",\n          \"        print('get_product_details not invoked')\",\n          \"        return True\",\n          \"    expected_id = None\",\n          \"    for prior_index in range(current_step_index - 1, -1, -1):\",\n          \"        has_list_call = False\",\n          \"        for sub in steps[prior_index].get('substeps', []):\",\n          \"            if sub.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            text = sub.get('content', '')\",\n          \"            if not isinstance(text, str):\",\n          \"                raise TypeError('assistant content must be a string')\",\n          \"            for pos, char in enumerate(text):\",\n          \"                if char not in '[{':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    value, _ = decoder.raw_decode(text[pos:])\",\n          \"                except json.JSONDecodeError:\",\n          \"                    continue\",\n          \"                if any(isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'list_all_product_types' for item in (value if isinstance(value, list) else [value])):\",\n          \"                    has_list_call = True\",\n          \"                    break\",\n          \"            if has_list_call:\",\n          \"                break\",\n          \"        if has_list_call:\",\n          \"            for result_step in steps[prior_index + 1:current_step_index]:\",\n          \"                for sub in result_step.get('substeps', []):\",\n          \"                    if sub.get('role') != 'tool':\",\n          \"                        continue\",\n          \"                    content = sub.get('content', '')\",\n          \"                    if not isinstance(content, str):\",\n          \"                        raise TypeError('tool content must be a string')\",\n          \"                    data = json.loads(content)\",\n          \"                    if not isinstance(data, dict):\",\n          \"                        raise TypeError('product type result must be an object')\",\n          \"                    expected_id = data.get('T-Shirt')\",\n          \"                    break\",\n          \"                if expected_id is not None:\",\n          \"                    break\",\n          \"            break\",\n          \"    matches = isinstance(expected_id, str) and all(product_id == expected_id for product_id in product_ids)\",\n          \"    print('requested_product_ids=', product_ids, 'listed_tshirt_id=', expected_id, 'matches=', matches)\",\n          \"    if not matches:\",\n          \"        return False\",\n          \"    return True\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"agent:assistant\": [\n      \"product_details_uses_tshirt_id_from_product_list\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 21,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "product_details_uses_tshirt_id_from_product_list",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 20,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "If the current assistant step invokes get_product_details, verify its product_id exactly matches the ID mapped to T-Shirt in the most recent prior list_all_product_types tool result. If get_product_details is not invoked in this step, the check passes.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "product_details_uses_tshirt_id_from_product_list",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def product_details_uses_tshirt_id_from_product_list(trajectory, current_step_index):",
+                "    \"\"\"Require product details lookup to use the listed T-Shirt product ID.\"\"\"",
+                "    import json",
+                "    print('product_details_uses_tshirt_id_from_product_list')",
+                "    steps = trajectory['steps']",
+                "    decoder = json.JSONDecoder()",
+                "    product_ids = []",
+                "    for sub in steps[current_step_index].get('substeps', []):",
+                "        if sub.get('role') != 'assistant':",
+                "            continue",
+                "        text = sub.get('content', '')",
+                "        if not isinstance(text, str):",
+                "            raise TypeError('assistant content must be a string')",
+                "        for pos, char in enumerate(text):",
+                "            if char not in '[{':",
+                "                continue",
+                "            try:",
+                "                value, _ = decoder.raw_decode(text[pos:])",
+                "            except json.JSONDecodeError:",
+                "                continue",
+                "            for item in (value if isinstance(value, list) else [value]):",
+                "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'get_product_details':",
+                "                    raw_args = item['function'].get('arguments', '{}')",
+                "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+                "                    if not isinstance(args, dict):",
+                "                        raise TypeError('tool arguments must be an object')",
+                "                    product_ids.append(args.get('product_id'))",
+                "            if product_ids:",
+                "                break",
+                "    if not product_ids:",
+                "        print('get_product_details not invoked')",
+                "        return True",
+                "    expected_id = None",
+                "    for prior_index in range(current_step_index - 1, -1, -1):",
+                "        has_list_call = False",
+                "        for sub in steps[prior_index].get('substeps', []):",
+                "            if sub.get('role') != 'assistant':",
+                "                continue",
+                "            text = sub.get('content', '')",
+                "            if not isinstance(text, str):",
+                "                raise TypeError('assistant content must be a string')",
+                "            for pos, char in enumerate(text):",
+                "                if char not in '[{':",
+                "                    continue",
+                "                try:",
+                "                    value, _ = decoder.raw_decode(text[pos:])",
+                "                except json.JSONDecodeError:",
+                "                    continue",
+                "                if any(isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'list_all_product_types' for item in (value if isinstance(value, list) else [value])):",
+                "                    has_list_call = True",
+                "                    break",
+                "            if has_list_call:",
+                "                break",
+                "        if has_list_call:",
+                "            for result_step in steps[prior_index + 1:current_step_index]:",
+                "                for sub in result_step.get('substeps', []):",
+                "                    if sub.get('role') != 'tool':",
+                "                        continue",
+                "                    content = sub.get('content', '')",
+                "                    if not isinstance(content, str):",
+                "                        raise TypeError('tool content must be a string')",
+                "                    data = json.loads(content)",
+                "                    if not isinstance(data, dict):",
+                "                        raise TypeError('product type result must be an object')",
+                "                    expected_id = data.get('T-Shirt')",
+                "                    break",
+                "                if expected_id is not None:",
+                "                    break",
+                "            break",
+                "    matches = isinstance(expected_id, str) and all(product_id == expected_id for product_id in product_ids)",
+                "    print('requested_product_ids=', product_ids, 'listed_tshirt_id=', expected_id, 'matches=', matches)",
+                "    if not matches:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:assistant": [
+            "product_details_uses_tshirt_id_from_product_list"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4dbfd8c8-f8fc-4ea4-8dcc-22387ab4ba0f",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 19352,
+          "output_tokens": 1410,
+          "total_tokens": 20763
+        },
+        "time": {
+          "start_time": "2026-10-09T04:47:14",
+          "end_time": "2026-10-09T04:47:29",
+          "execution_time_sec": 15.2982
+        }
+      }
+    },
+    {
+      "step_num": 22,
+      "raw_model_text": "{\n  \"step_num\": 22,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"tshirt_cheapest_available_price_is_minimum\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\"\n      ],\n      \"invariant_type\": \"ANY\",\n      \"event_trigger\": {\n        \"step_index\": 21,\n        \"substep_index\": \"*\",\n        \"role_name\": \"tool\"\n      },\n      \"check_hint\": \"Parse the current tool result's T-Shirt variants and consider only variants marked available. Compute the minimum price among those variants and verify it is 46.66. An unavailable variant must not be counted, and a missing or invalid set of available prices fails the check.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"tshirt_cheapest_available_price_is_minimum\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def tshirt_cheapest_available_price_is_minimum(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Verify the cheapest available T-Shirt price from the current tool result.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('tshirt_cheapest_available_price_is_minimum')\",\n          \"    step = trajectory['steps'][current_step_index]\",\n          \"    tool_contents = [sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'tool']\",\n          \"    if not tool_contents:\",\n          \"        return False\",\n          \"    content = tool_contents[-1]\",\n          \"    if not isinstance(content, str):\",\n          \"        raise TypeError('tool content must be a string')\",\n          \"    data = json.loads(content)\",\n          \"    if not isinstance(data, dict) or not isinstance(data.get('variants'), dict):\",\n          \"        raise TypeError('product details must contain a variants object')\",\n          \"    available_prices = []\",\n          \"    for variant in data['variants'].values():\",\n          \"        if not isinstance(variant, dict):\",\n          \"            raise TypeError('each variant must be an object')\",\n          \"        if variant.get('available') is True:\",\n          \"            price = variant.get('price')\",\n          \"            if isinstance(price, bool) or not isinstance(price, (int, float)):\",\n          \"                raise TypeError('available variant price must be numeric')\",\n          \"            available_prices.append(price)\",\n          \"    if not available_prices:\",\n          \"        return False\",\n          \"    minimum_price = min(available_prices)\",\n          \"    print('available_prices=', available_prices, 'minimum_price=', minimum_price)\",\n          \"    if minimum_price != 46.66:\",\n          \"        return False\",\n          \"    return True\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"tool\": [\n      \"tshirt_cheapest_available_price_is_minimum\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 22,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "tshirt_cheapest_available_price_is_minimum",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "ANY",
+            "event_trigger": {
+              "step_index": 21,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "Parse the current tool result's T-Shirt variants and consider only variants marked available. Compute the minimum price among those variants and verify it is 46.66. An unavailable variant must not be counted, and a missing or invalid set of available prices fails the check.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "tshirt_cheapest_available_price_is_minimum",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def tshirt_cheapest_available_price_is_minimum(trajectory, current_step_index):",
+                "    \"\"\"Verify the cheapest available T-Shirt price from the current tool result.\"\"\"",
+                "    import json",
+                "    print('tshirt_cheapest_available_price_is_minimum')",
+                "    step = trajectory['steps'][current_step_index]",
+                "    tool_contents = [sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'tool']",
+                "    if not tool_contents:",
+                "        return False",
+                "    content = tool_contents[-1]",
+                "    if not isinstance(content, str):",
+                "        raise TypeError('tool content must be a string')",
+                "    data = json.loads(content)",
+                "    if not isinstance(data, dict) or not isinstance(data.get('variants'), dict):",
+                "        raise TypeError('product details must contain a variants object')",
+                "    available_prices = []",
+                "    for variant in data['variants'].values():",
+                "        if not isinstance(variant, dict):",
+                "            raise TypeError('each variant must be an object')",
+                "        if variant.get('available') is True:",
+                "            price = variant.get('price')",
+                "            if isinstance(price, bool) or not isinstance(price, (int, float)):",
+                "                raise TypeError('available variant price must be numeric')",
+                "            available_prices.append(price)",
+                "    if not available_prices:",
+                "        return False",
+                "    minimum_price = min(available_prices)",
+                "    print('available_prices=', available_prices, 'minimum_price=', minimum_price)",
+                "    if minimum_price != 46.66:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "tool": [
+            "tshirt_cheapest_available_price_is_minimum"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "3e29e619-0211-4172-98e5-62e99f6f50c5",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 21400,
+          "output_tokens": 728,
+          "total_tokens": 22129
+        },
+        "time": {
+          "start_time": "2026-10-09T04:47:29",
+          "end_time": "2026-10-09T04:47:44",
+          "execution_time_sec": 14.6857
+        }
+      }
+    },
+    {
+      "step_num": 23,
+      "raw_model_text": "{\"step_num\":23,\"decision\":\"INVARIANT\",\"invariant\":[{\"assertion_name\":\"tshirt_cheapest_variant_claim_matches_tool_data\",\"taxonomy_targets\":[\"MisinterpretationOfToolOutput\"],\"invariant_type\":\"RELATIONAL_POST\",\"event_trigger\":{\"step_index\":23,\"substep_index\":\"*\",\"role_name\":\"assistant\"},\"check_hint\":\"For the current assistant response about the cheapest T-shirt, parse the preceding product-details tool result, compute the minimum price among available variants, and identify that variant's options. Verify the response states that minimum price and names the same color, size, material, and style. If the current response does not make a cheapest-T-shirt claim, pass.\",\"check_type\":\"python_check\",\"python_check\":{\"function_name\":\"tshirt_cheapest_variant_claim_matches_tool_data\",\"args\":[\"trajectory\",\"current_step_index\"],\"code_lines\":[\"def tshirt_cheapest_variant_claim_matches_tool_data(trajectory, current_step_index):\",\"    \\\"\\\"\\\"Check that the assistant's cheapest T-shirt claim matches product data.\\\"\\\"\\\"\",\"    import json\",\"    import re\",\"    print('tshirt_cheapest_variant_claim_matches_tool_data')\",\"    step = trajectory['steps'][current_step_index]\",\"    assistant_text = ' '.join(sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'assistant')\",\"    if not isinstance(assistant_text, str):\",\"        raise TypeError('assistant content must be a string')\",\"    if not re.search(r'cheapest.{0,40}t-?shirt|t-?shirt.{0,40}cheapest', assistant_text, re.IGNORECASE):\",\"        print('no cheapest T-shirt claim')\",\"        return True\",\"    if current_step_index == 0:\",\"        return False\",\"    prior_tool_contents = [sub.get('content', '') for sub in trajectory['steps'][current_step_index - 1].get('substeps', []) if sub.get('role') == 'tool']\",\"    if not prior_tool_contents:\",\"        return False\",\"    data = json.loads(prior_tool_contents[-1])\",\"    variants = data.get('variants') if isinstance(data, dict) else None\",\"    if not isinstance(variants, dict):\",\"        raise TypeError('product details must contain a variants object')\",\"    available = [v for v in variants.values() if isinstance(v, dict) and v.get('available') is True]\",\"    if not available:\",\"        return False\",\"    cheapest = min(available, key=lambda v: v.get('price'))\",\"    price = cheapest.get('price')\",\"    options = cheapest.get('options')\",\"    if isinstance(price, bool) or not isinstance(price, (int, float)) or not isinstance(options, dict):\",\"        raise TypeError('cheapest variant must contain a numeric price and options object')\",\"    stated_prices = [float(value) for value in re.findall(r'\\\\$\\\\s*(\\\\d+(?:\\\\.\\\\d{1,2})?)', assistant_text)]\",\"    text = assistant_text.lower()\",\"    matches = any(abs(stated - price) < 0.005 for stated in stated_prices) and all(str(options.get(key, '')).lower() in text for key in ('color', 'material', 'style')) and re.search(r'\\\\bsize\\\\s+' + re.escape(str(options.get('size', '')).lower()) + r'\\\\b', text) is not None\",\"    print('cheapest_price=', price, 'options=', options, 'stated_prices=', stated_prices, 'matches=', matches)\",\"    if not matches:\",\"        return False\",\"    return True\"]},\"nl_check\":{}}],\"trigger_to_invariants_map\":{\"agent:assistant\":[\"tshirt_cheapest_variant_claim_matches_tool_data\"]}}",
+      "parsed": {
+        "step_num": 23,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 23,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "For the current assistant response about the cheapest T-shirt, parse the preceding product-details tool result, compute the minimum price among available variants, and identify that variant's options. Verify the response states that minimum price and names the same color, size, material, and style. If the current response does not make a cheapest-T-shirt claim, pass.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def tshirt_cheapest_variant_claim_matches_tool_data(trajectory, current_step_index):",
+                "    \"\"\"Check that the assistant's cheapest T-shirt claim matches product data.\"\"\"",
+                "    import json",
+                "    import re",
+                "    print('tshirt_cheapest_variant_claim_matches_tool_data')",
+                "    step = trajectory['steps'][current_step_index]",
+                "    assistant_text = ' '.join(sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'assistant')",
+                "    if not isinstance(assistant_text, str):",
+                "        raise TypeError('assistant content must be a string')",
+                "    if not re.search(r'cheapest.{0,40}t-?shirt|t-?shirt.{0,40}cheapest', assistant_text, re.IGNORECASE):",
+                "        print('no cheapest T-shirt claim')",
+                "        return True",
+                "    if current_step_index == 0:",
+                "        return False",
+                "    prior_tool_contents = [sub.get('content', '') for sub in trajectory['steps'][current_step_index - 1].get('substeps', []) if sub.get('role') == 'tool']",
+                "    if not prior_tool_contents:",
+                "        return False",
+                "    data = json.loads(prior_tool_contents[-1])",
+                "    variants = data.get('variants') if isinstance(data, dict) else None",
+                "    if not isinstance(variants, dict):",
+                "        raise TypeError('product details must contain a variants object')",
+                "    available = [v for v in variants.values() if isinstance(v, dict) and v.get('available') is True]",
+                "    if not available:",
+                "        return False",
+                "    cheapest = min(available, key=lambda v: v.get('price'))",
+                "    price = cheapest.get('price')",
+                "    options = cheapest.get('options')",
+                "    if isinstance(price, bool) or not isinstance(price, (int, float)) or not isinstance(options, dict):",
+                "        raise TypeError('cheapest variant must contain a numeric price and options object')",
+                "    stated_prices = [float(value) for value in re.findall(r'\\$\\s*(\\d+(?:\\.\\d{1,2})?)', assistant_text)]",
+                "    text = assistant_text.lower()",
+                "    matches = any(abs(stated - price) < 0.005 for stated in stated_prices) and all(str(options.get(key, '')).lower() in text for key in ('color', 'material', 'style')) and re.search(r'\\bsize\\s+' + re.escape(str(options.get('size', '')).lower()) + r'\\b', text) is not None",
+                "    print('cheapest_price=', price, 'options=', options, 'stated_prices=', stated_prices, 'matches=', matches)",
+                "    if not matches:",
+                "        return False",
+                "    return True"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:assistant": [
+            "tshirt_cheapest_variant_claim_matches_tool_data"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "b0f1d88f-b1ec-44da-b844-f3ad76d248af",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 22106,
+          "output_tokens": 822,
+          "total_tokens": 22929
+        },
+        "time": {
+          "start_time": "2026-10-09T04:47:44",
+          "end_time": "2026-10-09T04:48:01",
+          "execution_time_sec": 16.4858
+        }
+      }
+    },
+    {
+      "step_num": 24,
+      "raw_model_text": "{\"step_num\":24,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 24,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "d791c082-45cf-4295-a9c8-d613a9c93808",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23084,
+          "output_tokens": 22,
+          "total_tokens": 23107
+        },
+        "time": {
+          "start_time": "2026-10-09T04:48:01",
+          "end_time": "2026-10-09T04:48:07",
+          "execution_time_sec": 6.5966
+        }
+      }
+    },
+    {
+      "step_num": 25,
+      "raw_model_text": "{\"step_num\":25,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 25,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "2a72368a-c206-42f9-81d5-28effb430484",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23156,
+          "output_tokens": 22,
+          "total_tokens": 23178
+        },
+        "time": {
+          "start_time": "2026-10-09T04:48:07",
+          "end_time": "2026-10-09T04:48:15",
+          "execution_time_sec": 7.9443
+        }
+      }
+    },
+    {
+      "step_num": 26,
+      "raw_model_text": "{\"step_num\":26,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 26,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "c3e3c045-5f55-4f8e-8fb2-2bbe3d6ba347",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23229,
+          "output_tokens": 22,
+          "total_tokens": 23252
+        },
+        "time": {
+          "start_time": "2026-10-09T04:48:15",
+          "end_time": "2026-10-09T04:48:21",
+          "execution_time_sec": 5.3936
+        }
+      }
+    }
+  ],
+  "dynamic_invariants": [
+    {
+      "assertion_name": "user_lookup_uses_provided_email",
+      "taxonomy_targets": [
+        "InvalidInvocation",
+        "Instruction/PlanAdherenceFailure"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 5,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "If the current assistant step invokes find_user_id_by_email, verify that the email argument exactly matches the email explicitly provided by the user in an earlier step. A mismatch or missing provided email fails this check; if that tool is not invoked in the current step, the check passes.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "user_lookup_uses_provided_email",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def user_lookup_uses_provided_email(trajectory, current_step_index):",
+          "    \"\"\"Require an email lookup to use the email stated by the user.\"\"\"",
+          "    import json",
+          "    import re",
+          "    print('user_lookup_uses_provided_email')",
+          "    steps = trajectory['steps']",
+          "    calls = []",
+          "    decoder = json.JSONDecoder()",
+          "    for sub in steps[current_step_index].get('substeps', []):",
+          "        if sub.get('role') != 'assistant':",
+          "            continue",
+          "        text = sub.get('content', '')",
+          "        if not isinstance(text, str):",
+          "            raise TypeError('assistant content must be a string')",
+          "        for pos, char in enumerate(text):",
+          "            if char not in '[{':",
+          "                continue",
+          "            try:",
+          "                value, _ = decoder.raw_decode(text[pos:])",
+          "            except json.JSONDecodeError:",
+          "                continue",
+          "            for item in (value if isinstance(value, list) else [value]):",
+          "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_email':",
+          "                    raw_args = item['function'].get('arguments', '{}')",
+          "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+          "                    if not isinstance(args, dict):",
+          "                        raise TypeError('tool arguments must be an object')",
+          "                    calls.append(args.get('email'))",
+          "            if calls:",
+          "                break",
+          "    if not calls:",
+          "        print('lookup_calls=', calls)",
+          "        return True",
+          "    provided_emails = []",
+          "    for step in steps[:current_step_index]:",
+          "        for sub in step.get('substeps', []):",
+          "            if sub.get('role') == 'user':",
+          "                text = sub.get('content', '')",
+          "                if not isinstance(text, str):",
+          "                    raise TypeError('user content must be a string')",
+          "                provided_emails.extend(re.findall(r'[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}', text, re.IGNORECASE))",
+          "    expected_email = provided_emails[-1] if provided_emails else None",
+          "    matches = all(isinstance(email, str) and email == expected_email for email in calls)",
+          "    print('lookup_emails=', calls, 'provided_email=', expected_email, 'matches=', matches)",
+          "    if not matches:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "name_zip_lookup_matches_user_details",
+      "taxonomy_targets": [
+        "InvalidInvocation",
+        "InventionOfNewInformation"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 9,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "If the current assistant step invokes find_user_id_by_name_zip, verify that first_name, last_name, and zip exactly match the name and ZIP code explicitly provided in an earlier user message. If this tool is not invoked in the current step, the check passes.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "name_zip_lookup_matches_user_details",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def name_zip_lookup_matches_user_details(trajectory, current_step_index):",
+          "    \"\"\"Require a name-and-ZIP lookup to use the user's stated details.\"\"\"",
+          "    import json",
+          "    import re",
+          "    print('name_zip_lookup_matches_user_details')",
+          "    steps = trajectory['steps']",
+          "    calls = []",
+          "    decoder = json.JSONDecoder()",
+          "    for sub in steps[current_step_index].get('substeps', []):",
+          "        if sub.get('role') != 'assistant':",
+          "            continue",
+          "        text = sub.get('content', '')",
+          "        if not isinstance(text, str):",
+          "            raise TypeError('assistant content must be a string')",
+          "        for pos, char in enumerate(text):",
+          "            if char not in '[{':",
+          "                continue",
+          "            try:",
+          "                value, _ = decoder.raw_decode(text[pos:])",
+          "            except json.JSONDecodeError:",
+          "                continue",
+          "            for item in (value if isinstance(value, list) else [value]):",
+          "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'find_user_id_by_name_zip':",
+          "                    raw_args = item['function'].get('arguments', '{}')",
+          "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+          "                    if not isinstance(args, dict):",
+          "                        raise TypeError('tool arguments must be an object')",
+          "                    calls.append(args)",
+          "            if calls:",
+          "                break",
+          "    if not calls:",
+          "        print('lookup_calls=', calls)",
+          "        return True",
+          "    prior_user_text = ' '.join(sub.get('content', '') for step in steps[:current_step_index] for sub in step.get('substeps', []) if sub.get('role') == 'user')",
+          "    if not isinstance(prior_user_text, str):",
+          "        raise TypeError('user content must be a string')",
+          "    name_match = re.search(r\"name(?:'s|’s)\\s+([A-Za-z]+)\\s+([A-Za-z]+)\", prior_user_text, re.IGNORECASE)",
+          "    zip_match = re.search(r'zip code is\\s*(\\d{5})', prior_user_text, re.IGNORECASE)",
+          "    if not name_match or not zip_match:",
+          "        print('name_match=', name_match, 'zip_match=', zip_match)",
+          "        return False",
+          "    expected = {'first_name': name_match.group(1), 'last_name': name_match.group(2), 'zip': zip_match.group(1)}",
+          "    matches = all(args.get(key) == value for args in calls for key, value in expected.items())",
+          "    print('lookup_calls=', calls, 'expected=', expected, 'matches=', matches)",
+          "    if not matches:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "user_details_lookup_matches_authenticated_id",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput",
+        "InventionOfNewInformation"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 12,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "When the current step returns user details following a get_user_details call, verify that the call's user_id exactly matches the ID returned by the most recent prior successful identity lookup. A mismatch or missing lookup result fails; if there is no preceding get_user_details call, the check passes.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "user_details_lookup_matches_authenticated_id",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def user_details_lookup_matches_authenticated_id(trajectory, current_step_index):",
+          "    \"\"\"Ensure user details are retrieved for the ID returned by identity lookup.\"\"\"",
+          "    import json",
+          "    print('user_details_lookup_matches_authenticated_id')",
+          "    steps = trajectory['steps']",
+          "    action_step_index = current_step_index - 1",
+          "    if action_step_index < 0:",
+          "        return True",
+          "    def calls_in(step):",
+          "        calls = []",
+          "        decoder = json.JSONDecoder()",
+          "        for sub in step.get('substeps', []):",
+          "            if sub.get('role') != 'assistant':",
+          "                continue",
+          "            text = sub.get('content', '')",
+          "            if not isinstance(text, str):",
+          "                raise TypeError('assistant content must be a string')",
+          "            for pos, char in enumerate(text):",
+          "                if char not in '[{':",
+          "                    continue",
+          "                try:",
+          "                    value, _ = decoder.raw_decode(text[pos:])",
+          "                except json.JSONDecodeError:",
+          "                    continue",
+          "                for item in (value if isinstance(value, list) else [value]):",
+          "                    if isinstance(item, dict) and isinstance(item.get('function'), dict):",
+          "                        fn = item['function']",
+          "                        raw_args = fn.get('arguments', '{}')",
+          "                        args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+          "                        if not isinstance(args, dict):",
+          "                            raise TypeError('tool arguments must be an object')",
+          "                        calls.append((fn.get('name'), args))",
+          "                if calls:",
+          "                    break",
+          "        return calls",
+          "    action_calls = calls_in(steps[action_step_index])",
+          "    detail_calls = [args for name, args in action_calls if name == 'get_user_details']",
+          "    if not detail_calls:",
+          "        print('get_user_details_calls=', detail_calls)",
+          "        return True",
+          "    requested_id = detail_calls[-1].get('user_id')",
+          "    lookup_result = None",
+          "    for lookup_index in range(action_step_index - 1, -1, -1):",
+          "        lookup_calls = calls_in(steps[lookup_index])",
+          "        if not any(name in {'find_user_id_by_email', 'find_user_id_by_name_zip'} for name, _ in lookup_calls):",
+          "            continue",
+          "        for result_step in steps[lookup_index + 1:action_step_index]:",
+          "            for sub in result_step.get('substeps', []):",
+          "                if sub.get('role') == 'tool':",
+          "                    content = sub.get('content', '')",
+          "                    if not isinstance(content, str):",
+          "                        raise TypeError('tool content must be a string')",
+          "                    lookup_result = content.strip()",
+          "                    break",
+          "            if lookup_result is not None:",
+          "                break",
+          "        if lookup_result is not None:",
+          "            break",
+          "    print('requested_id=', requested_id, 'lookup_result=', lookup_result)",
+          "    if not isinstance(requested_id, str) or not requested_id or lookup_result != requested_id:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "product_details_uses_tshirt_id_from_product_list",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 20,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "If the current assistant step invokes get_product_details, verify its product_id exactly matches the ID mapped to T-Shirt in the most recent prior list_all_product_types tool result. If get_product_details is not invoked in this step, the check passes.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "product_details_uses_tshirt_id_from_product_list",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def product_details_uses_tshirt_id_from_product_list(trajectory, current_step_index):",
+          "    \"\"\"Require product details lookup to use the listed T-Shirt product ID.\"\"\"",
+          "    import json",
+          "    print('product_details_uses_tshirt_id_from_product_list')",
+          "    steps = trajectory['steps']",
+          "    decoder = json.JSONDecoder()",
+          "    product_ids = []",
+          "    for sub in steps[current_step_index].get('substeps', []):",
+          "        if sub.get('role') != 'assistant':",
+          "            continue",
+          "        text = sub.get('content', '')",
+          "        if not isinstance(text, str):",
+          "            raise TypeError('assistant content must be a string')",
+          "        for pos, char in enumerate(text):",
+          "            if char not in '[{':",
+          "                continue",
+          "            try:",
+          "                value, _ = decoder.raw_decode(text[pos:])",
+          "            except json.JSONDecodeError:",
+          "                continue",
+          "            for item in (value if isinstance(value, list) else [value]):",
+          "                if isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'get_product_details':",
+          "                    raw_args = item['function'].get('arguments', '{}')",
+          "                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args",
+          "                    if not isinstance(args, dict):",
+          "                        raise TypeError('tool arguments must be an object')",
+          "                    product_ids.append(args.get('product_id'))",
+          "            if product_ids:",
+          "                break",
+          "    if not product_ids:",
+          "        print('get_product_details not invoked')",
+          "        return True",
+          "    expected_id = None",
+          "    for prior_index in range(current_step_index - 1, -1, -1):",
+          "        has_list_call = False",
+          "        for sub in steps[prior_index].get('substeps', []):",
+          "            if sub.get('role') != 'assistant':",
+          "                continue",
+          "            text = sub.get('content', '')",
+          "            if not isinstance(text, str):",
+          "                raise TypeError('assistant content must be a string')",
+          "            for pos, char in enumerate(text):",
+          "                if char not in '[{':",
+          "                    continue",
+          "                try:",
+          "                    value, _ = decoder.raw_decode(text[pos:])",
+          "                except json.JSONDecodeError:",
+          "                    continue",
+          "                if any(isinstance(item, dict) and isinstance(item.get('function'), dict) and item['function'].get('name') == 'list_all_product_types' for item in (value if isinstance(value, list) else [value])):",
+          "                    has_list_call = True",
+          "                    break",
+          "            if has_list_call:",
+          "                break",
+          "        if has_list_call:",
+          "            for result_step in steps[prior_index + 1:current_step_index]:",
+          "                for sub in result_step.get('substeps', []):",
+          "                    if sub.get('role') != 'tool':",
+          "                        continue",
+          "                    content = sub.get('content', '')",
+          "                    if not isinstance(content, str):",
+          "                        raise TypeError('tool content must be a string')",
+          "                    data = json.loads(content)",
+          "                    if not isinstance(data, dict):",
+          "                        raise TypeError('product type result must be an object')",
+          "                    expected_id = data.get('T-Shirt')",
+          "                    break",
+          "                if expected_id is not None:",
+          "                    break",
+          "            break",
+          "    matches = isinstance(expected_id, str) and all(product_id == expected_id for product_id in product_ids)",
+          "    print('requested_product_ids=', product_ids, 'listed_tshirt_id=', expected_id, 'matches=', matches)",
+          "    if not matches:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "tshirt_cheapest_available_price_is_minimum",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "ANY",
+      "event_trigger": {
+        "step_index": 21,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "Parse the current tool result's T-Shirt variants and consider only variants marked available. Compute the minimum price among those variants and verify it is 46.66. An unavailable variant must not be counted, and a missing or invalid set of available prices fails the check.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "tshirt_cheapest_available_price_is_minimum",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def tshirt_cheapest_available_price_is_minimum(trajectory, current_step_index):",
+          "    \"\"\"Verify the cheapest available T-Shirt price from the current tool result.\"\"\"",
+          "    import json",
+          "    print('tshirt_cheapest_available_price_is_minimum')",
+          "    step = trajectory['steps'][current_step_index]",
+          "    tool_contents = [sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'tool']",
+          "    if not tool_contents:",
+          "        return False",
+          "    content = tool_contents[-1]",
+          "    if not isinstance(content, str):",
+          "        raise TypeError('tool content must be a string')",
+          "    data = json.loads(content)",
+          "    if not isinstance(data, dict) or not isinstance(data.get('variants'), dict):",
+          "        raise TypeError('product details must contain a variants object')",
+          "    available_prices = []",
+          "    for variant in data['variants'].values():",
+          "        if not isinstance(variant, dict):",
+          "            raise TypeError('each variant must be an object')",
+          "        if variant.get('available') is True:",
+          "            price = variant.get('price')",
+          "            if isinstance(price, bool) or not isinstance(price, (int, float)):",
+          "                raise TypeError('available variant price must be numeric')",
+          "            available_prices.append(price)",
+          "    if not available_prices:",
+          "        return False",
+          "    minimum_price = min(available_prices)",
+          "    print('available_prices=', available_prices, 'minimum_price=', minimum_price)",
+          "    if minimum_price != 46.66:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 23,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "For the current assistant response about the cheapest T-shirt, parse the preceding product-details tool result, compute the minimum price among available variants, and identify that variant's options. Verify the response states that minimum price and names the same color, size, material, and style. If the current response does not make a cheapest-T-shirt claim, pass.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "tshirt_cheapest_variant_claim_matches_tool_data",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def tshirt_cheapest_variant_claim_matches_tool_data(trajectory, current_step_index):",
+          "    \"\"\"Check that the assistant's cheapest T-shirt claim matches product data.\"\"\"",
+          "    import json",
+          "    import re",
+          "    print('tshirt_cheapest_variant_claim_matches_tool_data')",
+          "    step = trajectory['steps'][current_step_index]",
+          "    assistant_text = ' '.join(sub.get('content', '') for sub in step.get('substeps', []) if sub.get('role') == 'assistant')",
+          "    if not isinstance(assistant_text, str):",
+          "        raise TypeError('assistant content must be a string')",
+          "    if not re.search(r'cheapest.{0,40}t-?shirt|t-?shirt.{0,40}cheapest', assistant_text, re.IGNORECASE):",
+          "        print('no cheapest T-shirt claim')",
+          "        return True",
+          "    if current_step_index == 0:",
+          "        return False",
+          "    prior_tool_contents = [sub.get('content', '') for sub in trajectory['steps'][current_step_index - 1].get('substeps', []) if sub.get('role') == 'tool']",
+          "    if not prior_tool_contents:",
+          "        return False",
+          "    data = json.loads(prior_tool_contents[-1])",
+          "    variants = data.get('variants') if isinstance(data, dict) else None",
+          "    if not isinstance(variants, dict):",
+          "        raise TypeError('product details must contain a variants object')",
+          "    available = [v for v in variants.values() if isinstance(v, dict) and v.get('available') is True]",
+          "    if not available:",
+          "        return False",
+          "    cheapest = min(available, key=lambda v: v.get('price'))",
+          "    price = cheapest.get('price')",
+          "    options = cheapest.get('options')",
+          "    if isinstance(price, bool) or not isinstance(price, (int, float)) or not isinstance(options, dict):",
+          "        raise TypeError('cheapest variant must contain a numeric price and options object')",
+          "    stated_prices = [float(value) for value in re.findall(r'\\$\\s*(\\d+(?:\\.\\d{1,2})?)', assistant_text)]",
+          "    text = assistant_text.lower()",
+          "    matches = any(abs(stated - price) < 0.005 for stated in stated_prices) and all(str(options.get(key, '')).lower() in text for key in ('color', 'material', 'style')) and re.search(r'\\bsize\\s+' + re.escape(str(options.get('size', '')).lower()) + r'\\b', text) is not None",
+          "    print('cheapest_price=', price, 'options=', options, 'stated_prices=', stated_prices, 'matches=', matches)",
+          "    if not matches:",
+          "        return False",
+          "    return True"
+        ]
+      },
+      "nl_check": {}
+    }
+  ],
+  "totals": {
+    "prompt_tokens": 473003,
+    "completion_tokens": 6638,
+    "total_tokens": 479648
+  }
+}

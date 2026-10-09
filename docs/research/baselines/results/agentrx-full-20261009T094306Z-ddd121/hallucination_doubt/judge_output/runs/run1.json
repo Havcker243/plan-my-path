@@ -1,0 +1,38 @@
+{
+    "summary": {
+        "model_name": "",
+        "api_version": "2024-12-01-preview",
+        "note": "No ground truth comparison available"
+    },
+    "detailed_results": [
+        {
+            "task_id": "39",
+            "failures": [
+                {
+                    "task_id": "39",
+                    "failure_case": 2,
+                    "description": "The assistant asserted an unverified limitation about what order details contain and used it to dismiss the user's proposed way of finding their address.",
+                    "step_number": 17,
+                    "checklist_reasoning": "The first unsupported decision occurs at step 17. The assistant says order details only reflect the current default address, but no tool output or policy establishes that limitation. It relies on that claim to rule out checking the order details. The earlier request for the new street address was appropriate because the user had only provided a city and ZIP code; no address update was made without the required confirmation."
+                }
+            ],
+            "num_judges": 1,
+            "trajectory_length": 26,
+            "llm_call_telemetry": {
+                "tokens": {
+                    "prompt_tokens": 6292,
+                    "output_tokens": 217,
+                    "total_tokens": 6509
+                },
+                "time": {
+                    "start_time": "2026-10-09T04:48:21.172090",
+                    "end_time": "2026-10-09T04:48:32.726788",
+                    "execution_time_sec": 11.5547
+                },
+                "model_name": "copilot-cli",
+                "instance": "copilot-cli",
+                "llm_call_id": "e98663fe-1a16-4f39-8c40-7dde35d491fb"
+            }
+        }
+    ]
+}

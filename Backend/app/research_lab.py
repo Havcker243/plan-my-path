@@ -36,20 +36,20 @@ ACTIONS = {
     "tau-check": {"label": "τ-bench environment checks", "scope": "Official data validation and retail tool tests; no task score", "paid": False},
     "tau-smoke": {"label": "τ-bench live retail baseline", "scope": "Official task 0, one trial, seed 300; Gemini agent and user", "paid": True},
     "tau-recovery": {"label": "Official-task recovery pilot", "scope": "Released retail task 0; controlled empty-read fault; reference vs selective recovery", "paid": True},
-    "agentrx-full": {"label": "AgentRx full public-sample pipeline", "scope": "One fixed public sample; all official stages; supported provider access required", "paid": True},
+    "agentrx-full": {"label": "AgentRx diagnosis — one public sample", "scope": "All official stages on one saved trace; Copilot automatic model selection; no measured diagnosis accuracy", "paid": True},
     "fisk-case-study": {"label": "Fisk catalog case-study checks", "scope": "Four synthetic records; sourced 2024–2025 rules; unresolved requirements remain flagged", "paid": False},
 }
 
 # Display contracts describe the implemented stage, never the full paper method.
 PROTOCOLS = {
     "agentrx-full": {
-        "category": "Published pipeline · access required", "benchmark": "First lexicographically sorted public AgentRx tau-retail sample",
+        "category": "Published diagnostic pipeline · public-sample pilot", "benchmark": "First lexicographically sorted public AgentRx tau-retail sample",
         "method": "All unchanged official stages: IR, static, dynamic, check, judge, report; Copilot endpoint",
         "data": "One released example; full gated dataset remains unavailable",
         "evaluator": "Official stage outputs and judge report; no locally invented diagnosis accuracy",
-        "design": "One fixed public sample; upstream provider/model defaults; isolated environment; 900s wrapper timeout",
+        "design": "One fixed public sample; clean pinned source; Copilot auto model substitution with text-only requests; isolated environment; 900s wrapper timeout",
         "question": "Can the complete published pipeline execute on a released sample with supported provider access?",
-        "claim": "Runner prepared; access blocked until isolated environment and authenticated Copilot CLI are available. Not reproduced yet.",
+        "claim": "All six stages executed locally on one public sample. No ground-truth comparison or full-dataset accuracy; paper-model results not reproduced.",
     },
     "fisk-case-study": {
         "category": "Source-grounded partial academic audit", "benchmark": "Separate Fisk B.S. Computer Science case study",
@@ -120,7 +120,7 @@ PROTOCOLS = {
 for _action, _protocol in PROTOCOLS.items():
     if _action.startswith("agentrx"):
         _protocol["sources"] = "https://github.com/microsoft/AgentRx/tree/7a18c79708e7671be15124460f4f7296107c2a55 ; https://arxiv.org/abs/2602.02475v2"
-        _protocol["validation_status"] = "Published diagnostic framework; only IR preprocessing completed locally. Full diagnosis remains access-blocked; recovery efficacy is not established."
+        _protocol["validation_status"] = ("All six stages executed on one public sample using Copilot auto; no scored localization accuracy or recovery efficacy." if _action == "agentrx-full" else "Official IR preprocessing completed; this action does not diagnose failures.")
     elif _action.startswith("tau"):
         _protocol["sources"] = "https://github.com/sierra-research/tau2-bench/tree/4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699 ; docs/research/baselines/upstream-lock.json"
         _protocol["validation_status"] = (
@@ -154,8 +154,14 @@ def clean(text: str) -> str:
 
 def readiness(action: str) -> str | None:
     if action == "agentrx-full":
-        if not (ROOT / ".research-upstream/AgentRx/.venv/Scripts/python.exe").exists() or not shutil.which("copilot"):
-            return "Requires isolated AgentRx dependencies and authenticated Copilot CLI; full diagnosis not yet reproduced."
+        if not (ROOT / ".research-upstream/AgentRx/.venv/Scripts/python.exe").exists():
+            return "AgentRx's isolated Python environment is missing."
+        if not (ROOT / ".research-upstream/AgentRx-clean-20261009/run.py").exists():
+            return "The clean pinned AgentRx checkout is missing; preserve local edits and prepare the clean checkout."
+        if not shutil.which("copilot.cmd"):
+            return "GitHub Copilot CLI is not on the backend PATH. Install/sign in, then restart the backend from a fresh terminal."
+        if not (ROOT / "Backend/research/agentrx_copilot_text_only.cmd").exists():
+            return "The AgentRx text-only Copilot wrapper is missing."
         return None
     if action.startswith("tau"):
         if not (ROOT / ".research-upstream/tau-bench/.venv/Scripts/tau2.exe").exists():
@@ -279,13 +285,20 @@ def execute_job(folder: Path, job: dict):
                        "-m", "research.tau_recovery", "--output", str(output)]
         else:
             command = [sys.executable, "-m", "research.official_baselines", action]
+            if action == "agentrx-full":
+                command += ["--endpoint", "copilot", "--checkout", str(ROOT / ".research-upstream/AgentRx-clean-20261009"),
+                            "--python", str(ROOT / ".research-upstream/AgentRx/.venv/Scripts/python.exe")]
         env = os.environ.copy()
         env.update(PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+        if action == "agentrx-full":
+            env.update(AGENT_VERIFY_COPILOT_BIN=str(ROOT / "Backend/research/agentrx_copilot_text_only.cmd"),
+                       AGENT_VERIFY_COPILOT_MODEL="auto", AGENT_VERIFY_COPILOT_TIMEOUT="120")
         job["command"] = command
         job["source_sha256"] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in [ROOT / "Backend/research/benchmark.py", ROOT / "Backend/research/fixtures.py",
                                           ROOT / "Backend/research/agent_recovery_demo.py", ROOT / "Backend/app/agent/state.py",
                                           ROOT / "Backend/research/tau_recovery.py", ROOT / "Backend/research/official_baselines.py",
+                                          ROOT / "Backend/research/agentrx_copilot_text_only.cmd",
                                           ROOT / "Backend/research/fisk_case_study.py", ROOT / "docs/research/fisk-catalog-rules.json",
                                           ROOT / "docs/research/tau-recovery-protocol.json"]}
         process = subprocess.Popen(command, cwd=ROOT / "Backend", env=env, stdout=subprocess.PIPE,

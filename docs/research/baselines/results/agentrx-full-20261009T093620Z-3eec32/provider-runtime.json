@@ -1,0 +1,31 @@
+{
+  "recorded_at": "2026-10-09T09:40:58.575250+00:00",
+  "provider": "GitHub Copilot CLI",
+  "cli_version": "1.0.94",
+  "copilot_model_selection": "auto",
+  "actual_routed_model": "Not captured; no fixed-model reproducibility claim",
+  "provider_preflight": "Exact AGENTRX_PROVIDER_READY response; successful authenticated live request",
+  "upstream_commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+  "clean_checkout": ".research-upstream/AgentRx-clean-20261009",
+  "original_checkout_preserved": "Local removal of claude-opus-4.6 default left intact; clean-checkout guard verified",
+  "runtime_deviations": [
+    "Text-only wrapper disables Copilot tool access, builtin MCPs, custom instructions and auto-update",
+    "Automatic model selection replaces unavailable upstream claude-opus-4.6",
+    "Per-model-call timeout 120 seconds; wrapper outer timeout 900 seconds"
+  ],
+  "wrapper_sha256": "e8315984e2db08c3418aaf2bcfff1a257e5e8f542e3120e927510ab3155f7ba7",
+  "preserved_default_model_failure": "agentrx-full-20261009T093506Z-655e02",
+  "stage_status": "All six stages completed; exit 0",
+  "completed_stages": [
+    "ir",
+    "static",
+    "dynamic",
+    "check",
+    "judge",
+    "report"
+  ],
+  "pipeline_duration_seconds": 314.4,
+  "ground_truth_comparison": false,
+  "predicted_failure_step": 17,
+  "research_lab_integration_tests_passed": 9
+}

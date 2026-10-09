@@ -1,0 +1,1276 @@
+{
+  "trajectory_id": "39",
+  "domain": "tau",
+  "input_path": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx-clean-20261009\\trajectories\\tau-retail\\hallucination_doubt.json",
+  "task_instruction": "You are fatima_taylor_3452, and you just moved from Florida (32169) to Phoenix (85033). Unfortunately your address is still the old one, and you want to update it. Your current address should be in your order, and you do not want to reveal it. Also, you want to know what is the price of the cheapest available t-shirt right now, and if you can order it through the agent. You are a funny person with lots of jokes, and you want to make the agent laugh.",
+  "static_invariants_used": "{\n  \"invariants\": [\n    {\n      \"assertion_name\": \"authenticate_before_retail_data_access\",\n      \"check_hint\": \"When the current assistant event invokes a retail tool other than the two identity-lookup tools, verify that a prior identity lookup was invoked and returned a nonempty result that is not an error. A user-provided user ID alone does not satisfy this requirement. Ignore current events that do not invoke a tool or that invoke an identity-lookup tool.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def authenticate_before_retail_data_access(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require a successful prior identity lookup before other retail tool calls.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('authenticate_before_retail_data_access')\",\n          \"    steps = trajectory['steps']\",\n          \"    current_step = steps[current_step_index]\",\n          \"    identity_tools = {'find_user_id_by_email', 'find_user_id_by_name_zip'}\",\n          \"    current_calls = []\",\n          \"    for substep in current_step.get('substeps', []):\",\n          \"        if substep.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        try:\",\n          \"            payload = json.loads(substep.get('content', ''))\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict):\",\n          \"                current_calls.append(entry['function'].get('name'))\",\n          \"    protected_calls = [name for name in current_calls if name and name not in identity_tools]\",\n          \"    if not protected_calls:\",\n          \"        print('current_calls=', current_calls, 'protected_calls=', protected_calls)\",\n          \"        return True\",\n          \"    authenticated = False\",\n          \"    pending_identity_lookup = False\",\n          \"    for step in steps[:current_step_index + 1]:\",\n          \"        for substep in step.get('substeps', []):\",\n          \"            role = substep.get('role')\",\n          \"            content = substep.get('content', '')\",\n          \"            if role == 'assistant':\",\n          \"                try:\",\n          \"                    payload = json.loads(content)\",\n          \"                except (TypeError, json.JSONDecodeError):\",\n          \"                    continue\",\n          \"                for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"                    if isinstance(entry, dict) and isinstance(entry.get('function'), dict):\",\n          \"                        if entry['function'].get('name') in identity_tools:\",\n          \"                            pending_identity_lookup = True\",\n          \"            elif role == 'tool' and pending_identity_lookup:\",\n          \"                result = str(content).strip()\",\n          \"                if result and not any(marker in result.lower() for marker in ('error:', 'not found', 'failed')):\",\n          \"                    authenticated = True\",\n          \"                pending_identity_lookup = False\",\n          \"    print('current_calls=', current_calls, 'authenticated=', authenticated)\",\n          \"    return authenticated\"\n        ],\n        \"function_name\": \"authenticate_before_retail_data_access\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"IntentPlanMisalignment\"\n      ]\n    },\n    {\n      \"assertion_name\": \"verify_order_status_before_order_action\",\n      \"check_hint\": \"For a current cancel, pending-order modification, return, or exchange tool call, extract its order_id and locate a prior get_order_details call for that same ID followed by a tool result reporting the required status. Cancellation and pending-order modifications require pending; returns and exchanges require delivered. If no relevant action is being called, the assertion passes.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def verify_order_status_before_order_action(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Require a same-order status lookup before cancellation, modification, return, or exchange.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    import re\",\n          \"    print('verify_order_status_before_order_action')\",\n          \"    steps = trajectory['steps']\",\n          \"    current_step = steps[current_step_index]\",\n          \"    action_status = {\",\n          \"        'cancel_pending_order': 'pending',\",\n          \"        'modify_pending_order_address': 'pending',\",\n          \"        'modify_pending_order_items': 'pending',\",\n          \"        'modify_pending_order_payment': 'pending',\",\n          \"        'return_delivered_order_items': 'delivered',\",\n          \"        'exchange_delivered_order_items': 'delivered'\",\n          \"    }\",\n          \"    current_actions = []\",\n          \"    for substep in current_step.get('substeps', []):\",\n          \"        if substep.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        try:\",\n          \"            payload = json.loads(substep.get('content', ''))\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict):\",\n          \"                function = entry['function']\",\n          \"                name = function.get('name')\",\n          \"                if name in action_status:\",\n          \"                    try:\",\n          \"                        args = json.loads(function.get('arguments', '{}'))\",\n          \"                    except (TypeError, json.JSONDecodeError):\",\n          \"                        args = {}\",\n          \"                    current_actions.append((name, args.get('order_id')))\",\n          \"    if not current_actions:\",\n          \"        print('current_actions=', current_actions)\",\n          \"        return True\",\n          \"    events = []\",\n          \"    for step_index, step in enumerate(steps[:current_step_index + 1]):\",\n          \"        for substep in step.get('substeps', []):\",\n          \"            events.append((step_index, substep.get('role'), substep.get('content', '')))\",\n          \"    current_event_start = next((i for i, event in enumerate(events) if event[0] == current_step_index), len(events))\",\n          \"    for name, order_id in current_actions:\",\n          \"        expected_status = action_status[name]\",\n          \"        matching_lookup_positions = []\",\n          \"        for position, (step_index, role, content) in enumerate(events[:current_event_start]):\",\n          \"            if role != 'assistant':\",\n          \"                continue\",\n          \"            try:\",\n          \"                payload = json.loads(content)\",\n          \"            except (TypeError, json.JSONDecodeError):\",\n          \"                continue\",\n          \"            for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"                if not isinstance(entry, dict) or not isinstance(entry.get('function'), dict):\",\n          \"                    continue\",\n          \"                function = entry['function']\",\n          \"                if function.get('name') != 'get_order_details':\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    args = json.loads(function.get('arguments', '{}'))\",\n          \"                except (TypeError, json.JSONDecodeError):\",\n          \"                    continue\",\n          \"                if args.get('order_id') == order_id:\",\n          \"                    matching_lookup_positions.append(position)\",\n          \"        if not matching_lookup_positions:\",\n          \"            print('action=', name, 'order_id=', order_id, 'expected_status=', expected_status, 'lookup_found=', False)\",\n          \"            return False\",\n          \"        lookup_position = matching_lookup_positions[-1]\",\n          \"        found_status = None\",\n          \"        for _, role, content in events[lookup_position + 1:current_event_start]:\",\n          \"            if role != 'tool':\",\n          \"                continue\",\n          \"            try:\",\n          \"                data = json.loads(content)\",\n          \"            except (TypeError, json.JSONDecodeError):\",\n          \"                data = None\",\n          \"            if isinstance(data, dict):\",\n          \"                status = data.get('status')\",\n          \"                if status is None and isinstance(data.get('order_info'), dict):\",\n          \"                    status = data['order_info'].get('status')\",\n          \"                if isinstance(status, str):\",\n          \"                    found_status = status.strip().lower()\",\n          \"            if found_status is None:\",\n          \"                match = re.search(r'\\\\bstatus\\\\b\\\\s*[:=]\\\\s*[\\\\\\\"\\\\']?([a-z][a-z ]*)', str(content), re.IGNORECASE)\",\n          \"                if match:\",\n          \"                    found_status = match.group(1).strip().lower()\",\n          \"        print('action=', name, 'order_id=', order_id, 'expected_status=', expected_status, 'found_status=', found_status)\",\n          \"        if found_status != expected_status:\",\n          \"            return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"verify_order_status_before_order_action\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\"\n      ]\n    },\n    {\n      \"assertion_name\": \"limit_order_modification_and_exchange_calls\",\n      \"check_hint\": \"When the current assistant event invokes an order-modification or exchange tool, compare its order_id with prior calls to those tools. The same order must not have been modified or exchanged previously; the policy permits these tools only once. Calls for other orders do not violate this assertion.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def limit_order_modification_and_exchange_calls(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Prevent repeated modification or exchange tool calls for the same order.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('limit_order_modification_and_exchange_calls')\",\n          \"    steps = trajectory['steps']\",\n          \"    limited_tools = {\",\n          \"        'exchange_delivered_order_items',\",\n          \"        'modify_pending_order_address',\",\n          \"        'modify_pending_order_items',\",\n          \"        'modify_pending_order_payment'\",\n          \"    }\",\n          \"    current_step = steps[current_step_index]\",\n          \"    current_actions = []\",\n          \"    for substep in current_step.get('substeps', []):\",\n          \"        if substep.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        try:\",\n          \"            payload = json.loads(substep.get('content', ''))\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict):\",\n          \"                function = entry['function']\",\n          \"                if function.get('name') in limited_tools:\",\n          \"                    try:\",\n          \"                        args = json.loads(function.get('arguments', '{}'))\",\n          \"                    except (TypeError, json.JSONDecodeError):\",\n          \"                        args = {}\",\n          \"                    current_actions.append((function.get('name'), args.get('order_id')))\",\n          \"    if not current_actions:\",\n          \"        print('current_actions=', current_actions)\",\n          \"        return True\",\n          \"    prior_order_ids = set()\",\n          \"    for step in steps[:current_step_index]:\",\n          \"        for substep in step.get('substeps', []):\",\n          \"            if substep.get('role') != 'assistant':\",\n          \"                continue\",\n          \"            try:\",\n          \"                payload = json.loads(substep.get('content', ''))\",\n          \"            except (TypeError, json.JSONDecodeError):\",\n          \"                continue\",\n          \"            for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"                if not isinstance(entry, dict) or not isinstance(entry.get('function'), dict):\",\n          \"                    continue\",\n          \"                function = entry['function']\",\n          \"                if function.get('name') not in limited_tools:\",\n          \"                    continue\",\n          \"                try:\",\n          \"                    args = json.loads(function.get('arguments', '{}'))\",\n          \"                except (TypeError, json.JSONDecodeError):\",\n          \"                    continue\",\n          \"                prior_order_ids.add(args.get('order_id'))\",\n          \"    print('current_actions=', current_actions, 'prior_order_ids=', prior_order_ids)\",\n          \"    return all(order_id not in prior_order_ids for _, order_id in current_actions)\"\n        ],\n        \"function_name\": \"limit_order_modification_and_exchange_calls\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\"\n      ]\n    },\n    {\n      \"assertion_name\": \"one_tool_call_per_assistant_turn\",\n      \"check_hint\": \"Inspect the current step's assistant substeps for serialized function-call payloads. There must be no more than one function call in the step, and an assistant step containing a tool call must not also contain a separate user-facing assistant response. Ignore assistant steps with no tool call.\",\n      \"check_type\": \"python_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"PROTOCOL\",\n      \"nl_check\": {},\n      \"python_check\": {\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def one_tool_call_per_assistant_turn(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Enforce one tool call at a time and no simultaneous user-facing response.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('one_tool_call_per_assistant_turn')\",\n          \"    steps = trajectory['steps']\",\n          \"    assistant_messages = []\",\n          \"    calls = []\",\n          \"    for substep in steps[current_step_index].get('substeps', []):\",\n          \"        if substep.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        content = substep.get('content', '')\",\n          \"        assistant_messages.append(content)\",\n          \"        try:\",\n          \"            payload = json.loads(content)\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict):\",\n          \"                calls.append(entry['function'].get('name'))\",\n          \"    has_tool_call = bool(calls)\",\n          \"    non_call_messages = []\",\n          \"    for content in assistant_messages:\",\n          \"        try:\",\n          \"            payload = json.loads(content)\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            if str(content).strip():\",\n          \"                non_call_messages.append(content)\",\n          \"            continue\",\n          \"        entries = payload if isinstance(payload, list) else [payload]\",\n          \"        if not any(isinstance(entry, dict) and isinstance(entry.get('function'), dict) for entry in entries) and str(content).strip():\",\n          \"            non_call_messages.append(content)\",\n          \"    print('calls=', calls, 'non_call_messages=', len(non_call_messages))\",\n          \"    if len(calls) > 1:\",\n          \"        return False\",\n          \"    if has_tool_call and non_call_messages:\",\n          \"        return False\",\n          \"    return True\"\n        ],\n        \"function_name\": \"one_tool_call_per_assistant_turn\"\n      },\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\"\n      ]\n    },\n    {\n      \"assertion_name\": \"confirm_consequential_action_with_user\",\n      \"check_hint\": \"Evaluate this assertion only when the current event invokes a cancel, modify, return, or exchange tool. Require an earlier assistant message that clearly states the action and its material details, followed by an explicit user confirmation before the tool call; the confirmation must apply to that action and target. A request to perform the action, silence, or ambiguous assent is not explicit confirmation.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"TEMPORAL\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The current assistant tool-call event—identify the consequential operation and its target and parameters. (2) The immediately prior user message—check whether it explicitly confirms proceeding, rather than merely requesting the action or expressing ambiguity. (3) The most recent assistant message before that confirmation—verify it specified the same action and relevant target and details. These events establish that confirmation is informed and matches the operation being invoked.\",\n        \"judge_rubric\": [\n          \"The assistant clearly described the specific consequential action and its relevant target and material details before the user confirmation.\",\n          \"A user message after that description and before the current tool call explicitly confirms proceeding with that action.\",\n          \"The action, target, and material details in the current tool call are consistent with what the user confirmed.\"\n        ],\n        \"judge_scope_notes\": \"Judge only the current consequential tool invocation and prior events in the supplied window. Consequential actions are cancellation, order or address modification, return, and exchange. A user request by itself is not confirmation; require a distinct explicit user affirmation after the assistant has described the action and relevant details.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nEvaluate whether the current consequential tool call is preceded by a clear description of the action and its material details, followed by explicit user confirmation to proceed. Compare the target order or user and the described action with the current tool call. If the current event is not a consequential database update, mark the criterion UNCLEAR.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"IntentPlanMisalignment\"\n      ]\n    },\n    {\n      \"assertion_name\": \"enforce_order_action_business_constraints\",\n      \"check_hint\": \"Evaluate the current order action against the policy and evidence available in prior tool results and user messages. Check action-specific constraints: cancellation requires the permitted reason and user-confirmed order; returns require delivered status, confirmed items, and a permitted refund method; item modifications or exchanges must use available variants of the same product with different options, collect all intended items before the one-time call, and handle any price difference with an eligible payment method. Do not fail when the trajectory lacks enough evidence to determine a constraint.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"CAPABILITY\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The current assistant tool-call event—identify the operation, order_id, item IDs, replacement item IDs, reason, and payment-related arguments actually present. (2) The most recent get_order_details result for the same order—check its reported status and items. (3) The most recent relevant get_product_details result for the affected products—compare product identity, availability, and options for replacements when these facts are present. (4) The immediately prior user confirmation and the assistant message just before it—check the confirmed item list, payment/refund choice, and whether all intended items were collected.\",\n        \"judge_rubric\": [\n          \"If the current operation is cancellation, its reason is one of the policy-permitted reasons: 'no longer needed' or 'ordered by mistake'.\",\n          \"If the current operation is a return, the order is reported delivered, the user confirmed the returned items, and the refund method is the original payment method or an existing gift card.\",\n          \"If the current operation modifies or exchanges items, each replacement is an available item of the same product with a different option from the original item; the call includes the items the user said to change, with no clearly omitted requested items.\",\n          \"If an item modification or exchange creates a price difference, the user provided a payment method to settle it; if a gift card is used, available evidence shows it can cover the difference.\",\n          \"If evidence for an applicable constraint clearly shows a violation, fail; missing or ambiguous evidence about that constraint is UNCLEAR rather than a violation.\"\n        ],\n        \"judge_scope_notes\": \"Scope is the current assistant order-action invocation and relevant earlier user confirmations, assistant descriptions, and tool results for the same order and items. Check only applicable rules: cancellation reason must be 'no longer needed' or 'ordered by mistake'; returns require delivered status, confirmed return items, and refund to the original payment method or an existing gift card; item modifications and exchanges require same-product variants that are available and differ in option, collect all intended items before the one-time call, and use an appropriate payment method for price differences. Gift-card payment for a price difference requires sufficient balance when that evidence is available. Do not infer unsupported details.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are UNCLEAR or CLEAR_PASS after discarding them, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nEvaluate the current order-action tool call against the applicable Retail policies using only the event evidence. Apply only criteria relevant to this operation; mark unrelated or unevidenced criteria UNCLEAR. Do not assume a tool argument or result field that is not present in the events.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence  \\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when you have CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"Instruction/PlanAdherenceFailure\",\n        \"InvalidInvocation\",\n        \"MisinterpretationOfToolOutput\"\n      ]\n    },\n    {\n      \"assertion_name\": \"follow_user_task_instruction\",\n      \"check_hint\": \"Compare the assistant's current response or tool call with the user's overall task instruction and the conversation context. Judge semantic alignment rather than exact wording: verify that the agent addresses the requested in-scope task, respects the user's stated constraints, and does not silently substitute an unrelated action. Missing or genuinely ambiguous intent is UNCLEAR and must not cause failure.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"ANY\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The task instruction—identify the requested outcome and explicit constraints that apply. (2) The most recent user message before the current event—identify the immediate request, target, and any limits or confirmation. (3) The current assistant event—compare its response or tool action with that request and the applicable Retail policy. If the current action depends on earlier context, inspect the most recent relevant assistant and tool-result events to verify the target and facts.\",\n        \"judge_rubric\": [\n          \"The current assistant event addresses the user's explicit task or a necessary in-scope step toward completing it, rather than pursuing a clearly unrelated objective.\",\n          \"The current assistant event does not clearly contradict an explicit user constraint or the Retail policy.\",\n          \"The assistant does not execute an action that the user explicitly rejected, withheld confirmation for, or limited to a different target.\"\n        ],\n        \"judge_scope_notes\": \"Judge the current assistant event against the overall task instruction and relevant earlier user messages and tool outputs in the supplied window. Consider whether the assistant pursues the requested in-scope user task, respects explicit constraints, and avoids performing a different or unsupported action. Tasks outside the available tools' capabilities may be declined; lack of evidence or underspecified intent is not by itself a violation.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are marked UNCLEAR or CLEAR_PASS after discarding UNCLEAR ones, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nDetermine whether the current assistant event is aligned with the user's task instruction and the Retail policy. Evaluate only requests and constraints that are explicit in the instruction and available conversation context; do not treat unrelated humor or incidental wording as a separate task.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence\\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when there is CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"IntentPlanMisalignment\",\n        \"Instruction/PlanAdherenceFailure\",\n        \"UnderspecifiedUserIntent\"\n      ]\n    },\n    {\n      \"assertion_name\": \"ground_retail_claims_in_available_evidence\",\n      \"check_hint\": \"For an assistant response that states a factual claim about a user's profile, order, products, policy, or tool capability, compare the claim with prior user-provided information, applicable policy text, and relevant tool outputs in the trajectory. Fail only for a clear unsupported or contradicted claim; subjective recommendations and ambiguity should not be treated as factual invention.\",\n      \"check_type\": \"nl_check\",\n      \"event_trigger\": {\n        \"role_name\": \"assistant\",\n        \"step_index\": 1\n      },\n      \"invariant_type\": \"PROVENANCE\",\n      \"nl_check\": {\n        \"focus_steps_instruction\": \"Focus on: (1) The current assistant response—identify its concrete factual claims about the user's profile, order, product, policy, or available actions. (2) The most recent relevant tool result before the response—check the actual fields or facts it reports. (3) The immediately prior user message and the overall task instruction—check facts supplied by the user and constraints that apply. Compare each material claim only against these available sources.\",\n        \"judge_rubric\": [\n          \"The current assistant response does not assert a concrete fact that is clearly contradicted by prior user-provided information, the Retail policy, or a relevant tool result.\",\n          \"Material factual claims in the current assistant response have support in the prior user messages, applicable policy text, or relevant tool outputs; when support cannot be determined from the available events, mark UNCLEAR.\"\n        ],\n        \"judge_scope_notes\": \"Scope is the current assistant response and prior events in the supplied window that can substantiate its claims, including relevant tool results and the provided Retail policy. Check only claims about profile, orders, products, operational policy, and tool capabilities. A clear contradiction of available evidence is a violation; unavailable evidence is UNCLEAR.\",\n        \"judge_system_prompt_template\": \"You are a strict compliance judge. Evaluate only with evidence in the provided events and the policy text.\\nDo not infer intent beyond explicit statements.\\nCRITICAL: If required evidence is missing or ambiguous, mark the criterion as UNCLEAR.\\nWhen criteria are marked as UNCLEAR, they are discarded and do NOT contribute to a fail verdict.\\nIf all criteria are marked UNCLEAR or CLEAR_PASS after discarding them, the final verdict is PASS.\\nOnly mark as CLEAR_FAIL when there is definitive, unambiguous evidence of violation.\\nAmbiguity or missing evidence leads to PASS, not FAIL.\",\n        \"judge_user_prompt_template\": \"TASK INSTRUCTION:\\n{TASK_INSTRUCTION}\\n\\nCURRENT EVENT:\\n{CURRENT_EVENT_JSON}\\n\\nCONTEXT WINDOW EVENTS:\\n{WINDOW_EVENTS_JSON}\\n\\nEvaluate whether factual claims in the current assistant response are grounded in the available prior user messages, policy text, or relevant tool outputs. Do not fail for a claim that is not factual, is clearly framed as uncertainty, or cannot be judged from the available evidence.\",\n        \"output_format_template\": \"Output Format:\\nYou MUST return a JSON response with this EXACT structure:\\n{\\n  \\\"verdict\\\": \\\"pass\\\" or \\\"fail\\\",\\n  \\\"rubric_results\\\": [\\n    {\\n      \\\"criterion_index\\\": 0,\\n      \\\"criterion\\\": \\\"full text of the criterion from the rubric\\\",\\n      \\\"evaluation\\\": \\\"CLEAR_PASS\\\" or \\\"CLEAR_FAIL\\\" or \\\"UNCLEAR\\\",\\n      \\\"reasoning\\\": \\\"detailed explanation of why this evaluation was chosen, citing specific evidence from events\\\"\\n    }\\n  ],\\n  \\\"final_reasoning\\\": \\\"explanation of how the verdict was determined from rubric_results, stating which criteria were discarded as UNCLEAR and which criteria drove the final decision\\\"\\n}\",\n        \"rubric_evaluation_algorithm_template\": \"Rubric Evaluation Algorithm:\\nStep 1: For each criterion in the rubric, evaluate whether it can be CLEARLY judged as PASS or FAIL based solely on the provided events.\\n- Mark as CLEAR_PASS if the criterion is demonstrably satisfied by the evidence\\n- Mark as CLEAR_FAIL if the criterion is demonstrably violated by the evidence\\n- Mark as UNCLEAR if: insufficient events to judge, criterion is ambiguous in this context, or pass/fail cannot be decisively determined\\n\\nStep 2: Discard ALL criteria marked as UNCLEAR from consideration.\\n\\nStep 3: Determine final verdict:\\n- If ANY remaining criterion is CLEAR_FAIL → return verdict 'fail'\\n- If ALL remaining criteria are CLEAR_PASS (or no criteria remain after discarding UNCLEAR) → return verdict 'pass'\\n\\nImportant: Only fail when there is CLEAR evidence of failure. When in doubt, mark as UNCLEAR and discard.\"\n      },\n      \"python_check\": {},\n      \"taxonomy_targets\": [\n        \"InventionOfNewInformation\",\n        \"MisinterpretationOfToolOutput\"\n      ]\n    }\n  ]\n}",
+  "per_step_outputs": [
+    {
+      "step_num": 1,
+      "raw_model_text": "{\"step_num\":1,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 1,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "b1f5483e-f474-480e-91e0-2af0a56b0b50",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17749,
+          "output_tokens": 22,
+          "total_tokens": 17771
+        },
+        "time": {
+          "start_time": "2026-10-09T04:37:52",
+          "end_time": "2026-10-09T04:37:58",
+          "execution_time_sec": 5.9447
+        }
+      }
+    },
+    {
+      "step_num": 2,
+      "raw_model_text": "{\"step_num\":2,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 2,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "2ece8562-ae68-46ca-aee8-93652d44ee24",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17800,
+          "output_tokens": 22,
+          "total_tokens": 17822
+        },
+        "time": {
+          "start_time": "2026-10-09T04:37:58",
+          "end_time": "2026-10-09T04:38:04",
+          "execution_time_sec": 5.9926
+        }
+      }
+    },
+    {
+      "step_num": 3,
+      "raw_model_text": "{\"step_num\":3,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 3,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4d7c9f53-ef39-41ca-8e79-56bdd140ff6a",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17863,
+          "output_tokens": 22,
+          "total_tokens": 17885
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:04",
+          "end_time": "2026-10-09T04:38:10",
+          "execution_time_sec": 5.8141
+        }
+      }
+    },
+    {
+      "step_num": 4,
+      "raw_model_text": "{\"step_num\":4,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 4,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "4e68a0f1-6c74-4dd0-a88d-761b7776bd1a",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17926,
+          "output_tokens": 22,
+          "total_tokens": 17948
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:10",
+          "end_time": "2026-10-09T04:38:16",
+          "execution_time_sec": 5.7484
+        }
+      }
+    },
+    {
+      "step_num": 5,
+      "raw_model_text": "{\"step_num\":5,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 5,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "34c6dcc2-53db-4885-8d67-6220b1892d8f",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17981,
+          "output_tokens": 22,
+          "total_tokens": 18003
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:16",
+          "end_time": "2026-10-09T04:38:20",
+          "execution_time_sec": 4.5754
+        }
+      }
+    },
+    {
+      "step_num": 6,
+      "raw_model_text": "{\"step_num\":6,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 6,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "deb66963-7e87-47b8-991e-61cf4ab9ec49",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 17989,
+          "output_tokens": 22,
+          "total_tokens": 18011
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:20",
+          "end_time": "2026-10-09T04:38:27",
+          "execution_time_sec": 6.5121
+        }
+      }
+    },
+    {
+      "step_num": 7,
+      "raw_model_text": "{\"step_num\":7,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 7,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "1c8fab24-1aef-4e54-a7af-cdf87e964880",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18050,
+          "output_tokens": 22,
+          "total_tokens": 18072
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:27",
+          "end_time": "2026-10-09T04:38:32",
+          "execution_time_sec": 4.9481
+        }
+      }
+    },
+    {
+      "step_num": 8,
+      "raw_model_text": "{\"step_num\":8,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 8,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "471f818e-96d8-474c-aae2-8508633e7685",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18108,
+          "output_tokens": 22,
+          "total_tokens": 18130
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:32",
+          "end_time": "2026-10-09T04:38:36",
+          "execution_time_sec": 4.4587
+        }
+      }
+    },
+    {
+      "step_num": 9,
+      "raw_model_text": "{\"step_num\":9,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 9,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "3fa08ea8-5445-46e0-994a-982b0dc755e0",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18170,
+          "output_tokens": 22,
+          "total_tokens": 18192
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:36",
+          "end_time": "2026-10-09T04:38:42",
+          "execution_time_sec": 6.0202
+        }
+      }
+    },
+    {
+      "step_num": 10,
+      "raw_model_text": "{\"step_num\":10,\"decision\":\"INVARIANT\",\"invariant\":[{\"assertion_name\":\"verify_authenticated_user_id_matches_task_identity\",\"taxonomy_targets\":[\"MisinterpretationOfToolOutput\",\"InventionOfNewInformation\"],\"invariant_type\":\"PROVENANCE\",\"event_trigger\":{\"step_index\":10,\"substep_index\":\"*\",\"role_name\":\"tool\"},\"check_hint\":\"Verify that the current tool result for the name-and-zip identity lookup returns the user ID specified by the task instruction, fatima_taylor_3452. A different or missing returned ID fails this assertion.\",\"check_type\":\"python_check\",\"python_check\":{\"function_name\":\"verify_authenticated_user_id_matches_task_identity\",\"args\":[\"trajectory\",\"current_step_index\"],\"code_lines\":[\"def verify_authenticated_user_id_matches_task_identity(trajectory, current_step_index):\",\"    \\\"\\\"\\\"Verify the identity lookup returned the user ID specified by the task.\\\"\\\"\\\"\",\"    print('verify_authenticated_user_id_matches_task_identity')\",\"    tool_results = [str(substep.get('content', '')).strip() for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']\",\"    print('tool_results=', tool_results)\",\"    if not tool_results:\",\"        return False\",\"    return any(result == 'fatima_taylor_3452' for result in tool_results)\"]},\"nl_check\":{}}],\"trigger_to_invariants_map\":{\"tool\":[\"verify_authenticated_user_id_matches_task_identity\"]}}",
+      "parsed": {
+        "step_num": 10,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "verify_authenticated_user_id_matches_task_identity",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput",
+              "InventionOfNewInformation"
+            ],
+            "invariant_type": "PROVENANCE",
+            "event_trigger": {
+              "step_index": 10,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "Verify that the current tool result for the name-and-zip identity lookup returns the user ID specified by the task instruction, fatima_taylor_3452. A different or missing returned ID fails this assertion.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "verify_authenticated_user_id_matches_task_identity",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def verify_authenticated_user_id_matches_task_identity(trajectory, current_step_index):",
+                "    \"\"\"Verify the identity lookup returned the user ID specified by the task.\"\"\"",
+                "    print('verify_authenticated_user_id_matches_task_identity')",
+                "    tool_results = [str(substep.get('content', '')).strip() for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+                "    print('tool_results=', tool_results)",
+                "    if not tool_results:",
+                "        return False",
+                "    return any(result == 'fatima_taylor_3452' for result in tool_results)"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "tool": [
+            "verify_authenticated_user_id_matches_task_identity"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "8d620e6c-3b3c-43c8-acf6-344abb5be00b",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18178,
+          "output_tokens": 347,
+          "total_tokens": 18525
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:42",
+          "end_time": "2026-10-09T04:38:56",
+          "execution_time_sec": 13.4355
+        }
+      }
+    },
+    {
+      "step_num": 11,
+      "raw_model_text": "{\"step_num\":11,\"decision\":\"INVARIANT\",\"invariant\":[{\"assertion_name\":\"get_user_details_uses_authenticated_user_id\",\"taxonomy_targets\":[\"MisinterpretationOfToolOutput\"],\"invariant_type\":\"RELATIONAL_POST\",\"event_trigger\":{\"step_index\":11,\"substep_index\":\"*\",\"role_name\":\"assistant\"},\"check_hint\":\"For the current get_user_details call, compare its user_id argument with the user ID returned by the prior name-and-zip identity lookup. The assertion passes only when the IDs match exactly.\",\"check_type\":\"python_check\",\"python_check\":{\"function_name\":\"get_user_details_uses_authenticated_user_id\",\"args\":[\"trajectory\",\"current_step_index\"],\"code_lines\":[\"def get_user_details_uses_authenticated_user_id(trajectory, current_step_index):\",\"    \\\"\\\"\\\"Ensure get_user_details uses the ID returned by identity lookup.\\\"\\\"\\\"\",\"    import json\",\"    print('get_user_details_uses_authenticated_user_id')\",\"    steps = trajectory['steps']\",\"    current_calls = []\",\"    for substep in steps[current_step_index].get('substeps', []):\",\"        if substep.get('role') != 'assistant':\",\"            continue\",\"        try:\",\"            payload = json.loads(substep.get('content', ''))\",\"        except (TypeError, json.JSONDecodeError):\",\"            continue\",\"        for entry in payload if isinstance(payload, list) else [payload]:\",\"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_user_details':\",\"                try:\",\"                    args = json.loads(entry['function'].get('arguments', '{}'))\",\"                except (TypeError, json.JSONDecodeError):\",\"                    args = {}\",\"                current_calls.append(args.get('user_id'))\",\"    if not current_calls:\",\"        print('current_calls=', current_calls)\",\"        return True\",\"    authenticated_ids = [str(substep.get('content', '')).strip() for step in steps[:current_step_index] for substep in step.get('substeps', []) if substep.get('role') == 'tool' and str(substep.get('content', '')).strip() == 'fatima_taylor_3452']\",\"    print('current_user_ids=', current_calls, 'authenticated_ids=', authenticated_ids)\",\"    return bool(authenticated_ids) and all(user_id == authenticated_ids[-1] for user_id in current_calls)\"]},\"nl_check\":{}}],\"trigger_to_invariants_map\":{\"agent:assistant\":[\"get_user_details_uses_authenticated_user_id\"]}}",
+      "parsed": {
+        "step_num": 11,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "get_user_details_uses_authenticated_user_id",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 11,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "For the current get_user_details call, compare its user_id argument with the user ID returned by the prior name-and-zip identity lookup. The assertion passes only when the IDs match exactly.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "get_user_details_uses_authenticated_user_id",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def get_user_details_uses_authenticated_user_id(trajectory, current_step_index):",
+                "    \"\"\"Ensure get_user_details uses the ID returned by identity lookup.\"\"\"",
+                "    import json",
+                "    print('get_user_details_uses_authenticated_user_id')",
+                "    steps = trajectory['steps']",
+                "    current_calls = []",
+                "    for substep in steps[current_step_index].get('substeps', []):",
+                "        if substep.get('role') != 'assistant':",
+                "            continue",
+                "        try:",
+                "            payload = json.loads(substep.get('content', ''))",
+                "        except (TypeError, json.JSONDecodeError):",
+                "            continue",
+                "        for entry in payload if isinstance(payload, list) else [payload]:",
+                "            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_user_details':",
+                "                try:",
+                "                    args = json.loads(entry['function'].get('arguments', '{}'))",
+                "                except (TypeError, json.JSONDecodeError):",
+                "                    args = {}",
+                "                current_calls.append(args.get('user_id'))",
+                "    if not current_calls:",
+                "        print('current_calls=', current_calls)",
+                "        return True",
+                "    authenticated_ids = [str(substep.get('content', '')).strip() for step in steps[:current_step_index] for substep in step.get('substeps', []) if substep.get('role') == 'tool' and str(substep.get('content', '')).strip() == 'fatima_taylor_3452']",
+                "    print('current_user_ids=', current_calls, 'authenticated_ids=', authenticated_ids)",
+                "    return bool(authenticated_ids) and all(user_id == authenticated_ids[-1] for user_id in current_calls)"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:assistant": [
+            "get_user_details_uses_authenticated_user_id"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "18879097-3e66-434b-8759-31ded3891cf8",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 18600,
+          "output_tokens": 594,
+          "total_tokens": 19194
+        },
+        "time": {
+          "start_time": "2026-10-09T04:38:56",
+          "end_time": "2026-10-09T04:39:11",
+          "execution_time_sec": 14.9739
+        }
+      }
+    },
+    {
+      "step_num": 12,
+      "raw_model_text": "{\n  \"step_num\": 12,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"verify_profile_address_matches_previous_zip\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 12,\n        \"substep_index\": \"*\",\n        \"role_name\": \"tool\"\n      },\n      \"check_hint\": \"Parse the current tool result and compare the returned profile address ZIP code with the old ZIP code, 32169, specified by the user earlier. The assertion passes only if a profile address is present and its zip field is exactly 32169.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"verify_profile_address_matches_previous_zip\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def verify_profile_address_matches_previous_zip(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Verify the returned profile address matches the user's stated old ZIP code.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('verify_profile_address_matches_previous_zip')\",\n          \"    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']\",\n          \"    print('tool_results=', tool_results)\",\n          \"    if not tool_results:\",\n          \"        return False\",\n          \"    for content in tool_results:\",\n          \"        try:\",\n          \"            data = json.loads(content)\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        address = data.get('address') if isinstance(data, dict) else None\",\n          \"        zip_code = address.get('zip') if isinstance(address, dict) else None\",\n          \"        print('zip_code=', zip_code)\",\n          \"        if zip_code == '32169':\",\n          \"            return True\",\n          \"    return False\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"tool\": [\n      \"verify_profile_address_matches_previous_zip\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 12,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "verify_profile_address_matches_previous_zip",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 12,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "Parse the current tool result and compare the returned profile address ZIP code with the old ZIP code, 32169, specified by the user earlier. The assertion passes only if a profile address is present and its zip field is exactly 32169.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "verify_profile_address_matches_previous_zip",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def verify_profile_address_matches_previous_zip(trajectory, current_step_index):",
+                "    \"\"\"Verify the returned profile address matches the user's stated old ZIP code.\"\"\"",
+                "    import json",
+                "    print('verify_profile_address_matches_previous_zip')",
+                "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+                "    print('tool_results=', tool_results)",
+                "    if not tool_results:",
+                "        return False",
+                "    for content in tool_results:",
+                "        try:",
+                "            data = json.loads(content)",
+                "        except (TypeError, json.JSONDecodeError):",
+                "            continue",
+                "        address = data.get('address') if isinstance(data, dict) else None",
+                "        zip_code = address.get('zip') if isinstance(address, dict) else None",
+                "        print('zip_code=', zip_code)",
+                "        if zip_code == '32169':",
+                "            return True",
+                "    return False"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "tool": [
+            "verify_profile_address_matches_previous_zip"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "a4483859-ed2e-4dcd-a771-a305797caee9",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 19383,
+          "output_tokens": 547,
+          "total_tokens": 19930
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:11",
+          "end_time": "2026-10-09T04:39:24",
+          "execution_time_sec": 13.7076
+        }
+      }
+    },
+    {
+      "step_num": 13,
+      "raw_model_text": "{\"step_num\":13,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 13,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "99574bd4-479b-429b-8334-86eeb67dd19b",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 19930,
+          "output_tokens": 22,
+          "total_tokens": 19952
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:24",
+          "end_time": "2026-10-09T04:39:32",
+          "execution_time_sec": 7.452
+        }
+      }
+    },
+    {
+      "step_num": 14,
+      "raw_model_text": "{\"step_num\":14,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 14,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "c92c9b73-8862-4f62-a007-09b719cf98df",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 19993,
+          "output_tokens": 22,
+          "total_tokens": 20016
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:32",
+          "end_time": "2026-10-09T04:39:43",
+          "execution_time_sec": 11.143
+        }
+      }
+    },
+    {
+      "step_num": 15,
+      "raw_model_text": "{\"step_num\":15,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 15,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "6ff873c3-3081-499b-b211-97ad06ae9378",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20089,
+          "output_tokens": 22,
+          "total_tokens": 20111
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:43",
+          "end_time": "2026-10-09T04:39:50",
+          "execution_time_sec": 7.0801
+        }
+      }
+    },
+    {
+      "step_num": 16,
+      "raw_model_text": "{\n  \"step_num\": 16,\n  \"decision\": \"NO_INVARIANT\",\n  \"invariant\": null,\n  \"trigger_to_invariants_map\": {}\n}",
+      "parsed": {
+        "step_num": 16,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "0ae34617-480a-4c5f-bf45-52a4466b96d2",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20168,
+          "output_tokens": 26,
+          "total_tokens": 20194
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:50",
+          "end_time": "2026-10-09T04:39:58",
+          "execution_time_sec": 8.2028
+        }
+      }
+    },
+    {
+      "step_num": 17,
+      "raw_model_text": "{\"step_num\":17,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 17,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "ae8370b9-6933-4a54-8527-c424c9dde4ec",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20229,
+          "output_tokens": 22,
+          "total_tokens": 20252
+        },
+        "time": {
+          "start_time": "2026-10-09T04:39:58",
+          "end_time": "2026-10-09T04:40:06",
+          "execution_time_sec": 7.494
+        }
+      }
+    },
+    {
+      "step_num": 18,
+      "raw_model_text": "{\"step_num\":18,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 18,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "c8a9440d-5f0e-4764-a7a9-a7621c9a51c0",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20305,
+          "output_tokens": 22,
+          "total_tokens": 20327
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:06",
+          "end_time": "2026-10-09T04:40:12",
+          "execution_time_sec": 5.8183
+        }
+      }
+    },
+    {
+      "step_num": 19,
+      "raw_model_text": "{\"step_num\":19,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 19,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "91baa2eb-9bdc-43d9-a5bf-dc9bbb3e3f5e",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20350,
+          "output_tokens": 22,
+          "total_tokens": 20372
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:12",
+          "end_time": "2026-10-09T04:40:18",
+          "execution_time_sec": 6.2206
+        }
+      }
+    },
+    {
+      "step_num": 20,
+      "raw_model_text": "{\n  \"step_num\": 20,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"verify_catalog_contains_t_shirt_product\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\"\n      ],\n      \"invariant_type\": \"SCHEMA\",\n      \"event_trigger\": {\n        \"step_index\": 20,\n        \"substep_index\": \"*\",\n        \"role_name\": \"tool\"\n      },\n      \"check_hint\": \"Parse the current tool result as a JSON object and verify it contains a T-Shirt entry mapped to a nonempty product ID. Return false if no current tool result provides this mapping.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"verify_catalog_contains_t_shirt_product\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def verify_catalog_contains_t_shirt_product(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Verify the catalog result provides a product ID for T-Shirt.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('verify_catalog_contains_t_shirt_product')\",\n          \"    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']\",\n          \"    print('tool_results=', tool_results)\",\n          \"    for content in tool_results:\",\n          \"        try:\",\n          \"            data = json.loads(content)\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        product_id = data.get('T-Shirt') if isinstance(data, dict) else None\",\n          \"        print('t_shirt_product_id=', product_id)\",\n          \"        if isinstance(product_id, str) and product_id.strip():\",\n          \"            return True\",\n          \"    return False\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"agent:tool\": [\n      \"verify_catalog_contains_t_shirt_product\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 20,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "verify_catalog_contains_t_shirt_product",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "SCHEMA",
+            "event_trigger": {
+              "step_index": 20,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "Parse the current tool result as a JSON object and verify it contains a T-Shirt entry mapped to a nonempty product ID. Return false if no current tool result provides this mapping.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "verify_catalog_contains_t_shirt_product",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def verify_catalog_contains_t_shirt_product(trajectory, current_step_index):",
+                "    \"\"\"Verify the catalog result provides a product ID for T-Shirt.\"\"\"",
+                "    import json",
+                "    print('verify_catalog_contains_t_shirt_product')",
+                "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+                "    print('tool_results=', tool_results)",
+                "    for content in tool_results:",
+                "        try:",
+                "            data = json.loads(content)",
+                "        except (TypeError, json.JSONDecodeError):",
+                "            continue",
+                "        product_id = data.get('T-Shirt') if isinstance(data, dict) else None",
+                "        print('t_shirt_product_id=', product_id)",
+                "        if isinstance(product_id, str) and product_id.strip():",
+                "            return True",
+                "    return False"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:tool": [
+            "verify_catalog_contains_t_shirt_product"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "29d9a8ec-2125-4724-ba66-8d2a02583059",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 20748,
+          "output_tokens": 495,
+          "total_tokens": 21243
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:18",
+          "end_time": "2026-10-09T04:40:29",
+          "execution_time_sec": 10.7758
+        }
+      }
+    },
+    {
+      "step_num": 21,
+      "raw_model_text": "{\n  \"step_num\": 21,\n  \"decision\": \"INVARIANT\",\n  \"invariant\": [\n    {\n      \"assertion_name\": \"get_t_shirt_details_uses_catalog_product_id\",\n      \"taxonomy_targets\": [\n        \"MisinterpretationOfToolOutput\"\n      ],\n      \"invariant_type\": \"RELATIONAL_POST\",\n      \"event_trigger\": {\n        \"step_index\": 21,\n        \"substep_index\": \"*\",\n        \"role_name\": \"assistant\"\n      },\n      \"check_hint\": \"When the current assistant step calls get_product_details, verify that its product_id exactly matches the T-Shirt product ID returned by the earlier list_all_product_types tool result. If there is no get_product_details call in the current step, the assertion passes.\",\n      \"check_type\": \"python_check\",\n      \"python_check\": {\n        \"function_name\": \"get_t_shirt_details_uses_catalog_product_id\",\n        \"args\": [\n          \"trajectory\",\n          \"current_step_index\"\n        ],\n        \"code_lines\": [\n          \"def get_t_shirt_details_uses_catalog_product_id(trajectory, current_step_index):\",\n          \"    \\\"\\\"\\\"Ensure T-Shirt product lookup uses the ID returned by the catalog.\\\"\\\"\\\"\",\n          \"    import json\",\n          \"    print('get_t_shirt_details_uses_catalog_product_id')\",\n          \"    steps = trajectory['steps']\",\n          \"    calls = []\",\n          \"    for substep in steps[current_step_index].get('substeps', []):\",\n          \"        if substep.get('role') != 'assistant':\",\n          \"            continue\",\n          \"        try:\",\n          \"            payload = json.loads(substep.get('content', ''))\",\n          \"        except (TypeError, json.JSONDecodeError):\",\n          \"            continue\",\n          \"        for entry in payload if isinstance(payload, list) else [payload]:\",\n          \"            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_product_details':\",\n          \"                try:\",\n          \"                    args = json.loads(entry['function'].get('arguments', '{}'))\",\n          \"                except (TypeError, json.JSONDecodeError):\",\n          \"                    args = {}\",\n          \"                calls.append(args.get('product_id'))\",\n          \"    if not calls:\",\n          \"        print('get_product_details_calls=', calls)\",\n          \"        return True\",\n          \"    catalog_ids = []\",\n          \"    for step in steps[:current_step_index]:\",\n          \"        for substep in step.get('substeps', []):\",\n          \"            if substep.get('role') != 'tool':\",\n          \"                continue\",\n          \"            try:\",\n          \"                data = json.loads(substep.get('content', ''))\",\n          \"            except (TypeError, json.JSONDecodeError):\",\n          \"                continue\",\n          \"            if isinstance(data, dict) and isinstance(data.get('T-Shirt'), str):\",\n          \"                catalog_ids.append(data['T-Shirt'])\",\n          \"    expected_id = catalog_ids[-1] if catalog_ids else None\",\n          \"    print('requested_product_ids=', calls, 'catalog_t_shirt_id=', expected_id)\",\n          \"    return expected_id is not None and all(product_id == expected_id for product_id in calls)\"\n        ]\n      },\n      \"nl_check\": {}\n    }\n  ],\n  \"trigger_to_invariants_map\": {\n    \"agent:assistant\": [\n      \"get_t_shirt_details_uses_catalog_product_id\"\n    ]\n  }\n}",
+      "parsed": {
+        "step_num": 21,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "get_t_shirt_details_uses_catalog_product_id",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "RELATIONAL_POST",
+            "event_trigger": {
+              "step_index": 21,
+              "substep_index": "*",
+              "role_name": "assistant"
+            },
+            "check_hint": "When the current assistant step calls get_product_details, verify that its product_id exactly matches the T-Shirt product ID returned by the earlier list_all_product_types tool result. If there is no get_product_details call in the current step, the assertion passes.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "get_t_shirt_details_uses_catalog_product_id",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def get_t_shirt_details_uses_catalog_product_id(trajectory, current_step_index):",
+                "    \"\"\"Ensure T-Shirt product lookup uses the ID returned by the catalog.\"\"\"",
+                "    import json",
+                "    print('get_t_shirt_details_uses_catalog_product_id')",
+                "    steps = trajectory['steps']",
+                "    calls = []",
+                "    for substep in steps[current_step_index].get('substeps', []):",
+                "        if substep.get('role') != 'assistant':",
+                "            continue",
+                "        try:",
+                "            payload = json.loads(substep.get('content', ''))",
+                "        except (TypeError, json.JSONDecodeError):",
+                "            continue",
+                "        for entry in payload if isinstance(payload, list) else [payload]:",
+                "            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_product_details':",
+                "                try:",
+                "                    args = json.loads(entry['function'].get('arguments', '{}'))",
+                "                except (TypeError, json.JSONDecodeError):",
+                "                    args = {}",
+                "                calls.append(args.get('product_id'))",
+                "    if not calls:",
+                "        print('get_product_details_calls=', calls)",
+                "        return True",
+                "    catalog_ids = []",
+                "    for step in steps[:current_step_index]:",
+                "        for substep in step.get('substeps', []):",
+                "            if substep.get('role') != 'tool':",
+                "                continue",
+                "            try:",
+                "                data = json.loads(substep.get('content', ''))",
+                "            except (TypeError, json.JSONDecodeError):",
+                "                continue",
+                "            if isinstance(data, dict) and isinstance(data.get('T-Shirt'), str):",
+                "                catalog_ids.append(data['T-Shirt'])",
+                "    expected_id = catalog_ids[-1] if catalog_ids else None",
+                "    print('requested_product_ids=', calls, 'catalog_t_shirt_id=', expected_id)",
+                "    return expected_id is not None and all(product_id == expected_id for product_id in calls)"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:assistant": [
+            "get_t_shirt_details_uses_catalog_product_id"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "466d02f6-7657-4d7f-9c2d-c4e4a59c6772",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 21229,
+          "output_tokens": 846,
+          "total_tokens": 22075
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:29",
+          "end_time": "2026-10-09T04:40:40",
+          "execution_time_sec": 11.0344
+        }
+      }
+    },
+    {
+      "step_num": 22,
+      "raw_model_text": "{\"step_num\":22,\"decision\":\"INVARIANT\",\"invariant\":[{\"assertion_name\":\"verify_cheapest_available_t_shirt_price\",\"taxonomy_targets\":[\"MisinterpretationOfToolOutput\"],\"invariant_type\":\"ANY\",\"event_trigger\":{\"step_index\":22,\"substep_index\":\"*\",\"role_name\":\"tool\"},\"check_hint\":\"Parse the current T-Shirt product-details tool result, select variants whose available field is true, and calculate the minimum price among them. The assertion passes only if that minimum is $46.66, the lowest available price in this result.\",\"check_type\":\"python_check\",\"python_check\":{\"function_name\":\"verify_cheapest_available_t_shirt_price\",\"args\":[\"trajectory\",\"current_step_index\"],\"code_lines\":[\"def verify_cheapest_available_t_shirt_price(trajectory, current_step_index):\",\"    \\\"\\\"\\\"Verify the minimum price among available T-Shirt variants is $46.66.\\\"\\\"\\\"\",\"    import json\",\"    print('verify_cheapest_available_t_shirt_price')\",\"    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']\",\"    print('tool_results=', tool_results)\",\"    if not tool_results:\",\"        return False\",\"    for content in tool_results:\",\"        try:\",\"            data = json.loads(content)\",\"        except (TypeError, json.JSONDecodeError):\",\"            continue\",\"        if not isinstance(data, dict) or data.get('name') != 'T-Shirt':\",\"            continue\",\"        variants = data.get('variants')\",\"        if not isinstance(variants, dict):\",\"            return False\",\"        available_prices = [variant.get('price') for variant in variants.values() if isinstance(variant, dict) and variant.get('available') is True and isinstance(variant.get('price'), (int, float)) and not isinstance(variant.get('price'), bool)]\",\"        print('available_prices=', available_prices)\",\"        if not available_prices:\",\"            return False\",\"        cheapest_price = min(available_prices)\",\"        print('cheapest_price=', cheapest_price)\",\"        return cheapest_price == 46.66\",\"    return False\"]},\"nl_check\":{}}],\"trigger_to_invariants_map\":{\"agent:tool\":[\"verify_cheapest_available_t_shirt_price\"]}}",
+      "parsed": {
+        "step_num": 22,
+        "decision": "INVARIANT",
+        "invariant": [
+          {
+            "assertion_name": "verify_cheapest_available_t_shirt_price",
+            "taxonomy_targets": [
+              "MisinterpretationOfToolOutput"
+            ],
+            "invariant_type": "ANY",
+            "event_trigger": {
+              "step_index": 22,
+              "substep_index": "*",
+              "role_name": "tool"
+            },
+            "check_hint": "Parse the current T-Shirt product-details tool result, select variants whose available field is true, and calculate the minimum price among them. The assertion passes only if that minimum is $46.66, the lowest available price in this result.",
+            "check_type": "python_check",
+            "python_check": {
+              "function_name": "verify_cheapest_available_t_shirt_price",
+              "args": [
+                "trajectory",
+                "current_step_index"
+              ],
+              "code_lines": [
+                "def verify_cheapest_available_t_shirt_price(trajectory, current_step_index):",
+                "    \"\"\"Verify the minimum price among available T-Shirt variants is $46.66.\"\"\"",
+                "    import json",
+                "    print('verify_cheapest_available_t_shirt_price')",
+                "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+                "    print('tool_results=', tool_results)",
+                "    if not tool_results:",
+                "        return False",
+                "    for content in tool_results:",
+                "        try:",
+                "            data = json.loads(content)",
+                "        except (TypeError, json.JSONDecodeError):",
+                "            continue",
+                "        if not isinstance(data, dict) or data.get('name') != 'T-Shirt':",
+                "            continue",
+                "        variants = data.get('variants')",
+                "        if not isinstance(variants, dict):",
+                "            return False",
+                "        available_prices = [variant.get('price') for variant in variants.values() if isinstance(variant, dict) and variant.get('available') is True and isinstance(variant.get('price'), (int, float)) and not isinstance(variant.get('price'), bool)]",
+                "        print('available_prices=', available_prices)",
+                "        if not available_prices:",
+                "            return False",
+                "        cheapest_price = min(available_prices)",
+                "        print('cheapest_price=', cheapest_price)",
+                "        return cheapest_price == 46.66",
+                "    return False"
+              ]
+            },
+            "nl_check": {}
+          }
+        ],
+        "trigger_to_invariants_map": {
+          "agent:tool": [
+            "verify_cheapest_available_t_shirt_price"
+          ]
+        }
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "5bc23e9f-afa1-42d3-b892-7d6ca2096b9b",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 22733,
+          "output_tokens": 543,
+          "total_tokens": 23276
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:40",
+          "end_time": "2026-10-09T04:40:50",
+          "execution_time_sec": 10.6134
+        }
+      }
+    },
+    {
+      "step_num": 23,
+      "raw_model_text": "{\"step_num\":23,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 23,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "57a9ab4e-9551-4648-901c-5702590c3640",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23387,
+          "output_tokens": 22,
+          "total_tokens": 23409
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:50",
+          "end_time": "2026-10-09T04:40:58",
+          "execution_time_sec": 7.9501
+        }
+      }
+    },
+    {
+      "step_num": 24,
+      "raw_model_text": "{\"step_num\":24,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 24,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "c4ec46e4-e42e-4fcc-b3d9-ef89ff1f4fc3",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23461,
+          "output_tokens": 22,
+          "total_tokens": 23483
+        },
+        "time": {
+          "start_time": "2026-10-09T04:40:58",
+          "end_time": "2026-10-09T04:41:07",
+          "execution_time_sec": 9.3002
+        }
+      }
+    },
+    {
+      "step_num": 25,
+      "raw_model_text": "{\"step_num\":25,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 25,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "2d538172-905d-42eb-85d1-f7bc595895ec",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23532,
+          "output_tokens": 22,
+          "total_tokens": 23554
+        },
+        "time": {
+          "start_time": "2026-10-09T04:41:07",
+          "end_time": "2026-10-09T04:41:15",
+          "execution_time_sec": 7.8487
+        }
+      }
+    },
+    {
+      "step_num": 26,
+      "raw_model_text": "{\"step_num\":26,\"decision\":\"NO_INVARIANT\",\"invariant\":null,\"trigger_to_invariants_map\":{}}",
+      "parsed": {
+        "step_num": 26,
+        "decision": "NO_INVARIANT",
+        "invariant": null,
+        "trigger_to_invariants_map": {}
+      },
+      "parse_error": null,
+      "telemetry": {
+        "llm_call_id": "29e9c670-3368-40e0-9c80-6393effebb43",
+        "model_name": "copilot-cli",
+        "instance": "default",
+        "tokens": {
+          "prompt_tokens": 23606,
+          "output_tokens": 22,
+          "total_tokens": 23628
+        },
+        "time": {
+          "start_time": "2026-10-09T04:41:15",
+          "end_time": "2026-10-09T04:41:23",
+          "execution_time_sec": 7.8919
+        }
+      }
+    }
+  ],
+  "dynamic_invariants": [
+    {
+      "assertion_name": "verify_authenticated_user_id_matches_task_identity",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput",
+        "InventionOfNewInformation"
+      ],
+      "invariant_type": "PROVENANCE",
+      "event_trigger": {
+        "step_index": 10,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "Verify that the current tool result for the name-and-zip identity lookup returns the user ID specified by the task instruction, fatima_taylor_3452. A different or missing returned ID fails this assertion.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "verify_authenticated_user_id_matches_task_identity",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def verify_authenticated_user_id_matches_task_identity(trajectory, current_step_index):",
+          "    \"\"\"Verify the identity lookup returned the user ID specified by the task.\"\"\"",
+          "    print('verify_authenticated_user_id_matches_task_identity')",
+          "    tool_results = [str(substep.get('content', '')).strip() for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+          "    print('tool_results=', tool_results)",
+          "    if not tool_results:",
+          "        return False",
+          "    return any(result == 'fatima_taylor_3452' for result in tool_results)"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "get_user_details_uses_authenticated_user_id",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 11,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "For the current get_user_details call, compare its user_id argument with the user ID returned by the prior name-and-zip identity lookup. The assertion passes only when the IDs match exactly.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "get_user_details_uses_authenticated_user_id",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def get_user_details_uses_authenticated_user_id(trajectory, current_step_index):",
+          "    \"\"\"Ensure get_user_details uses the ID returned by identity lookup.\"\"\"",
+          "    import json",
+          "    print('get_user_details_uses_authenticated_user_id')",
+          "    steps = trajectory['steps']",
+          "    current_calls = []",
+          "    for substep in steps[current_step_index].get('substeps', []):",
+          "        if substep.get('role') != 'assistant':",
+          "            continue",
+          "        try:",
+          "            payload = json.loads(substep.get('content', ''))",
+          "        except (TypeError, json.JSONDecodeError):",
+          "            continue",
+          "        for entry in payload if isinstance(payload, list) else [payload]:",
+          "            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_user_details':",
+          "                try:",
+          "                    args = json.loads(entry['function'].get('arguments', '{}'))",
+          "                except (TypeError, json.JSONDecodeError):",
+          "                    args = {}",
+          "                current_calls.append(args.get('user_id'))",
+          "    if not current_calls:",
+          "        print('current_calls=', current_calls)",
+          "        return True",
+          "    authenticated_ids = [str(substep.get('content', '')).strip() for step in steps[:current_step_index] for substep in step.get('substeps', []) if substep.get('role') == 'tool' and str(substep.get('content', '')).strip() == 'fatima_taylor_3452']",
+          "    print('current_user_ids=', current_calls, 'authenticated_ids=', authenticated_ids)",
+          "    return bool(authenticated_ids) and all(user_id == authenticated_ids[-1] for user_id in current_calls)"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "verify_profile_address_matches_previous_zip",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 12,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "Parse the current tool result and compare the returned profile address ZIP code with the old ZIP code, 32169, specified by the user earlier. The assertion passes only if a profile address is present and its zip field is exactly 32169.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "verify_profile_address_matches_previous_zip",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def verify_profile_address_matches_previous_zip(trajectory, current_step_index):",
+          "    \"\"\"Verify the returned profile address matches the user's stated old ZIP code.\"\"\"",
+          "    import json",
+          "    print('verify_profile_address_matches_previous_zip')",
+          "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+          "    print('tool_results=', tool_results)",
+          "    if not tool_results:",
+          "        return False",
+          "    for content in tool_results:",
+          "        try:",
+          "            data = json.loads(content)",
+          "        except (TypeError, json.JSONDecodeError):",
+          "            continue",
+          "        address = data.get('address') if isinstance(data, dict) else None",
+          "        zip_code = address.get('zip') if isinstance(address, dict) else None",
+          "        print('zip_code=', zip_code)",
+          "        if zip_code == '32169':",
+          "            return True",
+          "    return False"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "verify_catalog_contains_t_shirt_product",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "SCHEMA",
+      "event_trigger": {
+        "step_index": 20,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "Parse the current tool result as a JSON object and verify it contains a T-Shirt entry mapped to a nonempty product ID. Return false if no current tool result provides this mapping.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "verify_catalog_contains_t_shirt_product",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def verify_catalog_contains_t_shirt_product(trajectory, current_step_index):",
+          "    \"\"\"Verify the catalog result provides a product ID for T-Shirt.\"\"\"",
+          "    import json",
+          "    print('verify_catalog_contains_t_shirt_product')",
+          "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+          "    print('tool_results=', tool_results)",
+          "    for content in tool_results:",
+          "        try:",
+          "            data = json.loads(content)",
+          "        except (TypeError, json.JSONDecodeError):",
+          "            continue",
+          "        product_id = data.get('T-Shirt') if isinstance(data, dict) else None",
+          "        print('t_shirt_product_id=', product_id)",
+          "        if isinstance(product_id, str) and product_id.strip():",
+          "            return True",
+          "    return False"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "get_t_shirt_details_uses_catalog_product_id",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "RELATIONAL_POST",
+      "event_trigger": {
+        "step_index": 21,
+        "substep_index": "*",
+        "role_name": "assistant"
+      },
+      "check_hint": "When the current assistant step calls get_product_details, verify that its product_id exactly matches the T-Shirt product ID returned by the earlier list_all_product_types tool result. If there is no get_product_details call in the current step, the assertion passes.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "get_t_shirt_details_uses_catalog_product_id",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def get_t_shirt_details_uses_catalog_product_id(trajectory, current_step_index):",
+          "    \"\"\"Ensure T-Shirt product lookup uses the ID returned by the catalog.\"\"\"",
+          "    import json",
+          "    print('get_t_shirt_details_uses_catalog_product_id')",
+          "    steps = trajectory['steps']",
+          "    calls = []",
+          "    for substep in steps[current_step_index].get('substeps', []):",
+          "        if substep.get('role') != 'assistant':",
+          "            continue",
+          "        try:",
+          "            payload = json.loads(substep.get('content', ''))",
+          "        except (TypeError, json.JSONDecodeError):",
+          "            continue",
+          "        for entry in payload if isinstance(payload, list) else [payload]:",
+          "            if isinstance(entry, dict) and isinstance(entry.get('function'), dict) and entry['function'].get('name') == 'get_product_details':",
+          "                try:",
+          "                    args = json.loads(entry['function'].get('arguments', '{}'))",
+          "                except (TypeError, json.JSONDecodeError):",
+          "                    args = {}",
+          "                calls.append(args.get('product_id'))",
+          "    if not calls:",
+          "        print('get_product_details_calls=', calls)",
+          "        return True",
+          "    catalog_ids = []",
+          "    for step in steps[:current_step_index]:",
+          "        for substep in step.get('substeps', []):",
+          "            if substep.get('role') != 'tool':",
+          "                continue",
+          "            try:",
+          "                data = json.loads(substep.get('content', ''))",
+          "            except (TypeError, json.JSONDecodeError):",
+          "                continue",
+          "            if isinstance(data, dict) and isinstance(data.get('T-Shirt'), str):",
+          "                catalog_ids.append(data['T-Shirt'])",
+          "    expected_id = catalog_ids[-1] if catalog_ids else None",
+          "    print('requested_product_ids=', calls, 'catalog_t_shirt_id=', expected_id)",
+          "    return expected_id is not None and all(product_id == expected_id for product_id in calls)"
+        ]
+      },
+      "nl_check": {}
+    },
+    {
+      "assertion_name": "verify_cheapest_available_t_shirt_price",
+      "taxonomy_targets": [
+        "MisinterpretationOfToolOutput"
+      ],
+      "invariant_type": "ANY",
+      "event_trigger": {
+        "step_index": 22,
+        "substep_index": "*",
+        "role_name": "tool"
+      },
+      "check_hint": "Parse the current T-Shirt product-details tool result, select variants whose available field is true, and calculate the minimum price among them. The assertion passes only if that minimum is $46.66, the lowest available price in this result.",
+      "check_type": "python_check",
+      "python_check": {
+        "function_name": "verify_cheapest_available_t_shirt_price",
+        "args": [
+          "trajectory",
+          "current_step_index"
+        ],
+        "code_lines": [
+          "def verify_cheapest_available_t_shirt_price(trajectory, current_step_index):",
+          "    \"\"\"Verify the minimum price among available T-Shirt variants is $46.66.\"\"\"",
+          "    import json",
+          "    print('verify_cheapest_available_t_shirt_price')",
+          "    tool_results = [substep.get('content', '') for substep in trajectory['steps'][current_step_index].get('substeps', []) if substep.get('role') == 'tool']",
+          "    print('tool_results=', tool_results)",
+          "    if not tool_results:",
+          "        return False",
+          "    for content in tool_results:",
+          "        try:",
+          "            data = json.loads(content)",
+          "        except (TypeError, json.JSONDecodeError):",
+          "            continue",
+          "        if not isinstance(data, dict) or data.get('name') != 'T-Shirt':",
+          "            continue",
+          "        variants = data.get('variants')",
+          "        if not isinstance(variants, dict):",
+          "            return False",
+          "        available_prices = [variant.get('price') for variant in variants.values() if isinstance(variant, dict) and variant.get('available') is True and isinstance(variant.get('price'), (int, float)) and not isinstance(variant.get('price'), bool)]",
+          "        print('available_prices=', available_prices)",
+          "        if not available_prices:",
+          "            return False",
+          "        cheapest_price = min(available_prices)",
+          "        print('cheapest_price=', cheapest_price)",
+          "        return cheapest_price == 46.66",
+          "    return False"
+        ]
+      },
+      "nl_check": {}
+    }
+  ],
+  "totals": {
+    "prompt_tokens": 517557,
+    "completion_tokens": 3816,
+    "total_tokens": 521375
+  }
+}

@@ -1,5 +1,7 @@
 # Next evaluation stage
 
+AgentRx update: [all six stages completed on one public sample](baselines/results/agentrx-full-20261009T093620Z-3eec32/findings.md) using clean pinned code and Copilot-auto substitution after the original model was rejected. The judge predicted step 17, with no available ground-truth comparison. This advances provider/pipeline execution, not full diagnosis accuracy or recovery-method reproduction. The site action is configured to the tested route; nine API integration tests passed.
+
 Next comparison [predeclared here](v3-bounded-comparison-20261009.md): task 0 / seed 300 / empty_read, no-recovery, source rollback and selective under v3. Plan only while recent artifacts report daily quota exhaustion. Analysis now displays total tool invocations including validation, with measurement counts and missing-data handling; eight analysis tests passed. No v3 live outcome is claimed.
 
 October 9 redesign: [verified recovery cache v3](verified-cache-redesign-20261009.md) is implemented and all 12 pinned integration tests plus three matrix-scheduling tests pass. It validates saved tool values, excludes source/error/version-mismatched entries and pre-recovery cache hits, and records total tool invocations including validation. No new live trial was launched for this change. Preserve the active campaign's versioned evidence; the source/protocol guard stops further old-version cells. Next live work should be one serialized bounded comparison, not an immediate full campaign. Earlier results remain preliminary and do not evaluate v3.

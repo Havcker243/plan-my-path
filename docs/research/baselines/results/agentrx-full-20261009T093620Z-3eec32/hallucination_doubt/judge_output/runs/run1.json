@@ -1,0 +1,38 @@
+{
+    "summary": {
+        "model_name": "",
+        "api_version": "2024-12-01-preview",
+        "note": "No ground truth comparison available"
+    },
+    "detailed_results": [
+        {
+            "task_id": "39",
+            "failures": [
+                {
+                    "task_id": "39",
+                    "failure_case": 2,
+                    "description": "The assistant presented an unsupported limitation about order details as fact instead of checking available order information or explaining that it could not determine the new address from the information provided.",
+                    "step_number": 17,
+                    "checklist_reasoning": "At index 17, the assistant claimed that order details only reflect the current default address, but no tool output or policy established this. The user\u2019s new street address was still unknown, and the assistant relied on that unsupported claim to say it could not look for the address in order details. This is an invention of new information and was not corrected later."
+                }
+            ],
+            "num_judges": 1,
+            "trajectory_length": 26,
+            "llm_call_telemetry": {
+                "tokens": {
+                    "prompt_tokens": 6292,
+                    "output_tokens": 218,
+                    "total_tokens": 6510
+                },
+                "time": {
+                    "start_time": "2026-10-09T04:41:23.718519",
+                    "end_time": "2026-10-09T04:41:33.656052",
+                    "execution_time_sec": 9.9375
+                },
+                "model_name": "copilot-cli",
+                "instance": "copilot-cli",
+                "llm_call_id": "f97ae9ea-fc1b-41af-9481-014e7fd09560"
+            }
+        }
+    ]
+}

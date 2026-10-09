@@ -1,5 +1,7 @@
 # Public Benchmark and Method Inventory
 
+October 8 update: a later unchanged retail task-0 baseline earned reward 1.0 (site run 2520ed051f2d414c9e01d463335d335f); the earlier reward-zero and infrastructure-error attempts remain retained. The rows below describing the first October 7 task failure are historical observations, not the latest execution status. Controlled-recovery evidence now has a reproducible [analysis of all three saved pilot artifacts](../evidence/recovery-analysis-all-attempts-20261008/summary.md), with protocol versions separated and ungraded attempts retained. This analysis adds no new live trials or published-method reproduction.
+
 Latest October 7 addition: the custom recovery adapter now runs controlled faults on official retail tasks with unchanged grading. The paced pilot earned reward 1.0 for both methods, with greater work/cost for selective; this establishes integration, not superiority. The full matrix remains planned. AgentRx all-stage runner/dependencies are prepared but provider access remains blocked. Original unchanged reference reward 0.0 is preserved. See [recovery boundaries](../recovery-method.md).
 
 Verified October 7, 2026. Public availability, local installation, successful execution, and reproduction of published results are different statuses. An entry here is not a claim that the full experiment has been reproduced.
@@ -28,5 +30,7 @@ Airline and retail are different tau-bench domains, not two independent benchmar
 The old custom restart/retry/checkpoint/suffix/selective implementations are local engineering comparisons. They are not reproductions of these named systems. Keep that distinction in the report and video.
 
 ## Selection rule
+
+October 8 literature expansion: [DoVer](https://arxiv.org/html/2512.06749) and its [official implementation](https://github.com/microsoft/ACV/tree/main/misc/DoVer), plus [DARC](https://arxiv.org/html/2608.11772), were reviewed as additional diagnosis/recovery candidates. AgentRewind's author-linked [recorder](https://github.com/Futuresis/replay-agent-recorder) and [MettleBench](https://github.com/Kelvin-Coffee/MettleBench) were located. None was installed or reproduced in this stage. See the [dated comparison and scope implications](../literature-update-20261008.md); MettleBench is a recent public research release, not claimed to be a widely adopted standard.
 
 Establish one faithful diagnosis baseline and one executable task baseline first. Add a distinct public environment only after checking reset/replay semantics, hardware requirements, model access, grading, license, and cost. Do not download numerous suites merely to claim benchmark coverage. Each selected method needs its paper version, source revision, dataset/split, prompt/model configuration, budget, metric definitions, and deviations recorded before comparison. No custom recovery modification is part of the current official reference run.

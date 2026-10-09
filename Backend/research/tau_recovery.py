@@ -53,6 +53,7 @@ class RecoveryController:
         self.strategy, self.fault, self.max_steps = strategy, fault, max_steps
         self.nodes, self.context, self.reads, self.events, self.snapshots = [], [], [], [], []
         self.cache = {}
+        self.verified_cache = set()
         self.total_steps = self.tool_executions = self.validation_calls = self.cache_hits = 0
         self.total_errors = 0
         self.recoveries = 0
@@ -101,8 +102,12 @@ class RecoveryController:
         dependencies = [self.step_node]
         # Every call also depends on prior mutations; hashes guard cached read reuse.
         dependencies += [n["id"] for n in self.nodes if n["kind"] == "write" and n["status"] == "active"]
-        cached = self.cache.get(key) if self.strategy == "selective" and not mutates else None
-        if cached and cached["node_id"] not in self.invalidated:
+        cached = self.cache.get(key) if self.strategy == "selective" and not mutates and self.recoveries else None
+        # Recovery memoization requires an exact request/version match and a
+        # separately verified response. It does not prove reasoning independence.
+        cache_safe = (cached and key in self.verified_cache
+                      and cached["node_id"] != self.detected and not cached["response"].error)
+        if cache_safe:
             from tau2.utils.utils import get_now
             result = cached["response"].model_copy(update={"id": call.id, "timestamp": get_now()}, deep=True)
             self.cache_hits += 1
@@ -133,8 +138,28 @@ class RecoveryController:
             self.reads.append({"node_id": node_id, "call": deepcopy(call), "response": deepcopy(result),
                                "db_hash": before, "attempt_step": self.total_steps,
                                "snapshot_index": self.current_step, "cache_key": key})
-            self.cache[key] = {"node_id": node_id, "response": deepcopy(result)}
+            self.cache[key] = {"node_id": node_id, "response": deepcopy(result),
+                               "call": deepcopy(call), "db_hash": before}
+            if result.error or injected_now:
+                self.verified_cache.discard(key)
+            elif self.recoveries:
+                # Fresh post-recovery reads use the trusted local tool. An
+                # already verified cache hit keeps that verification status.
+                self.verified_cache.add(key)
         return result
+
+    def verify_recovery_cache(self):
+        """Check saved read values against the restored DB; count all overhead."""
+        self.verified_cache.clear()
+        current = self.o.environment.get_db_hash()
+        for key, cached in self.cache.items():
+            if (cached["node_id"] == self.detected or cached["response"].error
+                    or cached["db_hash"] != current):
+                continue
+            fresh = self.original_response(cached["call"])
+            self.validation_calls += 1
+            if not fresh.error and self.canonical(fresh) == self.canonical(cached["response"]):
+                self.verified_cache.add(key)
 
     def detect(self):
         """Wait until at least one subsequent orchestrator step, then revalidate.
@@ -181,6 +206,9 @@ class RecoveryController:
                             "pre_recovery_trace": [m.model_dump(mode="json") for m in self.o.trajectory]})
         self.restore(target)
         self.recoveries += 1
+        if self.strategy == "selective":
+            self.verify_recovery_cache()
+            self.events[-1]["verified_cache_entries"] = len(self.verified_cache)
 
     def run(self):
         from tau2.data_model.simulation import TerminationReason
@@ -240,6 +268,7 @@ class RecoveryController:
                     "total_attempt_steps": self.total_steps, "tool_executions": self.tool_executions,
                     "total_tool_errors": self.total_errors,
                     "validation_tool_calls": self.validation_calls, "cached_reads_reused": self.cache_hits,
+                    "total_tool_invocations": self.tool_executions + self.validation_calls,
                     "model_calls": len(messages), "attempted_usage": [m.get("usage") for m in messages],
                     "estimated_attempt_cost_usd": sum(m.get("cost") or 0 for m in messages),
                     "cost_usage_complete": all(m.get("cost") is not None and m.get("usage") is not None for m in messages),

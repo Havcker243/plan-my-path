@@ -437,29 +437,29 @@ export default function ProfilePage() {
           </div>
 
           {majorChanged && major && major !== "UNDECLARED" && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold text-amber-800">Switching to {formatDisplayName(majors.find((m) => m.code === major)?.name ?? major)}</p>
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Switching to {formatDisplayName(majors.find((m) => m.code === major)?.name ?? major)}</p>
               {impactLoading ? (
-                <p className="text-xs text-amber-700">Calculating impact on your plan…</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">Calculating impact on your plan…</p>
               ) : impactData ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
-                    <p className="text-base font-bold text-green-700">{impactData.carryOver}</p>
-                    <p className="text-[10px] text-amber-700">courses carry over as required/group</p>
+                  <div className="bg-white/60 dark:bg-muted/70 rounded-lg px-3 py-2 text-center">
+                    <p className="text-base font-bold text-green-700 dark:text-green-300">{impactData.carryOver}</p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">courses carry over as required/group</p>
                   </div>
-                  <div className="bg-white/60 rounded-lg px-3 py-2 text-center">
-                    <p className="text-base font-bold text-amber-700">{impactData.becomeElective}</p>
-                    <p className="text-[10px] text-amber-700">courses become electives</p>
+                  <div className="bg-white/60 dark:bg-muted/70 rounded-lg px-3 py-2 text-center">
+                    <p className="text-base font-bold text-amber-700 dark:text-amber-300">{impactData.becomeElective}</p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">courses become electives</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-amber-700">All course labels in your plan will refresh for the new major.</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">All course labels in your plan will refresh for the new major.</p>
               )}
-              <p className="text-[10px] text-amber-600">Save to apply. You can always switch back.</p>
+              <p className="text-[10px] text-amber-600 dark:text-amber-300">Save to apply. You can always switch back.</p>
             </div>
           )}
           {majorChanged && major === "UNDECLARED" && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <p className="text-xs text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-md px-3 py-2">
               Setting to Undeclared will clear major-specific labels. Visit <strong>Explore Majors</strong> when you're ready to pick one.
             </p>
           )}

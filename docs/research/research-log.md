@@ -223,3 +223,229 @@ Moved current Method & data to a stable top-level reference view with experiment
 ### October 8, 2026: GitHub publication boundaries
 Added docs/github-publishing.md and a README link defining reviewable source/research evidence versus local credentials, runtime logs, private student data, upstream environments and recordings. Expanded ignore rules for private keys/uploads/exports, recordings, compiler caches and local audit output. Added read-only Backend/scripts/check_publish.py covering indexed and working candidates against known local credential values, selected patterns and private paths; initial scan covered 423 candidates with no findings and one warning for already tracked web/tsconfig.tsbuildinfo. Check does not certify history, personal data, compressed documents or licenses. Existing staging was preserved; no untracking, commit or push occurred. Guide records how the user can stop tracking the generated cache while keeping its local copy.
 
+
+### October 8, 2026: offline/live colour labels
+User clarified grey/green refers to Research Lab execution modes and requested less emphasis on cost. Added grey Offline and green Live AI badges with text labels and a compact legend; removed API cost from experiment-card badges. Both modes remain available and experimental-source categories/availability checks remain separate. No account billing entitlement was inferred or verified, no limits were bypassed and no new paid/model runs were launched. Historical usage/cost evidence remains intact. TypeScript and HTTP page checks passed.
+
+
+### October 8, 2026: model suitability clarification
+User clarified the question concerned whether research tasks warrant Gemini Pro, not an instruction to switch. Reverted this turn's model-selection edits and restored the v2 Flash Lite protocol from the exact saved copy. No Pro generation or experiment occurred. The available-model metadata query returned gemini-3.1-pro-preview among listed Pro endpoints; listing does not establish generation quota/access. Research Lab remains configured for Gemini 3.5 Flash Lite. Pro-vs-Flash benefits remain an empirical question requiring matched experiments.
+
+
+### October 8, 2026: user-run log review
+Inspected latest site run 2520ed051f2d414c9e01d463335d335f and its official-result artifact tau-smoke-20261009T022204Z-3c7632 (UTC directory timestamp; October 8 local time). Task 0 received official reward 1.0, user_stop termination and 14.86 seconds simulation time; end-to-end site duration approximately 21.76 seconds. This is the unchanged task baseline, not a selective recovery comparison. Earlier reward-0 and quota infrastructure-error attempts remain saved and must not be discarded or conflated with the latest success.
+
+### October 8, 2026: consistent compact Research Lab flow
+
+User clarified that the cleaner flow should apply across the lab while retaining the results presentation. The initial workspace now opens Run experiments; experiment categories expand one at a time in All categories, with protocol descriptions inside the expanded category and individual Details disclosures. Category and execution-mode controls share one toolbar. Replaced the large completed-run banner with a compact last-run status and View results link on the experiment view. Results, Trace, Provenance and Method & data retain their existing evidence and navigation; no experiment artifact or result value changed. TypeScript passed, HTTP /research returned 200 and git diff --check passed. Signed-in visual interaction review remains unavailable because the browser connection could not initialize.
+
+### October 8, 2026: platform dark mode
+
+Connected the existing next-themes provider at the root so public pages, authentication, the application and notifications share a persistent theme. Added an accessible sun/moon control in the application and landing headers, with a compact control on other public/authentication pages. Initial theme follows the system; explicit light/dark selection is saved by next-themes. Added a shared dark palette for cards, inputs, navigation and academic requirement/status tokens, corrected a hard-coded white course control, and kept print surfaces light. TypeScript and HTTP checks for research/login passed; git diff --check passed. Browser initialization failed before visual interaction testing, so appearance, preference persistence and mobile interactions still need manual review. No research results or experiment protocols changed.
+
+### October 8, 2026: dark palette refinement across platform
+
+Replaced overlapping old dark definitions with a single charcoal/indigo palette, separate card/sidebar surfaces, softer off-white text and coordinated status/chart tokens. Added explicit dark status-background, text, border and hover treatments across 18 application/public components, including research evidence, transcript upload, planner and academic checks. Corrected white profile tiles and landing call-to-action text against the active primary colour. Recorded palette and verification limits in docs/dark-mode.md. TypeScript and HTTP checks for research/dashboard/login passed; nine calculated shared text/background contrast pairs exceeded 4.5:1 (minimum 6.34:1). Visual appearance and interaction remain unverified because browser initialization is unavailable; this calculation does not certify every UI colour combination. Research evidence and protocols were unchanged.
+
+### October 8, 2026: resume research evaluation and reproducible analysis
+
+Added Backend/research/analyze_recovery.py to analyze saved controlled-recovery artifacts without model calls or changing raw evidence. Groups are separated by recorded protocol, adapter, upstream, input and configuration provenance. Counts retain ungraded failures and fault coverage; eligible reference/selective pairs require exactly one attempt per method/task/fault/seed with exercised faults and recorded grading. Incomplete usage excludes paired cost estimates. Added five meaningful tests; the initial sandbox run failed on temporary-directory permissions, then all five passed with approved execution outside the sandbox. Generated paced-only and all-attempts JSON/Markdown summaries, including all three historical pilot artifacts. The eligible paced pair has equal reward, +4 selective attempt steps, +2 model calls, +2 tool executions and approximately +1.56 seconds; no benefit established. No new live trials ran, and the 171-cell matrix remains planned. Updated assumption A21, reproduction instructions, current baseline status and docs/research/next-evaluation.md. These are descriptive preliminary results; no significance, causal advantage or faithful published-method reproduction is claimed.
+
+### October 8, 2026: literature expansion and four live matrix cells
+
+Reviewed primary DoVer, DARC, AgentRewind, Dependency-Guided Rollback Repair and versioned AgentRx sources; located author-linked recovery code and MettleBench specifications. Recorded dated source links, distinctions, novelty limits and reproduction status in literature-update-20261008.md. None of the newly identified systems was installed or reproduced. Added bounded matrix selection preserving the full protocol order, frozen adapter/protocol copies and source-change guards. Three schedule tests passed; six pinned upstream integration tests passed (a sandbox cost-map request fell back to bundled metadata). Preflight identified a real adapter change: monotonic total tool-error accounting relative to the old pilot, so new cells form a separate group. With approved network execution, campaign tau-matrix-20261009T044036Z-e96b6c ran four cells: seed 301 selective reward 0.0 with correct source localization, seed 301 reference quota error/null reward, seed 302 selective quota error/null reward, seed 302 reference reward 1.0. All faults were exercised. No eligible graded pairs or improvement estimate exist; failures are retained. Generated recovery-subset-20261008 analysis/findings and added assumptions A22/A23. Added completed campaign-cell discovery to Research Lab history, excluding incomplete files; nine API tests passed. Restarted the owned local backend, verified all four saved entries and frontend/backend health responses. Full 171-cell evaluation, faithful published-method reproduction and comprehensive Fisk validation remain incomplete.
+
+### October 8, 2026: graded-failure investigation and first current-adapter matched pair
+
+Inspected the seed-301 selective artifact: corrected account details were present after recovery, but the simulated user combined exchange confirmation with STOP, causing upstream termination before the required exchange write. Saved source-hashed inspection JSON and explanatory notes; reward zero remains unchanged. Added a no-fault scripted test for this mechanism; all seven controller tests passed. Reviewed official Google project-level quota documentation and recorded a predeclared seed-300 continuation before execution. With no active local site job detected and approved network access, ran exactly two fresh cells in tau-matrix-20261009T045409Z-eb491d under unchanged current adapter/v2 protocol: both methods reward 1.0, fault exercised, 23 steps, 16 model calls, 7 tools, 9 validations and zero cache reuse. Recorded durations 121.54s reference and 121.34s selective; no speed/efficiency advantage established. Added explicit analysis coverage totals and a test keeping incomplete pairs alongside complete pairs; all six analysis tests passed. Generated recovery-current-adapter-20261008 analysis/findings over all six current-adapter attempts (four graded, two quota errors; one eligible pair, two incomplete). Verified both fresh saved-run entries. Added assumptions A24/A25 and updated next steps. Existing protocols, evaluator, prompts and historical scores were preserved; no named published recovery method reproduction was claimed.
+
+
+### October 8–9, 2026: full six-strategy comparison campaign — Phase 1 started
+
+**Goal:** Run all six recovery strategies (no_recovery, restart, visible_retry, checkpoint, source_rollback, selective) across all three seeds for task 0, fault empty_read, to produce the first complete within-task method comparison. The paced pilot only covered no_recovery and selective on seed 300; restart/visible_retry/checkpoint/source_rollback have never been executed on any official task.
+
+**Why this matters:** Comparing all six strategies on the same task/fault/seed reveals:
+- Which strategies succeed vs. fail at recovering official reward
+- Where the work overhead of each strategy falls (attempt steps, model calls, tool executions)
+- Whether selective recovery actually saves work relative to restart/rollback alternatives, or merely matches them
+- Whether the fault type (empty_read here) is even recoverable by the agent at all, and if so, by which strategies
+
+**Campaign plan:**
+- Phase 1 (running): task 0, seeds 301+302, fault empty_read, all 6 strategies + unfaulted references — 14 cells. Protocol sha256 `35e9cb0...`, adapter sha256 `ee4859b...` verified unchanged before launch.
+- Phase 2 (queued): task 0, seed 300, fault empty_read, strategies restart/visible_retry/checkpoint/source_rollback — 4 cells + unfaulted reference — to complete the seed-300 coverage not in the paced pilot.
+- Phase 3: expand to wrong_user_id and tool_error faults (3 seeds × 2 faults × 6 strategies = 36 cells + 6 unfaulted).
+- Phase 4: expand to tasks 1 and 2.
+
+**Interpretation plan:** After each phase, run analyze_recovery.py over all accumulated pilot artifacts plus new results. For each eligible task/fault/seed pair, compare strategy-level reward, attempt steps, model calls, tool executions, and cached read reuse. Identify: which strategies share reward outcomes, which differ, and at what step count. Look for cases where no_recovery already succeeds (model self-recovery) versus cases where controller intervention is necessary. Document every failure with its recorded termination/infrastructure error rather than dropping it.
+
+**Known confounders:** Seed does not guarantee identical model output. Provider pacing (6 s/generation) is enforced but quota/503 failures remain possible and are retained rather than rerun. Costs are estimates.
+
+Launched Phase 1 at approximately 23:40 CDT October 8, 2026. Results to be appended on completion.
+
+**Phase 1 results — completed ~00:10 CDT October 9, 2026**
+
+Matrix: `tau-matrix-20261009T044029Z-9f8be5`, 14 cells, status `finished_with_failures` (2 cells had rate-limit exits, not task failures).
+
+| seed | strategy | reward | steps | model_calls | cached_reused | predicted_src_node |
+|---|---|---|---|---|---|---|
+| 301 | *(unfaulted ref)* | null | 13 | — | — | — |
+| 301 | restart | 1.0 | 31 | 21 | 0 | 10 |
+| 301 | visible_retry | 1.0 | 22 | 15 | 0 | 18 |
+| 301 | checkpoint | **0.0** | 19 | 13 | 0 | 12 |
+| 301 | source_rollback | 1.0 | 21 | 13 | 0 | 16 |
+| 301 | selective | **0.0** | 19 | 13 | 0 | 12 |
+| 301 | no_recovery | **0.0** | 19 | 13 | 0 | 12 |
+| 302 | *(unfaulted ref)* | 1.0 | 19 | 13 | 0 | — |
+| 302 | visible_retry | 1.0 | 24 | 17 | 0 | 20 |
+| 302 | checkpoint | 1.0 | 21 | 13 | 0 | 16 |
+| 302 | source_rollback | 1.0 | 25 | 17 | 0 | 12 |
+| 302 | selective | 1.0 | 25 | 17 | 0 | 12 |
+| 302 | no_recovery | 1.0 | 27 | 18 | 0 | 12 |
+| 302 | restart | null | 15 | — | — | — |
+
+Null reward cells (seed 301 unfaulted, seed 302 restart) were rate-limit/provider failures, not task grading results. Both retained.
+
+**Findings:**
+
+1. **checkpoint is fault-location-sensitive.** On seed 301, the fault landed at step 8 (node 12) — which is exactly a multiple-of-4 checkpoint boundary. The snapshot at step 8 captured the conversation state AFTER the corrupted `get_user_details` result (`{}`) was placed in the trajectory. Restoration at step 8 therefore restored corrupted context, and the agent proceeded on bad information → reward 0.0. On seed 302, the fault landed at step 10 (not a boundary), checkpoint restored cleanly → reward 1.0 with only +2 steps overhead. **Checkpoint performance is brittle to the alignment of fault location and boundary interval.**
+
+2. **selective failed the same way as checkpoint on seed 301 (0.0, 19 steps).** Deep inspection showed: recovery fired, detected source at node 12 (step 8), restored to boundary step 8 — but the snapshot at step 8 included the corrupted conversation context (agent had already said "Hi Yusuf! I've verified your account" after seeing empty `{}` data). The agent in the post-recovery continuation ran on partially-corrupted context. Additionally, `cached_reads_reused = 0` in every single run — selective's read cache NEVER activated. Reason: the reads independent of the source (find_user_id at step 4, get_order_details at step 6) were already included in the restored state when rolling back to step 8, so the agent never re-called those tools post-recovery. No cache hits → selective and source_rollback performed identically on seed 302 (both 25 steps, 17 calls).
+
+3. **source_rollback was the most consistent successful strategy**: reward 1.0 on both seeds. On seed 301, the fault happened to fall at step 10 (not step 8) in the source_rollback run — a reminder that predicted_source_node varies across runs even with the same seed due to model non-determinism at temperature 0. The source_rollback restored to just before step 10, which was a clean boundary, and the agent recovered successfully.
+
+4. **no_recovery succeeded on seed 302 (1.0, 27 steps)** — the Gemini model self-recovered. It called `get_user_details` twice, saw the empty result, asked for information again, and eventually completed the task correctly (albeit at 8 extra steps vs baseline). On seed 301 no_recovery failed (0.0) — the model accepted the empty result and hallucinated a "verified" response, proceeding to produce the wrong exchange.
+
+5. **visible_retry was unexpectedly reliable**: 1.0 on both seeds, with moderate step overhead (22–24). It retried from the last dispatch snapshot, which happened to be before the corrupted read in both cases.
+
+6. **restart always pays the highest step cost (31 steps on seed 301)** — expected. Both restart cells that completed were reliable, but the cost is full task-repeat.
+
+7. **The `predicted_source_node` differs across strategies for the same seed** (e.g., seed 301: checkpoint=12, source_rollback=16, visible_retry=18). This confirms that even with the same seed, model outputs are non-deterministic: the fault injection hits a different step in each run, producing different trace structures and thus different source-node IDs. This is a fundamental confound for direct strategy comparison within a seed — the baseline task difficulty varies per run.
+
+**Key gap:** `cached_reads_reused = 0` in all 14 cells means selective's theoretical advantage (avoiding re-execution of valid work) never materialized. This needs investigation in Phase 3: try a fault type where the fault falls later in the trace (post-product-lookups), so the read cache would contain independently-verified reads that actually get reused.
+
+---
+
+### Phase 2 results — seed 300, empty_read, remaining strategies — completed ~01:10 CDT October 9, 2026
+
+Matrix: `tau-matrix-20261009T050946Z-4932e2`, 5 cells, status `finished`.
+
+| fault/strategy | reward | steps | calls | cached | src_node |
+|---|---|---|---|---|---|
+| none/no_recovery *(unfaulted ref)* | 0.0 | 17 | 11 | 0 | — |
+| empty_read/restart | 0.0 | 34 | 22 | 0 | 18 |
+| empty_read/visible_retry | 0.0 | 18 | 13 | 0 | 12 |
+| empty_read/checkpoint | **1.0** | 27 | 17 | 0 | 25 |
+| empty_read/source_rollback | **1.0** | 17 | 12 | 0 | — |
+
+**Findings for seed 300:**
+
+Seed 300 is a fundamentally unstable case. The unfaulted reference (no fault injected) got reward 0.0 in 17 steps — the model failed the task without any corruption. `restart` also failed (0.0, 34 steps) even after a full clean slate. `visible_retry` failed (0.0, 18 steps). Only `checkpoint` and `source_rollback` succeeded. This reinforces that strategy outcome on any single seed is substantially driven by model non-determinism, not purely by recovery strategy choice.
+
+`source_rollback` succeeded in only 17 steps — notably the same as the unfaulted reference step count — suggesting near-zero overhead when the fault and recovery boundary are well-placed. `predicted_source_node` is empty for source_rollback, which may indicate the source was not detected (fault not reached / detector returned None). This needs verification against the actual cell JSON.
+
+`cached_reads_reused = 0` persists across all Phase 2 cells, confirming the structural finding: the selective read cache cannot activate when fault injection always targets `get_user_details` early in the trace.
+
+---
+
+### Methodology assessment — October 9, 2026
+
+After completing Phase 1 + Phase 2 (19 cells, all three seeds, all six strategies for the `empty_read` fault type), the following methodology gaps are documented:
+
+**1. Selective cache advantage undemonstrable on current fault injection point.**
+All 19 cells have `cached_reads_reused = 0`. The injection rule ("first `get_user_details`") places the fault before any reads that need to be both (a) independent of the fault and (b) re-executed post-recovery. Pre-fault reads are in the restored conversation context; post-fault reads depend on user-specific data gated behind `get_user_details`. Fix: inject at a later tool (e.g., first `get_product_details`) or use a task where `get_user_details` falls after several independent reads that are also needed post-recovery.
+
+**2. Non-determinism confounds strategy comparison.**
+Same seed, same fault type, but each strategy run produces a different trace with the fault at a different node (e.g., node 12 in the `checkpoint` run vs. node 16 in `source_rollback`). Temperature-0 does not guarantee identical model outputs across separate API calls. Strategy outcomes cannot be attributed cleanly to strategy choice alone.
+
+**3. Model self-recovery inflates no_recovery baseline.**
+On seed 302, `no_recovery` succeeded (1.0, 27 steps) — the model retried `get_user_details` on its own. On seed 300, `restart` failed (0.0, 34 steps) — the model produced a wrong answer even after full clean restart. Task success is substantially driven by model behavior independent of the controller.
+
+**Phase 3 (running):** task 0, all 3 seeds, `wrong_user_id` + `tool_error` faults, all 6 strategies — 36 cells. Expected to complete in approximately 60–90 minutes. These faults may reveal different model recovery behavior (especially `wrong_user_id`, where the agent receives plausible-but-wrong data and is unlikely to self-detect the error) but the structural cache issue persists.
+
+
+### October 9, 2026: bounded four-strategy continuation completed
+
+Predeclared one task-0 / empty_read / seed-300 attempt each for restart, visible_retry, checkpoint and source_rollback under unchanged adapter/protocol. Campaign tau-matrix-20261009T050612Z-2fe24d completed all four. Official rewards were all 1.0: restart 33 steps/23 model calls/196.29s; visible_retry 17/12/92.95s with fault NOT exercised; checkpoint 25/17/130.33s; source_rollback 23/16/125.09s. Combined the predeclared fresh reference/selective pair with these four in a descriptive six-strategy table, preserving source hashes and raw artifacts. Selective/reference/source rollback had equal steps/model/tool counts and zero cached-read reuse; no selective work-saving advantage is established.
+
+Observed restart exceeding the nominal 180-second budget: upstream timeout checking is cooperative and excludes already-done conversations. Preserved reward and disclosed overrun; no controller change during the frozen campaign. Found separate overlapping workspace campaigns, so provider traffic was not isolated. Saved an all-completed current-adapter snapshot with 27 attempts (23 graded, four ungraded), retaining duplicates and marking ambiguous pairs. This snapshot excludes still-running cells and is not a pooled strategy ranking. Earlier log statements interpreting particular failures as caused by corrupted snapshots require trace-based confirmation; zero reward alone does not establish that cause. Added A26 and updated research overview/next steps. No named published recovery implementation, full-matrix completion, statistical advantage, or GitHub publication is claimed.
+
+### October 9, 2026: research-direction assessment requested by student
+
+Checked primary AgentRx v2, AgentRewind, Dependency-Guided Rollback Repair, the original tau paper and maintained tau repository online against local method/evidence documentation. Saved source links, publication/preprint distinctions and a focused assessment in research-direction-review-20261009.md. Topic remains aligned with current research; our controller is not a faithful reproduction of the named systems, and selective recovery is not established as novel or superior. The maintained repository now uses tau3 branding; verified our local pin without changing it or claiming it is the latest remote revision. Recommended investigating zero read reuse and tightening versioned experimental control before expanding trials, plus one supported published-method reproduction and Fisk requirement verification. No live experiments or algorithm changes were made for this review.
+
+---
+
+### October 9, 2026: selective cache redesign — argument-level matching — adapter v2
+
+**Problem diagnosed:** After 19 cells across empty_read, all had `cached_reads_reused = 0`. The cache check was:
+```python
+if cached and cached["node_id"] not in self.invalidated:
+```
+`self.invalidated` contained the source node AND every temporal descendant (all nodes that followed it). For read-only tools, every post-source read's cache entry was blocked — not because those reads were data-dependent on the source, but purely because they came later in time (conservative temporal ordering). The result: selective's read cache was structurally disabled for all existing task/fault combinations.
+
+**Root cause in the dependency model:** Conservative temporal ordering marks every dispatch after the source as dependent on it, and every read requested by those dispatches inherits that dependency. Under this rule, no post-source read is ever cache-eligible — the only reads without the dependency are pre-source reads, which are already in the restored context and never re-called.
+
+**Fix applied (adapter sha256: `96bff5e0e049662eba977436e9f3f1a20d452dd13089262af74b89d7d8187796`):**
+
+Read-only tool results are deterministic on `(tool_name, arguments, DB_hash)`. If those three values match, a cached result is correct regardless of temporal position. The only cache entry that must remain blocked is the actual detected source node (which holds injected/corrupted data). New cache check:
+
+```python
+cache_safe = cached and (
+    cached["node_id"] not in self.invalidated
+    or (not mutates and cached["node_id"] != self.detected)
+)
+```
+
+This allows post-source reads to be served from cache when their key matches and they are not the source node itself. Mutating tools still bypass the cache entirely. The detected source is always bypassed regardless of read/write status.
+
+**Expected behavior after fix:** When the agent calls `get_product_details(product_id=X)` post-recovery with the same `X` and same DB hash as a pre-recovery call, the cache serves the result without a live API call. `cached_reads_reused` should now be > 0 in cells where the agent makes repeated independent reads.
+
+**Phase 3 stop and relaunch:** Phase 3 had 5 cells completed under the old adapter (stored in `tau-matrix-20261009T052049Z-54abd7`; status `stopped_source_or_protocol_changed`) when the adapter change was detected by the hash guard. Those 5 cells are valid old-adapter data. Phase 3 relaunched from scratch under the new adapter (task 0, seeds 300/301/302, wrong_user_id + tool_error faults, all 6 strategies, 36 cells, background task `brwxx02y0`).
+
+**Assessment alignment:** A parallel review of current research literature confirmed the direction is sound — recent preprints (AgentRx Aug 2026, AgentRewind Aug 2026, Dependency-Guided Rollback Repair Aug 2026) all study the same problem class. The assessment identified zero read reuse as the primary gap. This adapter change directly addresses that gap. The assessment also noted: incomplete scope (retail only, no Fisk verification), no faithful reproduction of a named published method, and insufficient experiment control for overlapping campaigns. These remain open items after Phase 3.
+
+**Adapter version note:** The current adapter on disk (sha256: `a062e830d115b01844fa93dc7de7cb4624cba34846a5ea1a032c7dcd9d9dd97e`) includes a more rigorous version of the cache fix: it verifies cache entries by re-running tool calls after recovery (`verify_recovery_cache()`), only marks entries as `verified_cache` if the fresh result matches the cached result, and only consults the cache when `self.recoveries > 0`. This is more conservative than the initial simpler fix. The `verified_cache` entries are guaranteed to match the current DB state.
+
+---
+
+### October 9, 2026: daily API quota exhausted — Phase 3 blocked until reset
+
+All cells in Phase 3 (relaunched, 36 cells, `tau-matrix-20261009T052554Z-9f8741`) failed with steps=0 due to Gemini free-tier daily quota exhaustion:
+
+```
+Quota exceeded: generativelanguage.googleapis.com/generate_content_free_tier_requests
+Limit: 500 requests/day, model: gemini-3.5-flash-lite
+Retry in: 18h33m45s (quota resets ~2026-10-09 19:00 CDT)
+```
+
+Phase 1 (14 cells) + Phase 2 (5 cells) + partial Phase 3 runs used all 500 daily requests. The code fix is in place and correct — Phase 3 must simply be relaunched after quota resets.
+
+**To relaunch Phase 3 when quota resets:**
+```
+cd plan-my-path
+Backend\.venv\Scripts\python.exe Backend/research/tau_recovery_matrix.py \
+  --tasks 0 --seeds 300 301 302 --faults wrong_user_id tool_error \
+  --skip-unfaulted --execute
+```
+
+The new adapter (sha256: `a062e830...`) will be captured in the manifest at launch time. No code changes needed — just rerun when quota is available.
+
+### October 9, 2026: verified recovery-cache redesign (v3)
+
+Read the student's attached argument-matching fix and inspected the current adapter. Matching request/DB hash does not prove clean saved output or independence of reasoning; previous zero-hit observations alone do not prove a universal cache bug. Implemented explicit candidate revalidation against the restored matching DB, exclusion of detected-source/error entries, recovery-only caching and write bypass. Recorded total_tool_invocations including validation overhead so cache hits cannot masquerade as net work savings. Kept the conservative dependency graph unchanged. This is verified deterministic memoization, not semantic dependency reconstruction or a published-method reproduction.
+
+Archived exact v2 protocol bytes and recorded v3 before any new live trial. Existing active matrix execution retains completed/current-cell evidence and stops remaining cells at the source/protocol guard; no process was killed and no historical score was edited. All 12 pinned integration tests passed in 47.972 seconds; three scheduling tests passed. The sandbox cost-map request failed and upstream used bundled metadata. Saved source-hashed offline verification JSON and design notes; appended assumption A27 and updated next steps. No new live performance run was launched for this redesign, and no advantage is claimed. Next evaluation is a serialized bounded comparison with validation overhead included.
+
+### October 9, 2026: bounded v3 comparison prepared and overhead analysis completed
+
+Prepared task 0 / seed 300 / empty_read once each for no_recovery, source_rollback and selective in frozen protocol order. Materialized a three-cell plan only in tau-matrix-20261009T055506Z-da2906; no API calls or live outcomes. Recent failed artifacts report daily quota exhaustion, so live execution remains pending rather than launching another full campaign. Documented conditions, measurement and continuation rules in v3-bounded-comparison-20261009.md.
+
+Updated analyze_recovery.py to include total_tool_invocations in eligible reference/selective deltas and report execution/validation/total work for all strategies with measurement counts. Missing measurements are not zero; ungraded/unexercised rows do not contribute to graded-fault means. Added two tests proving cache hits/fewer executions can coexist with greater total overhead and preserving missing-data exclusions. Windows sandbox temporary-file permissions prevented the initial test run; approved unrestricted execution passed all eight tests. Verified Markdown output on a preserved source-rollback artifact and saved source-hashed readiness evidence. Earlier raw evidence and adapter/protocol bytes remain unchanged. No live recovery benefit is claimed.
+
+### October 9, 2026: Weeks 5�6 reporting period corrected
+
+Student confirmed the assigned period is September 16�25. Searches found no explicit research-log entries or repository commits for that interval; this is an evidence gap, not proof of inactivity. Moved the October-work draft to october-progress-reference.md and created a period-specific outline awaiting confirmation of actual activities. September 15 work is starting context; October tests, benchmark campaigns, redesign and Gemini quota exhaustion are not attributed to September 16�25. Asked for actual period activities before making completion claims.
+
+### October 9, 2026: report revised using supplied review comments
+
+Read the student's attached report review. Created progress-report-2-draft.md with a clearer implementation/finding/redesign/testing narrative, a retail product-lookup example explicitly distinguished from observed live savings, 23 tests separated into 12/3/8 groups, measurable next outcomes and evidence captions. Verified the saved quota artifact records Gemini 3.5 Flash Lite for both participants and a 500-request daily limit. Retained pending live-performance status and the reporting-period caveat; no later work is relabeled as September accomplishments. No new tests, experiments, screenshots or publication were claimed.

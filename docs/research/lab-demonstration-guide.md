@@ -25,6 +25,8 @@ The October 7 layout opens on **Saved evidence**. Use **Run experiments** to lau
 
 ## Evidence inventory
 
+Current navigation: the lab opens **Run experiments**. Under All categories, expand one category at a time, check an experiment's **Details**, then select **Run**. Category and Mode share the toolbar; Mode applies only to experiments. **Results** contains the saved-run selector and Summary / Trace / Provenance views. **Method & data** is the shared reference. The compact last-run status links to its saved results, while an active run keeps its elapsed timer visible. This flow supersedes earlier navigation descriptions in this guide.
+
 Both workspace views separate **Official benchmarks**, **Custom recovery on official tasks**, **Synthetic demonstrations**, and **Fisk catalog case study**. Use the section navigation to focus on one category, or All sections to see grouped headings. Official benchmark data can still represent simulated customers; the custom fault controller is an experimental modification. Fisk rules are official catalog facts, while student records are synthetic.
 
 | Evidence | What it supports | What it does not establish |

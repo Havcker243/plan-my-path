@@ -1,5 +1,7 @@
 # FiskGrad
 
+For the Senior Seminar II agent-recovery study, start with the [research overview, methods and evidence](docs/research/README.md). The research lab uses FiskGrad as its experiment interface; preliminary research results are documented separately from the broader product features below.
+
 Before publishing changes, see [what to push and keep local](docs/github-publishing.md), including research evidence, credentials and generated files. Run `python Backend/scripts/check_publish.py` for a limited, read-only check of staged and candidate content.
 
 FiskGrad is an academic planning system for Fisk University students. It connects transcript history, degree requirements, course planning, section selection, calendar export, course reviews, professor ratings, GPA projection, AI advising, and advisor-ready balance sheets into a single workflow.

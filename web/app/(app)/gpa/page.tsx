@@ -27,7 +27,7 @@ const newRow = (name = "", credits = "3", grade = "A"): Row => ({ id: ++_id, nam
 function GpaGauge({ gpa }: { gpa: number }) {
   const pct = (gpa / 4.0) * 100;
   const color =
-    gpa >= 3.5 ? "text-green-600" : gpa >= 3.0 ? "text-primary" : gpa >= 2.0 ? "text-amber-600" : "text-destructive";
+    gpa >= 3.5 ? "text-green-600 dark:text-green-300" : gpa >= 3.0 ? "text-primary" : gpa >= 2.0 ? "text-amber-600 dark:text-amber-300" : "text-destructive";
   const barColor =
     gpa >= 3.5 ? "bg-green-500" : gpa >= 3.0 ? "bg-primary" : gpa >= 2.0 ? "bg-amber-500" : "bg-destructive";
   return (
@@ -139,7 +139,7 @@ export default function GpaPage() {
                 {hasBase && (
                   <div className="flex justify-between text-xs pt-1 border-t border-border">
                     <span className="text-muted-foreground">GPA change</span>
-                    <span className={cn("font-semibold", projectedGpa >= parseFloat(currentGpa) ? "text-green-600" : "text-destructive")}>
+                    <span className={cn("font-semibold", projectedGpa >= parseFloat(currentGpa) ? "text-green-600 dark:text-green-300" : "text-destructive")}>
                       {projectedGpa >= parseFloat(currentGpa) ? "+" : ""}
                       {(projectedGpa - parseFloat(currentGpa)).toFixed(2)}
                     </span>

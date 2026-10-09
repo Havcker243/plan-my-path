@@ -221,11 +221,11 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
             {gradText && (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
-                <GraduationCap className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl px-3.5 py-2.5">
+                <GraduationCap className="w-4 h-4 text-amber-600 dark:text-amber-300 flex-shrink-0" />
                 <div>
-                  <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wide">Graduation</p>
-                  <p className="text-sm font-bold text-amber-800">{gradText}</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-300 font-medium uppercase tracking-wide">Graduation</p>
+                  <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{gradText}</p>
                 </div>
               </div>
             )}
@@ -254,7 +254,7 @@ export default function DashboardPage() {
             />
           </div>
           <div className="flex items-center gap-4 mt-1.5 text-[11px]">
-            <span className="flex items-center gap-1 text-amber-600 font-semibold">
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-300 font-semibold">
               <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
               {completedCredits} earned
             </span>
@@ -290,8 +290,8 @@ export default function DashboardPage() {
             label: "Cumulative GPA",
             value: gpa !== null ? gpa.toFixed(2) : "N/A",
             sub: gpa !== null ? (gpa >= 3.0 ? "Above 3.0" : "Below 3.0") : "Import transcript to track",
-            valueColor: gpa !== null ? "text-green-600" : "text-muted-foreground",
-            subColor: gpa !== null && gpa >= 3.0 ? "text-green-600" : undefined,
+            valueColor: gpa !== null ? "text-green-600 dark:text-green-300" : "text-muted-foreground",
+            subColor: gpa !== null && gpa >= 3.0 ? "text-green-600 dark:text-green-300" : undefined,
           },
         ].map((card, index) => (
           <motion.div
@@ -344,27 +344,27 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6"
+          className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 p-4 mb-6"
         >
-          <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-3">
+          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 uppercase tracking-wide mb-3">
             {totalActions} thing{totalActions !== 1 ? "s" : ""} to address
           </p>
           <div className="space-y-2">
             {missingRequired.slice(0, 3).map((code) => (
               <div key={code} className="flex items-start gap-2.5">
-                <BookMarked className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
+                <BookMarked className="w-3.5 h-3.5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200">
                   <span className="font-semibold">{code}</span> is required for your major but not in your plan
                 </p>
               </div>
             ))}
             {missingRequired.length > 3 && (
-              <p className="text-xs text-amber-700 pl-6">+{missingRequired.length - 3} more missing required courses</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300 pl-6">+{missingRequired.length - 3} more missing required courses</p>
             )}
             {prereqWarnings.slice(0, 2).map((w, i) => (
               <div key={i} className="flex items-start gap-2.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-300 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200">
                   <span className="font-semibold">{w.prereqId}</span> must be taken before{" "}
                   <span className="font-semibold">{w.courseId}</span>
                 </p>
@@ -372,8 +372,8 @@ export default function DashboardPage() {
             ))}
             {coreqWarnings.slice(0, 2).map((w, i) => (
               <div key={`${w.courseId}-${w.coreqId}-${i}`} className="flex items-start gap-2.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200">
                   <span className="font-semibold">{w.coreqId}</span> should be taken with{" "}
                   <span className="font-semibold">{w.courseId}</span>
                 </p>
@@ -381,22 +381,22 @@ export default function DashboardPage() {
             ))}
             {offeredTermWarnings.slice(0, 2).map((w, i) => (
               <div key={i} className="flex items-start gap-2.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
+                <AlertTriangle className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200">
                   <span className="font-semibold">{w.courseId}</span> may not be offered in {w.semesterTerm} — verify with catalog
                 </p>
               </div>
             ))}
             {overloadedSemesters.slice(0, 2).map((s) => (
               <div key={s.id} className="flex items-start gap-2.5">
-                <Zap className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-900">
+                <Zap className="w-3.5 h-3.5 text-orange-500 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-200">
                   <span className="font-semibold">{s.term} {s.year}</span> has {getTotalCredits(s.courseIds, planCatalog)} credits — aim for 12–18
                 </p>
               </div>
             ))}
           </div>
-          <Link href="/planner" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 hover:text-amber-900">
+          <Link href="/planner" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-800 dark:text-amber-200 hover:text-amber-900 dark:hover:text-amber-200">
             Fix in Degree Plan <ChevronRight className="w-3 h-3" />
           </Link>
         </motion.div>
@@ -515,7 +515,7 @@ function SemesterPreviewCard({
         </div>
         <span className={cn(
           "text-[10px] font-semibold px-2 py-1 rounded-full",
-          isOverloaded ? "bg-red-50 text-red-700" : isLight ? "bg-yellow-50 text-yellow-700" : "bg-green-50 text-green-700"
+          isOverloaded ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300" : isLight ? "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300" : "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300"
         )}>
           {semCredits} credits · {isOverloaded ? "Overloaded" : isLight ? "Light" : "OK"}
         </span>

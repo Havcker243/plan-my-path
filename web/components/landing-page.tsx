@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle, GraduationCap, BookOpen, Star, ChevronRight } 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -28,6 +29,7 @@ export default function LandingPage() {
           <Link href="/explore" className="hover:text-foreground transition-colors">Browse courses</Link>
         </nav>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link href="/login">
             <Button variant="ghost" size="sm" className="hidden md:inline-flex">Sign in</Button>
           </Link>
@@ -62,7 +64,7 @@ export default function LandingPage() {
               {...fadeUp}
               transition={{ duration: 0.45, ease: "easeOut", delay: 0 }}
             >
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold mb-6">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold mb-6">
                 <GraduationCap className="w-3.5 h-3.5" />
                 Made for Fisk University students
               </span>
@@ -153,15 +155,15 @@ export default function LandingPage() {
                 num: "02",
                 title: "Build your plan",
                 desc: "Add courses to each semester. We warn you about prereqs, overloaded terms, and missing requirements in real time so nothing slips through.",
-                color: "text-amber-600",
-                bg: "bg-amber-50",
+                color: "text-amber-600 dark:text-amber-300",
+                bg: "bg-amber-50 dark:bg-amber-950/40",
               },
               {
                 num: "03",
                 title: "Know when you'll graduate",
                 desc: "See your graduation date, credits completed, and what's left to do — updated every time you change your plan. No more guessing.",
-                color: "text-green-600",
-                bg: "bg-green-50",
+                color: "text-green-600 dark:text-green-300",
+                bg: "bg-green-50 dark:bg-green-950/40",
               },
             ].map(({ num, title, desc, color, bg }, i) => (
               <motion.div
@@ -249,10 +251,10 @@ export default function LandingPage() {
           viewport={{ once: true }}
           className="max-w-2xl mx-auto rounded-3xl bg-gradient-to-br from-primary to-primary/80 px-8 py-12 text-center shadow-xl shadow-primary/20"
         >
-          <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center mx-auto mb-5">
-            <GraduationCap className="w-5 h-5 text-white" />
+          <div className="w-11 h-11 rounded-full bg-primary-foreground/15 flex items-center justify-center mx-auto mb-5">
+            <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-balance">
+          <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground mb-3 text-balance">
             Ready to map your graduation?
           </h2>
           <p className="text-primary-foreground/75 mb-8 text-sm leading-relaxed">
@@ -297,7 +299,7 @@ function GraduationJourneyPreview() {
         <span className="w-3 h-3 rounded-full bg-amber-400/80" />
         <span className="w-3 h-3 rounded-full bg-green-400/80" />
         <span className="ml-3 text-xs text-muted-foreground">FiskGrad · Dashboard</span>
-        <span className="ml-auto text-[11px] text-green-600 font-semibold flex items-center gap-1.5">
+        <span className="ml-auto text-[11px] text-green-600 dark:text-green-300 font-semibold flex items-center gap-1.5">
           <CheckCircle className="w-3 h-3" /> On track
         </span>
       </div>
@@ -310,19 +312,19 @@ function GraduationJourneyPreview() {
             <p className="text-base font-bold text-foreground">Jordan M.</p>
             <p className="text-xs text-muted-foreground mt-0.5">Computer Science · Sophomore</p>
           </div>
-          <span className="text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-full">
             Class of &apos;26
           </span>
         </div>
 
         {/* Graduation target */}
-        <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200/80 px-3.5 py-2.5 mb-4">
-          <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <GraduationCap className="w-3.5 h-3.5 text-amber-600" />
+        <div className="flex items-center gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-3.5 py-2.5 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/40 flex items-center justify-center flex-shrink-0">
+            <GraduationCap className="w-3.5 h-3.5 text-amber-600 dark:text-amber-300" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-amber-800">Graduating Spring 2026</p>
-            <p className="text-[11px] text-amber-600 mt-0.5">All requirements on track</p>
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-200">Graduating Spring 2026</p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-300 mt-0.5">All requirements on track</p>
           </div>
         </div>
 
@@ -341,7 +343,7 @@ function GraduationJourneyPreview() {
             />
           </div>
           <div className="flex justify-between items-center text-[11px] mt-1.5">
-            <span className="text-green-600 font-semibold">On track · 39%</span>
+            <span className="text-green-600 dark:text-green-300 font-semibold">On track · 39%</span>
             <span className="text-muted-foreground">73 credits left</span>
           </div>
         </div>
@@ -359,7 +361,7 @@ function GraduationJourneyPreview() {
                 className={cn(
                   "rounded-xl border p-3 text-[11px]",
                   sem.status === "done"
-                    ? "bg-green-50/80 border-green-200/80"
+                    ? "bg-green-50/80 dark:bg-green-950/40 border-green-200/80 dark:border-green-800/60"
                     : sem.status === "current"
                     ? "bg-primary/5 border-primary/30"
                     : "bg-background border-border"
@@ -372,7 +374,7 @@ function GraduationJourneyPreview() {
                   )}>
                     {sem.label}
                   </span>
-                  {sem.status === "done" && <CheckCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />}
+                  {sem.status === "done" && <CheckCircle className="w-3.5 h-3.5 text-green-500 dark:text-green-400 flex-shrink-0" />}
                   {sem.status === "current" && (
                     <span className="text-[9px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full tracking-wide">
                       NOW
@@ -390,7 +392,7 @@ function GraduationJourneyPreview() {
                 ) : (
                   <span className={cn(
                     "text-[11px]",
-                    sem.status === "done" ? "text-green-700 font-medium" : "text-muted-foreground"
+                    sem.status === "done" ? "text-green-700 dark:text-green-300 font-medium" : "text-muted-foreground"
                   )}>
                     {sem.credits} credits
                   </span>

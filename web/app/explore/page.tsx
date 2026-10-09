@@ -97,9 +97,9 @@ function SectionRow({ section }: { section: BackendSection }) {
       <div className="text-right flex-shrink-0">
         <span className={cn(
           "text-[10px] font-semibold px-2 py-0.5 rounded-full",
-          available > 5 ? "bg-green-50 text-green-700" :
-          available > 0 ? "bg-yellow-50 text-yellow-700" :
-          "bg-red-50 text-red-700"
+          available > 5 ? "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300" :
+          available > 0 ? "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300" :
+          "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300"
         )}>
           {available > 0 ? `${available} open` : "Full"}
         </span>

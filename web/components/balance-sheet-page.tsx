@@ -35,9 +35,9 @@ import { toast } from "sonner";
 
 const STATUS_META = {
   completed: {
-    icon: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+    icon: <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-300" />,
     text: "Completed",
-    pill: "bg-green-50 text-green-700",
+    pill: "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300",
   },
   planned: {
     icon: <Circle className="w-4 h-4 text-primary" />,
@@ -62,8 +62,8 @@ const GROUP_TYPE_LABEL: Record<string, string> = {
 
 const GROUP_TONE_STYLES = {
   core: "bg-sky-50 text-sky-700 border-sky-200",
-  major: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  elective: "bg-amber-50 text-amber-700 border-amber-200",
+  major: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60",
+  elective: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60",
   general: "bg-muted text-muted-foreground border-border",
 } as const;
 
@@ -511,7 +511,7 @@ export default function BalanceSheetPage() {
                 </p>
               </div>
 
-              <div className={cn("divide-y divide-border", isBusinessLayout && "bg-amber-50/20")}>
+              <div className={cn("divide-y divide-border", isBusinessLayout && "bg-amber-50/20 dark:bg-amber-950/20")}>
                 {activeModel.groups.map((group) => {
                   const resolvedOpen = expandedGroups[group.id] ?? (group.defaultExpanded || group.completedCount > 0 || group.plannedCount > 0);
                   return (
@@ -521,7 +521,7 @@ export default function BalanceSheetPage() {
                         onClick={() => setExpandedGroups((prev) => ({ ...prev, [group.id]: !resolvedOpen }))}
                         className={cn(
                           "w-full flex items-center justify-between gap-3 px-5 py-4 transition-colors text-left",
-                          isBusinessLayout ? "hover:bg-amber-50/40" : "hover:bg-muted/40"
+                          isBusinessLayout ? "hover:bg-amber-50/40 dark:hover:bg-amber-950/40" : "hover:bg-muted/40"
                         )}
                       >
                         <div className="min-w-0">
@@ -548,7 +548,7 @@ export default function BalanceSheetPage() {
                             )}
                             <span className={cn(
                               "rounded-full px-2.5 py-0.5 text-[11px]",
-                              group.isSatisfied ? "bg-green-50 text-green-700" : "bg-muted text-muted-foreground"
+                              group.isSatisfied ? "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground"
                             )}>
                               {group.isCreditBased ? group.progressLabel : `${group.completedCount} completed`}
                             </span>
@@ -986,7 +986,7 @@ function BalanceSheetTableRow({
     <tr
       className={cn(
         "align-top",
-        row.status === "completed" && "bg-green-50/40",
+        row.status === "completed" && "bg-green-50/40 dark:bg-green-950/40",
         row.status === "planned" && "bg-primary/[0.03]"
       )}
     >
@@ -995,7 +995,7 @@ function BalanceSheetTableRow({
           className={cn(
             "w-5 h-5 rounded border flex items-center justify-center text-[11px] font-semibold",
             row.status === "completed"
-              ? "border-green-600 text-green-700 bg-green-50"
+              ? "border-green-600 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40"
               : row.status === "planned"
               ? "border-primary text-primary bg-primary/5"
               : "border-border text-muted-foreground"
@@ -1169,7 +1169,7 @@ function BalanceSheetPairRow({
                     className={cn(
                       "w-5 h-5 rounded border flex items-center justify-center text-[11px] font-semibold mt-0.5",
                       course.status === "completed"
-                        ? "border-green-600 text-green-700 bg-green-50"
+                        ? "border-green-600 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40"
                         : course.status === "planned"
                         ? "border-primary text-primary bg-primary/5"
                         : "border-border text-muted-foreground"

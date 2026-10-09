@@ -1,0 +1,110 @@
+┌───────────────────────── Simulation Configuration ──────────────────────────┐
+│ Domain: retail  Task Set: Default  Tasks: 0                                 │
+│ Trials: 1  Max Steps: 200  Max Errors: 10                                   │
+│                                                                             │
+│ Agent: llm_agent → gemini/gemini-3.5-flash-lite                             │
+│ User:  user_simulator → gemini/gemini-3.5-flash-lite                        │
+│                                                                             │
+│ Save: tau-smoke-20261009T022204Z-3c7632  Concurrency: 1  Verbose: False     │
+└─────────────────────────────────────────────────────────────────────────────┘
+0/1 (trial 1/1). Running task 0, trial 1
+┌──────────────────────────── Simulation Overview ────────────────────────────┐
+│ Task ID: 0                                                                  │
+│ Trial: 0                                                                    │
+│ Duration: 14.86s                                                            │
+│ Mode: half_duplex                                                           │
+│ Termination Reason: TerminationReason.USER_STOP                             │
+│ Agent Cost: $0.0141                                                         │
+│ User Cost: $0.0032                                                          │
+│ Reward: ✅ 1.0000 (DB: 1.0, NL_ASSERTION: 1.0)                              │
+│                                                                             │
+│ DB Check:✅ 1.0                                                             │
+│                                                                             │
+│ Action Checks:                                                              │
+│ - 0: agent find_user_id_by_name_zip [read] ✅ 1.0                           │
+│ - 1: agent get_order_details [read] ✅ 1.0                                  │
+│ - 2: agent get_product_details [read] ✅ 1.0                                │
+│ - 3: agent get_product_details [read] ✅ 1.0                                │
+│ - 4: agent exchange_delivered_order_items [write] ✅ 1.0                    │
+│                                                                             │
+│ Partial Action Reward: 5/5 (100.0%)                                         │
+│   Read:  4/4 (100.0%)                                                       │
+│   Write: 1/1 (100.0%)                                                       │
+│                                                                             │
+│ Additional Info:                                                            │
+│ env: None                                                                   │
+│ nl: {'note': 'No nl_assertions to evaluate'}                                │
+│ communicate: {'note': 'No communicate_info to evaluate'}                    │
+│ action: None                                                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Successfully completed all simulations!
+To review the simulations, run: tau2 view
+┌───────────────────────── Agent Performance Metrics ─────────────────────────┐
+│   ═══ Overview ═══                                                          │
+│   Total Simulations         1                                               │
+│   Total Tasks               1                                               │
+│                                                                             │
+│   ═══ Reward Metrics ═══                                                    │
+│   🏆 Average Reward         1.0000                                          │
+│      Pass^1                 1.000                                           │
+│   💰 Avg Cost/Conversation  $0.0141                                         │
+│                                                                             │
+│   ═══ Action Metrics ═══                                                    │
+│   📖 Read Actions           4/4 (100.0%)                                    │
+│   ✏️  Write Actions          1/1 (100.0%)                                    │
+│                                                                             │
+│   ═══ DB Match ═══                                                          │
+│   🗄️  DB Match               ✓ 1 / ✗ 0 (100.0%)                              │
+│                                                                             │
+│   ═══ Authentication ═══                                                    │
+│      Not Checked            1                                               │
+│                                                                             │
+│   ═══ Termination ═══                                                       │
+│   🛑 Normal Stop            1 (👤 1 / 🤖 0)                                 │
+│                                                                             │
+│   ═══ LLM Judge Review ═══                                                  │
+│   🤖 Agent Errors           0 errors                                        │
+│      Sims by severity       -                                               │
+│   👤 User Errors            0 errors                                        │
+│      Sims by severity       -                                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+2026-10-08 21:22:05.731 | WARNING  | tau2.utils.utils:<module>:15 - No .env file found
+2026-10-08 21:22:05.732 | INFO     | tau2.utils.utils:<module>:28 - Using data directory from source: C:\Users\dolap\Desktop\Projects\plan-my-path\.research-upstream\tau-bench\data
+2026-10-08 21:22:09.451 | INFO     | tau2.utils.llm_utils:<module>:102 - LiteLLM: Cache is disabled
+2026-10-08 21:22:09.545 | DEBUG    | tau2.registry:<module>:281 - Registering default components...
+2026-10-08 21:22:09.555 | INFO     | tau2.voice.utils.utils:<module>:26 - Found 4 continuous noise files in the directory C:\Users\dolap\Desktop\Projects\plan-my-path\.research-upstream\tau-bench\data\voice\background_noise_audio_pcm_mono_verified\continuous
+2026-10-08 21:22:09.555 | INFO     | tau2.voice.utils.utils:<module>:33 - Found 5 burst noise files in the directory C:\Users\dolap\Desktop\Projects\plan-my-path\.research-upstream\tau-bench\data\voice\background_noise_audio_pcm_mono_verified\bursts
+2026-10-08 21:22:10.548 | DEBUG    | tau2.registry:<module>:350 - Default components registered successfully. Registry info: {
+  "domains": [
+    "mock",
+    "airline",
+    "retail",
+    "telecom",
+    "telecom-workflow",
+    "banking_knowledge"
+  ],
+  "agents": [
+    "llm_agent",
+    "llm_agent_gt",
+    "llm_agent_solo",
+    "discrete_time_audio_native_agent"
+  ],
+  "users": [
+    "user_simulator",
+    "dummy_user",
+    "voice_streaming_user_simulator"
+  ],
+  "task_sets": [
+    "mock",
+    "airline",
+    "retail",
+    "telecom_full",
+    "telecom_small",
+    "telecom",
+    "telecom-workflow",
+    "banking_knowledge"
+  ]
+}

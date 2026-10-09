@@ -413,18 +413,18 @@ export default function CoursesPage() {
         <div className="flex-1 overflow-y-auto px-5 py-4 pb-4">
           {/* Courses You Still Need */}
           {coursesYouNeed.length > 0 && statusFilter === "all" && !search && (
-            <div className="mb-6 p-4 rounded-xl border border-yellow-200 bg-yellow-50">
+            <div className="mb-6 p-4 rounded-xl border border-yellow-200 dark:border-yellow-800/60 bg-yellow-50 dark:bg-yellow-950/40">
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm font-semibold text-yellow-900">Courses You Still Need</span>
-                <span className="text-xs text-yellow-700 ml-auto">{coursesYouNeed.length} required not in plan</span>
+                <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-300" />
+                <span className="text-sm font-semibold text-yellow-900 dark:text-yellow-200">Courses You Still Need</span>
+                <span className="text-xs text-yellow-700 dark:text-yellow-300 ml-auto">{coursesYouNeed.length} required not in plan</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {coursesYouNeed.slice(0, 6).map((code) => (
                   <button
                     key={code}
                     onClick={() => setSearch(code)}
-                    className="text-xs bg-white border border-yellow-300 rounded-md px-2.5 py-1 font-medium hover:border-primary/50 hover:text-primary transition-colors"
+                    className="text-xs bg-card border border-yellow-300 dark:border-yellow-700 rounded-md px-2.5 py-1 font-medium hover:border-primary/50 hover:text-primary transition-colors"
                   >
                     {code}
                   </button>
@@ -432,7 +432,7 @@ export default function CoursesPage() {
                 {coursesYouNeed.length > 6 && (
                   <button
                     onClick={() => setStatusFilter("needed")}
-                    className="text-xs text-yellow-700 hover:underline"
+                    className="text-xs text-yellow-700 dark:text-yellow-300 hover:underline"
                   >
                     +{coursesYouNeed.length - 6} more
                   </button>
@@ -476,7 +476,7 @@ export default function CoursesPage() {
                       className={cn(
                         "flex items-start gap-3 px-3 py-3 text-left transition-colors sm:items-center sm:px-4",
                         isDone
-                          ? "bg-green-50/70 hover:bg-green-50"
+                          ? "bg-green-50/70 dark:bg-green-950/40 hover:bg-green-50 dark:hover:bg-green-950/40"
                           : isPlanned
                           ? "bg-primary/3 hover:bg-primary/5"
                           : "hover:bg-muted/50",
@@ -486,7 +486,7 @@ export default function CoursesPage() {
                       {/* Completion indicator — left-edge column */}
                       <div className="flex-shrink-0 w-5 flex items-center justify-center">
                         {isDone ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-300" />
                         ) : isPlanned ? (
                           <Circle className="w-3.5 h-3.5 text-primary" />
                         ) : (
@@ -498,12 +498,12 @@ export default function CoursesPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
                             "text-sm font-semibold",
-                            isDone ? "text-green-700" : "text-foreground"
+                            isDone ? "text-green-700 dark:text-green-300" : "text-foreground"
                           )}>
                             {course.code}
                           </span>
                           {isDone ? (
-                            <span className="text-[10px] font-semibold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[10px] font-semibold bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full">
                               Completed
                             </span>
                           ) : isPlanned ? (
@@ -518,7 +518,7 @@ export default function CoursesPage() {
                         </div>
                         <p className={cn(
                           "text-xs leading-relaxed sm:truncate",
-                          isDone ? "text-green-700/70" : "text-muted-foreground"
+                          isDone ? "text-green-700/70 dark:text-green-300" : "text-muted-foreground"
                         )}>
                           {course.title}
                         </p>
@@ -654,7 +654,7 @@ export default function CoursesPage() {
 
           <div className="px-5 py-4 border-t border-border flex-shrink-0">
             {plannedSemesters[selected.id] ? (
-              <div className="flex items-center justify-center gap-2 py-2 text-green-600 text-sm font-medium">
+              <div className="flex items-center justify-center gap-2 py-2 text-green-600 dark:text-green-300 text-sm font-medium">
                 <Check className="w-4 h-4" />
                 In {plannedSemesters[selected.id]}
               </div>

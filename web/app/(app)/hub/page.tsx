@@ -119,7 +119,7 @@ function ReviewCard({ review }: { review: CourseReview }) {
           {review.would_take_again !== null && (
             <div className="flex items-center gap-1">
               {review.would_take_again
-                ? <ThumbsUp className="w-3 h-3 text-green-600" />
+                ? <ThumbsUp className="w-3 h-3 text-green-600 dark:text-green-300" />
                 : <ThumbsDown className="w-3 h-3 text-destructive" />}
               <span className="text-[10px] text-muted-foreground">
                 {review.would_take_again ? "Would take again" : "Wouldn't take again"}
@@ -175,7 +175,7 @@ function ProfessorCard({
         {prof.would_take_again_pct !== null && (
           <span className={cn(
             "text-[10px] font-medium",
-            prof.would_take_again_pct >= 70 ? "text-green-600" : prof.would_take_again_pct >= 40 ? "text-amber-600" : "text-destructive"
+            prof.would_take_again_pct >= 70 ? "text-green-600 dark:text-green-300" : prof.would_take_again_pct >= 40 ? "text-amber-600 dark:text-amber-300" : "text-destructive"
           )}>
             {prof.would_take_again_pct}% would take again
           </span>
@@ -458,7 +458,7 @@ function ProfessorsTab() {
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Would Take Again</p>
                 <p className={cn("text-sm font-bold",
-                  selected.would_take_again_pct >= 70 ? "text-green-600" : selected.would_take_again_pct >= 40 ? "text-amber-600" : "text-destructive"
+                  selected.would_take_again_pct >= 70 ? "text-green-600 dark:text-green-300" : selected.would_take_again_pct >= 40 ? "text-amber-600 dark:text-amber-300" : "text-destructive"
                 )}>{selected.would_take_again_pct}%</p>
               </div>
             )}

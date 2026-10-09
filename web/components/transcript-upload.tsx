@@ -29,12 +29,12 @@ type State =
   | { phase: "error"; message: string };
 
 const GRADE_COLOR: Record<string, string> = {
-  "A+": "text-green-600", A: "text-green-600", "A-": "text-green-600",
-  "B+": "text-blue-600", B: "text-blue-600", "B-": "text-blue-600",
-  "C+": "text-yellow-600", C: "text-yellow-600", "C-": "text-yellow-600",
-  "D+": "text-orange-500", D: "text-orange-500", "D-": "text-orange-500",
-  F: "text-red-600", NP: "text-red-600", U: "text-red-600",
-  S: "text-green-600", P: "text-green-600",
+  "A+": "text-green-600 dark:text-green-300", A: "text-green-600 dark:text-green-300", "A-": "text-green-600 dark:text-green-300",
+  "B+": "text-blue-600 dark:text-blue-300", B: "text-blue-600 dark:text-blue-300", "B-": "text-blue-600 dark:text-blue-300",
+  "C+": "text-yellow-600 dark:text-yellow-300", C: "text-yellow-600 dark:text-yellow-300", "C-": "text-yellow-600 dark:text-yellow-300",
+  "D+": "text-orange-500 dark:text-orange-400", D: "text-orange-500 dark:text-orange-400", "D-": "text-orange-500 dark:text-orange-400",
+  F: "text-red-600 dark:text-red-300", NP: "text-red-600 dark:text-red-300", U: "text-red-600 dark:text-red-300",
+  S: "text-green-600 dark:text-green-300", P: "text-green-600 dark:text-green-300",
 };
 
 function termKey(course: ParsedTranscriptCourse) {
@@ -303,11 +303,11 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
       </div>
 
       {unmatchedRowIds.size > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-900">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
             {unmatchedRowIds.size} course{unmatchedRowIds.size !== 1 ? "s" : ""} need verification
           </p>
-          <p className="text-xs text-amber-800 mt-1">
+          <p className="text-xs text-amber-800 dark:text-amber-200 mt-1">
             Only rows that could not be matched to an exact catalog code are flagged. In-progress rows are not flagged just because they have no grade.
           </p>
         </div>
@@ -331,11 +331,11 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
                     onClick={() => toggleCourse(course.rowId)}
                     className={cn(
                       "w-full flex items-start gap-3 px-3 py-3 text-left hover:bg-muted/40 transition-colors sm:items-center sm:px-4",
-                      isSelected && "bg-green-50/60"
+                      isSelected && "bg-green-50/60 dark:bg-green-950/40"
                     )}
                   >
                     {isSelected
-                      ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      ? <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-300 flex-shrink-0" />
                       : <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     }
                     <div className="flex-1 min-w-0">
@@ -343,17 +343,17 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
                         <span className="font-mono text-sm font-semibold text-foreground">{course.code}</span>
                         <span className="min-w-0 text-xs text-muted-foreground sm:truncate">{course.title}</span>
                         {course.status === "planned" && (
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                          <span className="rounded-full bg-blue-100 dark:bg-blue-950/40 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
                             In progress
                           </span>
                         )}
                         {course.status === "failed" && (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                          <span className="rounded-full bg-red-100 dark:bg-red-950/40 px-2 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-300">
                             Failed — may need retake
                           </span>
                         )}
                         {unmatchedRowIds.has(course.rowId) && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                          <span className="rounded-full bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200">
                             Verify
                           </span>
                         )}
@@ -371,7 +371,7 @@ export default function TranscriptUpload({ onResult, onCancel }: Props) {
                       <span className="text-xs text-muted-foreground font-mono">
                         {course.credits != null ? `${course.credits}cr` : "TBD"}
                       </span>
-                      <span className={cn("text-sm font-bold", course.grade ? (GRADE_COLOR[course.grade] ?? "text-foreground") : "text-blue-700")}>
+                      <span className={cn("text-sm font-bold", course.grade ? (GRADE_COLOR[course.grade] ?? "text-foreground") : "text-blue-700 dark:text-blue-300")}>
                         {course.grade ?? (course.status === "planned" ? "IP" : "TR")}
                       </span>
                     </div>

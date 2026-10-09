@@ -10,9 +10,9 @@ import { toast } from "sonner";
 
 const DEGREE_COLORS: Record<string, string> = {
   "B.S.":   "bg-primary/10 text-primary",
-  "B.A.":   "bg-green-100 text-green-700",
+  "B.A.":   "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300",
   "B.F.A.": "bg-purple-100 text-purple-700",
-  "B.M.":   "bg-amber-100 text-amber-700",
+  "B.M.":   "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300",
   "B.S.W.": "bg-cyan-100 text-cyan-700",
 };
 
@@ -203,7 +203,7 @@ export default function ExploreMajorsPage() {
                         </span>
                       )}
                       {isCurrentMajor && (
-                        <span className="flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/40 px-2 py-0.5 rounded-full">
                           <CheckCircle2 className="w-2.5 h-2.5" /> Current Major
                         </span>
                       )}
@@ -266,13 +266,13 @@ export default function ExploreMajorsPage() {
                         {completedCodes.length > 0 && (
                           <div className="grid sm:grid-cols-2 gap-3">
                             {previewMatches.required.length > 0 && (
-                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <p className="text-[11px] font-semibold text-green-800 mb-1.5">
+                              <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/60 rounded-lg p-3">
+                                <p className="text-[11px] font-semibold text-green-800 dark:text-green-200 mb-1.5">
                                   ✓ {previewMatches.required.length} required course{previewMatches.required.length !== 1 ? "s" : ""} already completed
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {previewMatches.required.map((c) => (
-                                    <span key={c} className="text-[10px] font-mono bg-green-100 text-green-800 px-1.5 py-0.5 rounded">{c}</span>
+                                    <span key={c} className="text-[10px] font-mono bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded">{c}</span>
                                   ))}
                                 </div>
                               </div>

@@ -99,6 +99,26 @@ class ResearchLabTests(unittest.TestCase):
         self.assertIn("provider_error", item["evidence"]["rows"][0])
         self.assertNotIn("exact_source_accuracy", item["evidence"]["rows"][0])
 
+    def test_matrix_archive_preserves_zero_and_ignores_partial_files(self):
+        base = Path(self.temp.name) / "baselines"
+        folder = base / "tau-matrix-test"
+        folder.mkdir(parents=True)
+        data = {"action": "tau-recovery", "started_at": "2026-10-09T00:00:00Z",
+                "ended_at": "2026-10-09T00:01:00Z", "configuration": {"llm_agent": "test"},
+                "protocol_sha256": "p" * 64, "adapter_sha256": "a" * 64,
+                "limitations": "one cell", "results": [{"strategy": "selective", "task_id": "0",
+                "seed": 301, "fault": "empty_read", "reward": 0.0, "fault_exercised": True}]}
+        (folder / "cell-000.json").write_text(json.dumps(data))
+        data.pop("ended_at")
+        data["results"] = []
+        (folder / "cell-001.json").write_text(json.dumps(data))
+        with patch.object(lab, "BASELINES", base), patch.object(lab, "EVIDENCE", base):
+            rows = lab.history()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], "tau-matrix-test-cell-000")
+        self.assertEqual(rows[0]["status"], "completed")
+        self.assertEqual(rows[0]["evidence"]["rows"][0]["reward"], 0.0)
+
     def test_interrupted_run_does_not_claim_completion(self):
         folder = Path(self.temp.name) / "old"
         folder.mkdir()

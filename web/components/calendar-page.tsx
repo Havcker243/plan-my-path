@@ -175,7 +175,7 @@ export default function CalendarPage() {
             <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
           )}
           {conflicts.size > 0 && (
-            <span className="text-[10px] md:text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] md:text-xs font-medium text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 px-2 py-0.5 rounded-full">
               {Math.ceil(conflicts.size / 2)} conflict{conflicts.size > 2 ? "s" : ""}
             </span>
           )}
@@ -208,7 +208,7 @@ export default function CalendarPage() {
               className={cn(
                 "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border",
                 isConflict
-                  ? "bg-red-50 border-red-300 text-red-700"
+                  ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800/60 text-red-700 dark:text-red-300"
                   : hasSections
                   ? "bg-background border-border text-foreground"
                   : "bg-muted border-border text-muted-foreground"
@@ -250,7 +250,7 @@ export default function CalendarPage() {
                         key={`${e.courseCode}-${i}`}
                         className={cn(
                           "flex items-start gap-3 px-4 py-3",
-                          isConflict ? "bg-red-50" : ""
+                          isConflict ? "bg-red-50 dark:bg-red-950/40" : ""
                         )}
                       >
                         <div className={cn("w-1 self-stretch rounded-full flex-shrink-0", e.color.split(" ")[0])} />
@@ -261,7 +261,7 @@ export default function CalendarPage() {
                               <span className="text-xs text-muted-foreground truncate">{course.title}</span>
                             )}
                             {isConflict && (
-                              <span className="text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">Conflict</span>
+                              <span className="text-[10px] font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 px-1.5 py-0.5 rounded-full">Conflict</span>
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
@@ -356,7 +356,7 @@ export default function CalendarPage() {
                       className={cn(
                         "absolute inset-x-1 rounded-md border px-2 py-1.5 overflow-hidden cursor-pointer hover:brightness-95 transition-all",
                         isConflict
-                          ? "bg-red-100 border-red-300 text-red-800 ring-1 ring-red-400"
+                          ? "bg-red-100 dark:bg-red-950/40 border-red-300 dark:border-red-800/60 text-red-800 dark:text-red-200 ring-1 ring-red-400 dark:ring-red-800/60"
                           : e.color
                       )}
                     >
@@ -378,8 +378,8 @@ export default function CalendarPage() {
       </div>
 
       {conflicts.size > 0 && (
-        <div className="px-5 py-3 border-t border-border bg-red-50 flex-shrink-0">
-          <p className="text-xs text-red-700 font-medium">
+        <div className="px-5 py-3 border-t border-border bg-red-50 dark:bg-red-950/40 flex-shrink-0">
+          <p className="text-xs text-red-700 dark:text-red-300 font-medium">
             Time conflict detected. Check highlighted courses above and adjust sections in your registrar portal.
           </p>
         </div>

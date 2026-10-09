@@ -14,7 +14,7 @@ import { fetchCourseLabels } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STATUS_ICON = {
-  completed: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+  completed: <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-300" />,
   planned: <Circle className="w-4 h-4 text-primary" />,
   missing: <AlertCircle className="w-4 h-4 text-destructive" />,
 };
@@ -245,7 +245,7 @@ export default function RequirementsPage() {
                               key={code}
                               className={cn(
                                 "flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition-colors",
-                                status === "completed" && "bg-green-50/50"
+                                status === "completed" && "bg-green-50/50 dark:bg-green-950/40"
                               )}
                             >
                               {STATUS_ICON[status]}
@@ -260,7 +260,7 @@ export default function RequirementsPage() {
                               <span className="text-xs font-mono text-muted-foreground">{credits} cr</span>
                               <span className={cn(
                                 "text-xs px-2 py-0.5 rounded-full",
-                                status === "completed" && "bg-green-100 text-green-700",
+                                status === "completed" && "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300",
                                 status === "planned" && "bg-primary/10 text-primary",
                                 status === "missing" && "bg-destructive/10 text-destructive"
                               )}>
@@ -338,7 +338,7 @@ export default function RequirementsPage() {
                               key={code}
                               className={cn(
                                 "flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors",
-                                status === "completed" && "bg-green-50/50"
+                                status === "completed" && "bg-green-50/50 dark:bg-green-950/40"
                               )}
                             >
                               {STATUS_ICON[status]}
@@ -356,7 +356,7 @@ export default function RequirementsPage() {
                               <span className="text-xs font-mono text-muted-foreground">{credits} cr</span>
                               <span className={cn(
                                 "text-xs px-2 py-0.5 rounded-full",
-                                status === "completed" && "bg-green-100 text-green-700",
+                                status === "completed" && "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300",
                                 status === "planned" && "bg-primary/10 text-primary",
                                 status === "missing" && "bg-destructive/10 text-destructive"
                               )}>

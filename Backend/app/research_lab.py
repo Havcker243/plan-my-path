@@ -237,11 +237,22 @@ def history() -> list[dict]:
                           "archived": True, "started_at": m["started_at_utc"], "evidence": describe(path, m["action"])})
         except (OSError, ValueError, KeyError):
             continue
-    for path in sorted(BASELINES.glob("tau-recovery*/recovery-results.json"), reverse=True):
-        data = read_json(path)
-        ok = bool(data.get("ended_at")) and all(not r.get("execution_error") for r in data["results"])
-        items.append({"id": path.parent.name, "action": "tau-recovery", "status": "completed" if ok else "failed",
-                      "archived": True, "started_at": data["started_at"], "evidence": describe(path, "tau-recovery")})
+    recovery_paths = list(BASELINES.glob("tau-recovery*/recovery-results.json"))
+    recovery_paths += list(BASELINES.glob("tau-matrix-*/cell-*.json"))
+    for path in sorted(recovery_paths, reverse=True):
+        try:
+            data = read_json(path)
+            # Matrix files are created before generation; do not present partial
+            # files as completed/failed results while the CLI is still running.
+            if not data.get("ended_at") or not data.get("results"):
+                continue
+            ok = all(not r.get("execution_error") for r in data["results"])
+            identifier = path.parent.name if path.name == "recovery-results.json" else f"{path.parent.name}-{path.stem}"
+            items.append({"id": identifier, "action": "tau-recovery", "status": "completed" if ok else "failed",
+                          "archived": True, "started_at": data["started_at"], "ended_at": data["ended_at"],
+                          "evidence": describe(path, "tau-recovery")})
+        except (OSError, ValueError, KeyError):
+            continue
     # The official wrapper also archives lab runs; show each execution only once.
     linked = {item.get("artifact_id") for item in items if not item.get("archived")}
     return [item for item in items if not item.get("archived") or item["id"] not in linked]

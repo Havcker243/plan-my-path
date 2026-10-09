@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { usePlan } from "@/contexts/plan-context";
 import { getPrereqWarnings, getCoreqWarnings, getTotalCredits, getOfferedTermWarnings, getCompletedCredits } from "@/lib/data";
 import CommandSearch from "@/components/command-search";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { NAV_ITEMS } from "@/lib/nav";
 import { allowedEmailDomainsText, isAllowedSchoolEmail } from "@/lib/email-access";
 
@@ -333,6 +334,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Right: Bell + Avatar */}
           <div className="flex items-center gap-2 ml-4">
+            <ThemeToggle />
             <div className="relative">
               <button
                 ref={bellRef}
@@ -362,7 +364,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="max-h-72 overflow-y-auto divide-y divide-border">
                       {overloadedSemesters.map((s) => (
                         <div key={s.id} className="flex gap-3 px-4 py-3 items-start">
-                          <Zap className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                          <Zap className="w-4 h-4 text-orange-500 dark:text-orange-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-medium text-foreground">
                               {s.term} {s.year} is overloaded
@@ -376,7 +378,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                       {prereqWarnings.map((w, i) => (
                         <div key={i} className="flex gap-3 px-4 py-3 items-start">
-                          <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                          <AlertTriangle className="w-4 h-4 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-medium text-foreground">
                               Prerequisite issue: {w.courseId}
@@ -390,7 +392,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                       {coreqWarnings.map((w, i) => (
                         <div key={`${w.courseId}-${w.coreqId}-${i}`} className="flex gap-3 px-4 py-3 items-start">
-                          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                          <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-medium text-foreground">
                               Corequisite issue: {w.courseId}
@@ -418,7 +420,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                       {missingRequired.slice(0, 5).map((code) => (
                         <div key={code} className="flex gap-3 px-4 py-3 items-start">
-                          <BookMarked className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                          <BookMarked className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-medium text-foreground">
                               {code} not in plan
@@ -437,7 +439,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                   ) : (
                     <div className="px-4 py-6 flex flex-col items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-green-500" />
+                      <CheckCircle className="w-6 h-6 text-green-500 dark:text-green-400" />
                       <p className="text-xs text-muted-foreground text-center">
                         No warnings. Your plan looks good.
                       </p>

@@ -104,77 +104,53 @@
   }
 }
 
-/* Dark mode hex fallbacks */
+/* Shared platform dark palette, including academic requirement/status tokens. */
 .dark {
-  --background: #222222;
-  --foreground: #f9f9f9;
-  --card: #222222;
-  --card-foreground: #f9f9f9;
-  --popover: #222222;
-  --popover-foreground: #f9f9f9;
-  --primary: #f9f9f9;
-  --primary-foreground: #333333;
-  --secondary: #434343;
-  --secondary-foreground: #f9f9f9;
-  --muted: #434343;
-  --muted-foreground: #b5b5b5;
-  --accent: #434343;
-  --accent-foreground: #f9f9f9;
-  --destructive: #8b2a1a;
-  --destructive-foreground: #e05a40;
-  --border: #434343;
-  --input: #434343;
-  --ring: #717171;
-  --chart-1: #4a6cf7;
-  --chart-2: #34c577;
-  --chart-3: #e9b332;
-  --chart-4: #9f5cdf;
-  --chart-5: #e8563a;
-  --sidebar: #333333;
-  --sidebar-foreground: #f9f9f9;
-  --sidebar-primary: #4a6cf7;
-  --sidebar-primary-foreground: #f9f9f9;
-  --sidebar-accent: #434343;
-  --sidebar-accent-foreground: #f9f9f9;
-  --sidebar-border: #434343;
-  --sidebar-ring: #717171;
-}
-
-@supports (color: oklch(0 0 0)) {
-  .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
-  }
+  color-scheme: dark;
+  --background: #12161c;
+  --foreground: #e4e9f1;
+  --card: #1c232d;
+  --card-foreground: #e4e9f1;
+  --popover: #1c232d;
+  --popover-foreground: #e4e9f1;
+  --primary: #a5b4fc;
+  --primary-foreground: #182044;
+  --secondary: #27313e;
+  --secondary-foreground: #e4e9f1;
+  --muted: #27313e;
+  --muted-foreground: #a9b5c6;
+  --accent: #303c4c;
+  --accent-foreground: #e4e9f1;
+  --destructive: #fda4af;
+  --destructive-foreground: #3b101a;
+  --border: #3b4758;
+  --input: #3b4758;
+  --ring: #a5b4fc;
+  --req-required: #fda4af;
+  --req-required-bg: #38232b;
+  --req-group: #f5cc8a;
+  --req-group-bg: #342c21;
+  --req-elective: #a5b4fc;
+  --req-elective-bg: #2b304b;
+  --req-general: #b7c1d0;
+  --req-general-bg: #2b3441;
+  --status-completed: #86d7b0;
+  --status-completed-bg: #1e352d;
+  --status-warning: #f5cc8a;
+  --status-warning-bg: #342c21;
+  --sidebar: #0e131a;
+  --sidebar-foreground: #e4e9f1;
+  --sidebar-primary: #a5b4fc;
+  --sidebar-primary-foreground: #182044;
+  --sidebar-accent: #27313e;
+  --sidebar-accent-foreground: #e4e9f1;
+  --sidebar-border: #3b4758;
+  --sidebar-ring: #a5b4fc;
+  --chart-1: #a5b4fc;
+  --chart-2: #86d7b0;
+  --chart-3: #f5cc8a;
+  --chart-4: #c4b5fd;
+  --chart-5: #fda4af;
 }
 
 @theme inline {
@@ -228,6 +204,18 @@
 }
 
 @media print {
+  :root, .dark {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #111111;
+    --card: #ffffff;
+    --card-foreground: #111111;
+    --muted: #f1f3f8;
+    --muted-foreground: #555555;
+    --border: #dddddd;
+    --primary: #3b5bdb;
+    --primary-foreground: #ffffff;
+  }
   @page {
     margin: 0.65in;
     size: letter portrait;

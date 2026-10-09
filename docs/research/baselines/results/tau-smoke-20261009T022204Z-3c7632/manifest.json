@@ -1,0 +1,81 @@
+{
+  "action": "tau-smoke",
+  "started_at_utc": "2026-10-09T02:22:04.835219+00:00",
+  "upstream": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [
+    {
+      "command": [
+        "uv",
+        "pip",
+        "freeze",
+        "--python",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-09T02:22:04.840712+00:00",
+      "ended_at_utc": "2026-10-09T02:22:04.881928+00:00",
+      "exit_code": 0,
+      "log": "installed-dependencies.txt",
+      "log_sha256": "78e0d1b3fde4a19815ba11a72078090ef2167597cbb430c5e9e7bfe42ae7cfe6"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\tau2.exe",
+        "run",
+        "--domain",
+        "retail",
+        "--task-split-name",
+        "base",
+        "--task-ids",
+        "0",
+        "--num-trials",
+        "1",
+        "--agent-llm",
+        "gemini/gemini-3.5-flash-lite",
+        "--user-llm",
+        "gemini/gemini-3.5-flash-lite",
+        "--max-concurrency",
+        "1",
+        "--seed",
+        "300",
+        "--timeout",
+        "180",
+        "--save-to",
+        "tau-smoke-20261009T022204Z-3c7632"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-09T02:22:04.900553+00:00",
+      "ended_at_utc": "2026-10-09T02:22:26.427968+00:00",
+      "exit_code": 0,
+      "log": "official-tau-run.txt",
+      "log_sha256": "f87404b068afab6fa3c7a6fb47078b5030c6a89b8743abc67de363cebb33ea00"
+    }
+  ],
+  "input_sha256": {
+    "data\\tau2\\domains\\retail\\tasks.json": "f44563d8f36362e2dc58282bb02cfb85010d22f27d9439808758d3e9b2bc16d2",
+    "data\\tau2\\domains\\retail\\split_tasks.json": "5f9949b833e6b99584b87e84ef22f9d81789ea67a52e534c6f7aa91eff08adc7",
+    "data\\tau2\\domains\\retail\\policy.md": "4313d3fef8acf919f555fa17fbce929cc3ed1cef2dd8f0d35ff5c8c3364de176",
+    "data\\tau2\\domains\\retail\\db.json": "dbde692e380bb4ad17f9f7841172cf1e69bebad2daa405628ccdc52a42b3b9b0",
+    "uv.lock": "a53fbbea32e711935e7f4eaad23075f5c962b895c40c0ec9c1419256582ae4bf"
+  },
+  "evidence_scope": "one official retail task, one trial; model-substituted baseline smoke test",
+  "deviations": [
+    "Gemini replaces upstream default agent and user models.",
+    "A 180-second per-simulation timeout and 240-second wrapper timeout bound this setup run."
+  ],
+  "task_ids": [
+    "0"
+  ],
+  "official_result_sha256": "82ad37be97838a595691de0c572dba2b926bdd1c5344558aed9e93597f7e2a47",
+  "grading_note": "Read official reward and termination reason. CLI exit zero alone does not mean task success.",
+  "ended_at_utc": "2026-10-09T02:22:26.429699+00:00"
+}

@@ -1,0 +1,12 @@
+{
+  "recorded_at": "2026-10-09T05:55:39.286765+00:00",
+  "analysis_tests_passed": 8,
+  "sandbox_test_attempt": "Temporary-file permissions prevented tests; approved unrestricted run passed",
+  "report_check": "Existing source-rollback artifact renders overhead columns with unrecorded totals distinguished from zero",
+  "plan": "docs/research/baselines/results/tau-matrix-20261009T055506Z-da2906/matrix.json",
+  "live_trials": 0,
+  "sha256": {
+    "Backend\\research\\analyze_recovery.py": "e83bc50c751bc66ea57f3712373a7acfaf4e72454729dff4ca5e330105875a6d",
+    "Backend\\tests\\test_recovery_analysis.py": "e8327644800932b88618293cbba0e05ab710c1d928893ff417126c9d3f24b02d"
+  }
+}

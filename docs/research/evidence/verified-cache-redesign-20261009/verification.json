@@ -1,0 +1,16 @@
+{
+  "recorded_at": "2026-10-09T05:33:58.824671+00:00",
+  "scope": "Offline software correctness; no live performance claim",
+  "protocol_id": "tau-retail-controlled-recovery-v3-verified-cache",
+  "integration_command": ".research-upstream/tau-bench/.venv/Scripts/python.exe Backend/tests/test_tau_recovery.py",
+  "integration_tests": 12,
+  "integration_result": "passed",
+  "integration_duration_seconds": 47.972,
+  "warning": "Remote model cost-map fetch failed in sandbox; bundled fallback used",
+  "sha256": {
+    "Backend/research/tau_recovery.py": "a062e830d115b01844fa93dc7de7cb4624cba34846a5ea1a032c7dcd9d9dd97e",
+    "Backend/tests/test_tau_recovery.py": "dcdf673404d993a13ed2f4cd0c847f4992b492b8251c3e14521f7de0e8c0889a",
+    "docs/research/tau-recovery-protocol.json": "6d6dc1a9b82c8425b1cc41efb2750775dec8592bd6ecaf8c2e8765bb13e45952"
+  },
+  "live_trials_launched_by_this_redesign": 0
+}

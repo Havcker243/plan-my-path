@@ -1,0 +1,9 @@
+# Predeclared seed-300 continuation — October 8, 2026
+
+Declared before the next live invocation. Execute exactly two fresh cells: released retail task 0, empty_read, seed 300, no_recovery then selective, using the existing v2 protocol and current monotonic-error-accounting adapter. The current adapter has no earlier seed-300 trial. The October 7 seed-300 pair used different adapter bytes and remains separate.
+
+The generated matrix freezes current source/protocol hashes and records commands before executing each cell. No model, prompt, user simulator, fault, pacing or budget changes are introduced. Do not replace results with favorable reruns. No provider-error retry is permitted inside a cell. Both cells are attempted once; any null reward remains ungraded. Analyze only these fresh cells as their own seed-300 pair, with no pairing against the older pilot or incomplete seed-301/302 attempts.
+
+Before invocation, local site job files were checked for active runs. That check cannot certify absence of other applications sharing the same Gemini project. Google's documentation states that quotas are per project, not API key, and actual capacity may vary: [official rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits). This continuation checks practical capacity through recorded task attempts, not a promise that quota errors cannot recur.
+
+The prior selective failure has an observed termination mechanism: the final simulated user response combined exchange confirmation with the STOP marker; the official runner ended before the required exchange write. Retain reward zero. Do not alter the simulated user's prompt or remove the marker to improve that score. A new scripted test demonstrates this mechanism can occur even without an injected fault; it does not establish counterfactual live recovery success.

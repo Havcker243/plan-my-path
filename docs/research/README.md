@@ -2,6 +2,12 @@
 
 This directory is the living record for the Senior Seminar II project.
 
+[October 9 research direction review](research-direction-review-20261009.md) explains current source grounding, implementation limits and the next evaluation priorities.
+
+The research asks whether an agent can recover from an error while preserving valid work. FiskGrad is the test interface; the research implementation lives in [Backend/research](../../Backend/research/).
+
+Start with the [latest evaluation plan](next-evaluation.md), [recorded methods](recovery-method.md), and [six-strategy results](evidence/recovery-six-strategies-20261009/findings.md). These are preliminary controlled-fault experiments, not a completed benchmark study or a proven improvement. The [source audit](method-data-audit.md) distinguishes official data, published methods and our custom implementation.
+
 - `literature-notes.md` records sources, findings, uncertainties, and the novelty audit.
 - `project-draft.md` is the current research proposal and paper draft.
 - `research-log.md` records dated decisions, searches, experiments, and next actions.

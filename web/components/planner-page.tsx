@@ -84,9 +84,9 @@ import { toast } from "sonner";
  */
 
 const STATUS_COLORS = {
-  completed: "bg-green-50 border-green-200",
+  completed: "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800/60",
   planned: "bg-card border-border",
-  failed: "bg-red-50 border-red-200",
+  failed: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60",
 };
 
 
@@ -662,14 +662,14 @@ export default function PlannerPage() {
               <span>GPA <span className="font-semibold text-foreground">{gpa.toFixed(2)}</span></span>
             )}
             {(warnings.length + coreqWarnings.length) > 0 && (
-              <span className="flex items-center gap-1 text-yellow-600 font-medium">
+              <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-300 font-medium">
                 <AlertTriangle className="w-3 h-3" /> {warnings.length + coreqWarnings.length}
               </span>
             )}
           </div>
           <span className={cn(
             "text-xs flex items-center gap-1 transition-colors",
-            saving ? "text-muted-foreground" : lastSaved ? "text-green-600" : "text-muted-foreground"
+            saving ? "text-muted-foreground" : lastSaved ? "text-green-600 dark:text-green-300" : "text-muted-foreground"
           )}>
             {saving
               ? <><Clock className="w-3.5 h-3.5 animate-spin" /><span className="hidden sm:inline"> Savingâ€¦</span></>
@@ -786,7 +786,7 @@ export default function PlannerPage() {
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={cn(
                         "text-[9px] font-semibold px-1.5 py-0.5 rounded-full",
-                        load === "overloaded" ? "bg-red-50 text-red-700" : load === "light" ? "bg-yellow-50 text-yellow-700" : "bg-green-50 text-green-700"
+                        load === "overloaded" ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300" : load === "light" ? "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300" : "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300"
                       )}>
                         {semCredits}cr
                       </span>
@@ -838,7 +838,7 @@ export default function PlannerPage() {
                         onClick={() => course && setSelectedCourse(course)}
                         className={cn(
                           "border rounded-lg px-3 py-2 flex flex-col gap-1 cursor-pointer shadow-sm hover:shadow-md transition-shadow group",
-                          hasWarn && "border-yellow-300 bg-yellow-50/50",
+                          hasWarn && "border-yellow-300 dark:border-yellow-800/60 bg-yellow-50/50 dark:bg-yellow-950/40",
                           !hasWarn && course && STATUS_COLORS[course.status],
                           !hasWarn && !course && "bg-card border-border",
                           !sem.isPast && "active:cursor-grabbing",
@@ -860,10 +860,10 @@ export default function PlannerPage() {
                                   if (course) setSelectedCourse(course);
                                 }}
                               >
-                                <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                                <AlertTriangle className="w-3 h-3 text-yellow-500 dark:text-yellow-400" />
                               </button>
                             )}
-                            {sem.isPast && <Check className="w-3 h-3 text-green-500" />}
+                            {sem.isPast && <Check className="w-3 h-3 text-green-500 dark:text-green-400" />}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -902,7 +902,7 @@ export default function PlannerPage() {
                                   </span>
                                 )}
                                 {course.grade && (
-                                  <span className="text-[7px] font-mono bg-green-100 text-green-700 px-1 py-0.5 rounded">
+                                  <span className="text-[7px] font-mono bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 px-1 py-0.5 rounded">
                                     {course.grade}
                                   </span>
                                 )}
@@ -964,8 +964,8 @@ export default function PlannerPage() {
                                         className={cn(
                                           "rounded-full px-1.5 py-0.5 text-[9px] font-medium",
                                           matchCount > 0
-                                            ? "bg-green-50 text-green-700"
-                                            : "bg-yellow-50 text-yellow-700"
+                                            ? "bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300"
+                                            : "bg-yellow-50 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300"
                                         )}
                                       >
                                         {matchCount} match{matchCount === 1 ? "" : "es"}
@@ -1121,9 +1121,9 @@ export default function PlannerPage() {
               </div>
             )}
             {warnSet.has(selectedCourse.id) && (
-              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-50 border border-yellow-200 mb-4">
-                <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-800">
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800/60 mb-4">
+                <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-300 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-yellow-800 dark:text-yellow-200">
                   {(() => {
                     const prereqWarn = warnings.find((w) => w.courseId === selectedCourse.id);
                     if (prereqWarn) {
@@ -1185,7 +1185,7 @@ export default function PlannerPage() {
                                 <span
                                   className={cn(
                                     "text-[11px]",
-                                    sectionMatchesPreferences(section, optimizer) ? "text-green-700" : "text-yellow-700"
+                                    sectionMatchesPreferences(section, optimizer) ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
                                   )}
                                 >
                                   {sectionMatchesPreferences(section, optimizer) ? "Matches preferences" : "Outside current filters"}
@@ -1412,7 +1412,7 @@ export default function PlannerPage() {
                           <span
                             className={cn(
                               "text-[11px]",
-                              sectionMatchesPreferences(section, optimizer) ? "text-green-700" : "text-yellow-700"
+                              sectionMatchesPreferences(section, optimizer) ? "text-green-700 dark:text-green-300" : "text-yellow-700 dark:text-yellow-300"
                             )}
                           >
                             {sectionMatchesPreferences(section, optimizer) ? "Matches preferences" : "Outside current filters"}

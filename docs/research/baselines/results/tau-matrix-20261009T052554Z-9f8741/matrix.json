@@ -1,0 +1,638 @@
+{
+  "protocol_sha256": "35e9cb0079c2050e59594c217312be416a11e733c0372b837f50613197f695e3",
+  "adapter_sha256": "96bff5e0e049662eba977436e9f3f1a20d452dd13089262af74b89d7d8187796",
+  "status": "stopped_source_or_protocol_changed",
+  "planned_cells": 36,
+  "cells": [
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "no_recovery",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-000.json"
+      ],
+      "started_at": "2026-10-09T05:25:54.128200+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:26:16.343438+00:00",
+      "output": "cell-000.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "restart",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "restart",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-001.json"
+      ],
+      "started_at": "2026-10-09T05:26:16.345911+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:26:37.179173+00:00",
+      "output": "cell-001.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "visible_retry",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-002.json"
+      ],
+      "started_at": "2026-10-09T05:26:37.181423+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:27:14.062162+00:00",
+      "output": "cell-002.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "checkpoint",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-003.json"
+      ],
+      "started_at": "2026-10-09T05:27:14.064122+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:27:36.134408+00:00",
+      "output": "cell-003.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "source_rollback",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-004.json"
+      ],
+      "started_at": "2026-10-09T05:27:36.137086+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:27:55.075221+00:00",
+      "output": "cell-004.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "selective",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "selective",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-005.json"
+      ],
+      "started_at": "2026-10-09T05:27:55.076585+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:28:13.366455+00:00",
+      "output": "cell-005.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "no_recovery",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "no_recovery",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-006.json"
+      ],
+      "started_at": "2026-10-09T05:28:13.368925+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:28:30.881622+00:00",
+      "output": "cell-006.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "restart",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "restart",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-007.json"
+      ],
+      "started_at": "2026-10-09T05:28:30.883038+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:28:47.397401+00:00",
+      "output": "cell-007.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "visible_retry",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "visible_retry",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-008.json"
+      ],
+      "started_at": "2026-10-09T05:28:47.398969+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:29:04.306411+00:00",
+      "output": "cell-008.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "checkpoint",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "checkpoint",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-009.json"
+      ],
+      "started_at": "2026-10-09T05:29:04.308354+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:29:21.048637+00:00",
+      "output": "cell-009.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "source_rollback",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "source_rollback",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-010.json"
+      ],
+      "started_at": "2026-10-09T05:29:21.050537+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:29:37.663263+00:00",
+      "output": "cell-010.json"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "selective",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "300",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "selective",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-011.json"
+      ],
+      "started_at": "2026-10-09T05:29:37.664707+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:29:54.379427+00:00",
+      "output": "cell-011.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "restart",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "301",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "restart",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-012.json"
+      ],
+      "started_at": "2026-10-09T05:29:54.381028+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:30:11.204715+00:00",
+      "output": "cell-012.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "301",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "visible_retry",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-013.json"
+      ],
+      "started_at": "2026-10-09T05:30:11.207013+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:30:34.240362+00:00",
+      "output": "cell-013.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "301",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "checkpoint",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-014.json"
+      ],
+      "started_at": "2026-10-09T05:30:34.242654+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:30:50.902049+00:00",
+      "output": "cell-014.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "301",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "source_rollback",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-015.json"
+      ],
+      "started_at": "2026-10-09T05:30:50.903800+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:31:12.072925+00:00",
+      "output": "cell-015.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "selective",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "301",
+        "--fault",
+        "wrong_user_id",
+        "--strategies",
+        "selective",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261009T052554Z-9f8741\\cell-016.json"
+      ],
+      "started_at": "2026-10-09T05:31:12.077054+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-09T05:31:33.014997+00:00",
+      "output": "cell-016.json"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "restart"
+    }
+  ],
+  "full_protocol_cells": 171,
+  "protocol_definition": {
+    "protocol_id": "tau-retail-controlled-recovery-v2",
+    "amendments": [
+      {
+        "date": "2026-10-07",
+        "reason": "First selective attempt hit provider free-tier per-minute quota",
+        "change": "Six-second fixed delay before every agent/user generation, identical for all strategies; included in 180-second wall budget",
+        "original_protocol": "baselines/results/tau-recovery-pilot-network-20261007/protocol-v1.json",
+        "original_outcomes_retained": true
+      }
+    ],
+    "frozen_before_first_adapter_trial": "2026-10-07",
+    "scope": "Controlled recovery extension using official released retail tasks, tools, policy and unchanged evaluator; distinct from unmodified benchmark results",
+    "task_split": "base",
+    "task_ids": [
+      "0",
+      "1",
+      "2"
+    ],
+    "seeds": [
+      300,
+      301,
+      302
+    ],
+    "faults": [
+      "empty_read",
+      "wrong_user_id",
+      "tool_error"
+    ],
+    "injection_rule": "First successful get_user_details response, one injection per run; never reinject after rollback",
+    "strategies": [
+      "no_recovery",
+      "restart",
+      "visible_retry",
+      "checkpoint",
+      "source_rollback",
+      "selective"
+    ],
+    "controlled_runs_planned": 162,
+    "unfaulted_reference_runs_planned": 9,
+    "pilot": {
+      "task_id": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategies": [
+        "no_recovery",
+        "selective"
+      ]
+    },
+    "agent": "official llm_agent",
+    "user": "official user_simulator",
+    "agent_and_user_model": "gemini/gemini-3.5-flash-lite",
+    "temperature": 0,
+    "provider_call_timeout_seconds": 45,
+    "provider_retries": 0,
+    "provider_pacing_seconds_before_each_generation": 6,
+    "attempt_step_budget": 60,
+    "max_tool_errors": 10,
+    "wall_time_seconds": 180,
+    "max_recovery_events": 1,
+    "checkpoint_interval_attempt_steps": 4,
+    "source_detector": "Earliest version-matched recorded read whose canonical content/error differs on deterministic re-execution; after at least one downstream step; hidden injection labels excluded",
+    "dependency_rule": "Model/user generations depend on observed prefix; calls depend on producing dispatch and prior writes; database-version-keyed read cache; conservative closure",
+    "safe_restore": "Retail-only in-memory copy of agent/user states, pending message/routing, trajectory, local counters and DB; global attempt/time/usage counts never reset",
+    "primary_measure": "Official evaluator reward conditional on fault exercised; also report unconditioned reward and coverage",
+    "secondary_measures": [
+      "exact source accuracy",
+      "attempt steps",
+      "tool executions",
+      "validation tool calls",
+      "cached read reuse",
+      "attempted model calls and usage",
+      "wall time",
+      "estimated attempted cost"
+    ],
+    "failure_reporting": "Provider/runtime/evaluator failures retained with null reward; fault not reached marked not exercised; no favorable-result replacement",
+    "analysis": "Paired task/fault/seed results, denominators and coverage; descriptive intervals only with sample counts; no significance claim from pilot",
+    "notes": [
+      "Faults are researcher-defined; public tasks/evaluator do not make the fault protocol an official recovery benchmark.",
+      "Seed does not guarantee identical provider output or deterministic paired trajectories.",
+      "Source rollback and selective recovery may coincide under conservative dependencies; do not tune faults to force an advantage.",
+      "Full matrix is planned, not yet completed. Published recovery methods are not relabeled as implemented."
+    ]
+  },
+  "selection": {
+    "tasks": [
+      "0"
+    ],
+    "seeds": [
+      300,
+      301,
+      302
+    ],
+    "faults": [
+      "wrong_user_id",
+      "tool_error"
+    ],
+    "strategies": [
+      "no_recovery",
+      "restart",
+      "visible_retry",
+      "checkpoint",
+      "source_rollback",
+      "selective"
+    ],
+    "include_unfaulted": false
+  }
+}

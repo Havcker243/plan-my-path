@@ -1,0 +1,1 @@
+Snapshot of completed current-adapter matrix cells at 2026-10-09T05:17:04.644208+00:00. In-progress and planned cells excluded; all completed duplicates retained. Ambiguous reference/selective pairs are not scored. This coverage snapshot is not a pooled strategy ranking.

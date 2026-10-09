@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Inter, DM_Mono } from 'next/font/google'
 import Providers from '@/components/providers'
 import { Toaster } from '@/components/ui/sonner'
+import { ThemeProvider } from '@/components/theme-provider'
+import { PublicThemeToggle } from '@/components/theme-toggle'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -36,12 +38,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${dmMono.variable} font-sans antialiased`} suppressHydrationWarning>
-        <Providers>
-          {children}
-        </Providers>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <Providers>{children}</Providers>
+          <PublicThemeToggle />
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

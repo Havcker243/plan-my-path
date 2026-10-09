@@ -1,0 +1,24 @@
+{
+  "recorded_at_utc": "2026-10-07 16:12:44 UTC",
+  "checks": [
+    {
+      "key": "backend",
+      "exit_code": 0,
+      "log": "research-backend-verification-20261007.txt"
+    },
+    {
+      "key": "tau-adapter",
+      "exit_code": 0,
+      "log": "research-tau-adapter-verification-20261007.txt"
+    },
+    {
+      "key": "frontend-build",
+      "exit_code": 0,
+      "log": "research-frontend-build-verification-20261007.txt"
+    }
+  ],
+  "backend": "26 passed, 1 optional-environment skip",
+  "tau_adapter": "6 passed using pinned upstream interpreter; scripted speakers, not live performance trials",
+  "frontend": "production build passed including /research",
+  "browser": "Not verified: browser connection missing sandboxPolicy metadata"
+}

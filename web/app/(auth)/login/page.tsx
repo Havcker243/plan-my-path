@@ -96,7 +96,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@my.fisk.edu"
+                  placeholder="you@my.fisk.edu or you@fisk.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-11"

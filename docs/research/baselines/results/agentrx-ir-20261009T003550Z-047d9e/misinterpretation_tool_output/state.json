@@ -1,0 +1,13 @@
+{
+  "completed_stages": [
+    "ir"
+  ],
+  "config": {
+    "input": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\misinterpretation_tool_output.json",
+    "domain": "tau",
+    "endpoint": "copilot",
+    "started": "2026-10-08T19:35:51.499355"
+  },
+  "ir_used_llm_fallback": false,
+  "ir_from_markdown": false
+}

@@ -1,0 +1,104 @@
+Blocked: install/authenticate supported provider CLI. Artifacts: C:\Users\dolap\Desktop\Projects\plan-my-path\docs\research\baselines\results\agentrx-full-20261007T160911Z-bb49ae
+usage: run.py [-h] [--domain {tau,flash,magentic}]
+              [--endpoint {copilot,azure,trapi}]
+              [--stage {ir,static,dynamic,check,judge,report}]
+              [--from-stage {ir,static,dynamic,check,judge,report}]
+              [--skip-static] [--skip-dynamic]
+              [--dynamic-mode {stepbystep,oneshot}] [--skip-judge]
+              [--ground-truth GROUND_TRUTH] [--run-name RUN_NAME]
+              [--run-dir RUN_DIR]
+              input
+
+AgentVerify: Push-button pipeline for trajectory analysis
+
+positional arguments:
+  input                 Path to trajectory file (JSON/JSONL)
+
+options:
+  -h, --help            show this help message and exit
+  --domain {tau,flash,magentic}
+                        Domain (auto-detected if not specified)
+  --endpoint {copilot,azure,trapi}
+                        LLM endpoint (default: copilot). Options: copilot
+                        (GitHub CLI), azure, trapi.
+  --stage {ir,static,dynamic,check,judge,report}
+                        Run ONLY this stage
+  --from-stage {ir,static,dynamic,check,judge,report}
+                        Resume from this stage (skips earlier stages)
+  --skip-static         Skip static invariant generation (use empty static
+                        set; only dynamic invariants will drive checking)
+  --skip-dynamic        Skip dynamic invariant generation (faster)
+  --dynamic-mode {stepbystep,oneshot}
+                        Dynamic invariant mode: stepbystep (per-step, slower)
+                        or oneshot (single LLM call per trajectory, faster)
+  --skip-judge          Skip judge and report stages
+  --ground-truth GROUND_TRUTH
+                        Path to ground truth JSON for judge accuracy
+                        comparison
+  --run-name RUN_NAME   Custom name for this run (default: auto-generated)
+  --run-dir RUN_DIR     Resume into an existing run directory
+
+Examples:
+  python run.py data/my_trajectory.json
+  python run.py data/my_trajectory.json --domain tau
+  python run.py data/my_trajectory.json --stage ir          # IR only
+  python run.py data/my_trajectory.json --from-stage check   # resume from checking
+  python run.py data/my_trajectory.json --skip-dynamic       # faster, no per-step invariants
+  python run.py data/my_trajectory.json --skip-judge         # skip LLM judge
+  python run.py data/my_trajectory.json --endpoint trapi     # use TRAPI (Microsoft Research internal)
+  python run.py data/my_trajectory.json --run-name my_run    # custom run name
+        
+Using Python 3.13.2 environment at: .research-upstream\AgentRx\.venv
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.4
+aiosignal==1.4.0
+annotated-types==0.8.0
+anyio==4.15.1
+attrs==26.1.0
+azure-ai-inference==1.0.0b9
+azure-core==1.41.0
+azure-identity==1.26.0
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.2
+colorama==0.4.6
+contourpy==1.4.0
+cryptography==50.0.2
+cycler==0.12.1
+fonttools==4.66.1
+frozenlist==1.8.0
+h11==0.16.0
+httpcore2==2.13.1
+httpx2==2.13.1
+idna==3.20
+iniconfig==2.3.1
+isodate==0.7.2
+jiter==0.17.0
+kiwisolver==1.5.1
+matplotlib==3.11.2
+msal==1.39.0
+msal-extensions==1.3.1
+multidict==6.9.1
+numpy==2.5.3
+openai==3.26.0
+packaging==26.3
+pillow==12.3.0
+pluggy==1.6.0
+propcache==0.5.4
+pycparser==3.0
+pydantic==2.13.5
+pydantic-core==2.46.5
+pygments==2.21.0
+pyjwt==2.15.1
+pyparsing==3.3.3
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.4
+requests==2.34.2
+six==1.17.0
+sniffio==1.3.1
+truststore==0.10.4
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+urllib3==2.8.0
+yarl==1.25.1

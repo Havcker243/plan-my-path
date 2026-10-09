@@ -1,0 +1,7 @@
+Strategy          Success  Repeated  Diagnosis  Valid work preserved
+restart           True           7          0                     0
+visible_retry     False          1          0                     4
+checkpoint        False          2          0                     4
+source_rollback   True           5          1                     2
+selective         True           3          1                     4
+Results: C:\Users\dolap\Desktop\Projects\plan-my-path\docs\research\progress-report-1\evidence\recovery-benchmark.json

@@ -18,6 +18,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import require_allowed_email, resolve_allowed_email_domains, resolve_jwt_secret, verify_token
 from app.advisor import stream_advisor_reply
+from app.agent.state import RunState
+from app.agent.tools import database_tools
 from app.custom_balance_sheet import fill_balance_sheet_docx, scan_balance_sheet_pdf, scan_balance_sheet_docx
 from app.db import (
     CourseLabelsData,
@@ -55,6 +57,8 @@ app = FastAPI(title="FiskGrad API")
 _default_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8080",
@@ -299,6 +303,11 @@ def get_current_user(
     payload = verify_token(token, JWT_SECRET)
     require_allowed_email(payload, ALLOWED_EMAIL_DOMAINS)
     return payload
+
+
+from app.research_lab import create_router as create_research_router
+
+app.include_router(create_research_router(get_current_user))
 
 
 @app.get("/api/profile")
@@ -699,33 +708,13 @@ def advise(
     if len(history) > 20:
         raise HTTPException(status_code=400, detail="history must include 20 messages or fewer")
 
-    # Fetch student data
-    profile = fetch_profile(POOLER_URL, str(user_id)) or {}
-    plan = fetch_plan(POOLER_URL, str(user_id))
-    major_code = profile.get("major_code") or ""
-
-    labels_data: dict = {}
-    total_credits = 120
-    if major_code and major_code != "UNDECLARED":
-        raw = fetch_course_labels(POOLER_URL, major_code)
-        labels_data = {k: dict(v) for k, v in raw.get("labels", {}).items()}
-        total_credits = raw.get("total_credits", 120)
-
-    subject_codes = _advisor_subject_codes(major_code, labels_data, plan)
-    course_catalog_context = _advisor_course_catalog(subject_codes, message)
-    reviews = _advisor_reviews(subject_codes)
+    toolset = database_tools(RunState(), POOLER_URL, str(user_id))
 
     def generate():
         try:
             for event in stream_advisor_reply(
                 message=message,
-                profile=dict(profile),
-                plan=dict(plan) if plan else None,
-                labels=labels_data,
-                total_credits=total_credits,
-                reviews=reviews,
-                course_catalog=course_catalog_context,
-                subject_codes=subject_codes,
+                toolset=toolset,
                 history=history,
             ):
                 yield f"data: {json.dumps(event)}\n\n"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Sparkles, Bot } from "lucide-react";
+import { Send, Loader2, Sparkles, Bot, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { callAdvisor, AdvisorBusyError, type AdvisorMessage } from "@/lib/api";
 import { getSupabase } from "@/lib/supabase";
@@ -64,8 +64,28 @@ function MessageBubble({ msg }: { msg: AdvisorMessage }) {
         ) : (
           <span className="inline-flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Thinking...
+            {msg.agent_status || "Thinking..."}
           </span>
+        )}
+        {!isUser && msg.agent_trace && (
+          <div className="mt-3 flex items-center gap-2 border-t border-border pt-2 text-xs text-muted-foreground whitespace-normal">
+            <span>{msg.agent_trace.usage.model_calls} model calls · {(msg.agent_trace.elapsed_ms / 1000).toFixed(1)}s</span>
+            <button
+              type="button"
+              title="Download execution trace"
+              aria-label="Download execution trace"
+              className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded hover:bg-background"
+              onClick={() => {
+                const blob = new Blob([JSON.stringify(msg.agent_trace, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `fiskgrad-run-${msg.agent_trace!.run_id}.json`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            ><Download className="h-4 w-4" /></button>
+          </div>
         )}
       </div>
     </div>
@@ -120,6 +140,13 @@ export default function AdvisorChat() {
               return [...prev.slice(0, -1), { ...last, reasoning_details: reasoningDetails }];
             }
             return prev;
+          });
+        },
+        (event) => {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role !== "assistant") return prev;
+            return [...prev.slice(0, -1), { ...last, ...event }];
           });
         }
       );

@@ -1,0 +1,39 @@
+{
+  "action": "tau-check",
+  "started_at_utc": "2026-10-07T15:05:10.627860+00:00",
+  "upstream": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [
+    {
+      "command": [
+        "uv",
+        "pip",
+        "freeze",
+        "--python",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-07T15:05:10.632219+00:00",
+      "ended_at_utc": "2026-10-07T15:05:10.655613+00:00",
+      "exit_code": 2,
+      "log": "installed-dependencies.txt",
+      "log_sha256": "9ae213ded4d7585dcd9137d99f72d46d81fdf8562e65ec7a23c77d021a344fe8"
+    }
+  ],
+  "input_sha256": {
+    "data\\tau2\\domains\\retail\\tasks.json": "f44563d8f36362e2dc58282bb02cfb85010d22f27d9439808758d3e9b2bc16d2",
+    "data\\tau2\\domains\\retail\\split_tasks.json": "5f9949b833e6b99584b87e84ef22f9d81789ea67a52e534c6f7aa91eff08adc7",
+    "data\\tau2\\domains\\retail\\policy.md": "4313d3fef8acf919f555fa17fbce929cc3ed1cef2dd8f0d35ff5c8c3364de176",
+    "data\\tau2\\domains\\retail\\db.json": "dbde692e380bb4ad17f9f7841172cf1e69bebad2daa405628ccdc52a42b3b9b0",
+    "uv.lock": "a53fbbea32e711935e7f4eaad23075f5c962b895c40c0ec9c1419256582ae4bf"
+  },
+  "evidence_scope": "preprocessing/setup smoke test, not a benchmark-wide reproduction"
+}

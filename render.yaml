@@ -22,11 +22,7 @@ services:
         value: my.fisk.edu
       - key: ALLOWED_ORIGINS
         sync: false
-      - key: OPENROUTER_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: OPENROUTER_MODEL
-        value: openai/gpt-oss-120b:free
-      - key: OPENROUTER_SITE_URL
-        sync: false
-      - key: OPENROUTER_APP_NAME
-        value: FiskGrad
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash

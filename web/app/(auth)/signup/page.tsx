@@ -115,13 +115,13 @@ export default function SignupPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@my.fisk.edu"
+                  placeholder="you@my.fisk.edu or you@fisk.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-11"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Only Fisk email addresses can create accounts.</p>
+              <p className="text-xs text-muted-foreground">Only Fisk University email addresses can create accounts.</p>
             </div>
 
             <div className="space-y-2">

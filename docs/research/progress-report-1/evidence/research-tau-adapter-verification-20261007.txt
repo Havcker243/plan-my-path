@@ -1,0 +1,6 @@
+11:09:29 - LiteLLM:WARNING: get_model_cost_map.py:174 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [WinError 10061] No connection could be made because the target machine actively refused it. Falling back to local backup.
+......
+----------------------------------------------------------------------
+Ran 6 tests in 15.347s
+
+OK

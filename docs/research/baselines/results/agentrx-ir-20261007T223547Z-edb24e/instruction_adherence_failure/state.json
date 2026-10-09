@@ -1,0 +1,13 @@
+{
+  "completed_stages": [
+    "ir"
+  ],
+  "config": {
+    "input": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\instruction_adherence_failure.json",
+    "domain": "tau",
+    "endpoint": "copilot",
+    "started": "2026-10-07T17:35:47.876128"
+  },
+  "ir_used_llm_fallback": false,
+  "ir_from_markdown": false
+}

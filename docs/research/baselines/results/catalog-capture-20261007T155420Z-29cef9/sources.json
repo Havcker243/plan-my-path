@@ -1,0 +1,52 @@
+{
+  "edition_selected": "Undergraduate Bulletin 2024-2025",
+  "facts_sha256": "3d6100fc3b1fc6ba423d0d6184b0430618037bcbce58d53bf0746633818fe23d",
+  "retrieved_at_utc": "2026-10-07T15:54:20.708560+00:00",
+  "sources": [
+    {
+      "id": "major",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/school-of-natural-science-and-mathematics/department-of-mathematics-and-computer-science/computer-science-bs/",
+      "status": "retrieved",
+      "final_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/school-of-natural-science-and-mathematics/department-of-mathematics-and-computer-science/computer-science-bs/",
+      "sha256": "6a2dfd749809ea7167034f6978013af3f14c2b01c51d3448add3fc1d456861b1",
+      "local_archive": "logs/catalog-sources/20261007T155420Z-29cef9/major.html",
+      "bytes": 96301
+    },
+    {
+      "id": "degree",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/academic-requirement-and-standards/undergraduate-degree-requirements",
+      "status": "retrieved",
+      "final_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/academic-requirement-and-standards/undergraduate-degree-requirements",
+      "sha256": "78727b5e433f027344843cb4f9d19b65d465e3840fc32b6dcc0e1959cc6aae62",
+      "local_archive": "logs/catalog-sources/20261007T155420Z-29cef9/degree.html",
+      "bytes": 56514
+    },
+    {
+      "id": "core",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/core",
+      "status": "retrieved",
+      "final_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/core",
+      "sha256": "54dba0a0693402cb6b2fafe0816d0a9352e2c954e833b142d52687b726897693",
+      "local_archive": "logs/catalog-sources/20261007T155420Z-29cef9/core.html",
+      "bytes": 76438
+    },
+    {
+      "id": "lab_ambiguity",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/csci-computer-science/200/csci-282l",
+      "status": "retrieved",
+      "final_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/csci-computer-science/200/csci-282l",
+      "sha256": "e73e9a5878f3d2e9c3cb1684c5864889474866a6aa5aaad6b22b7f270254ed2c",
+      "local_archive": "logs/catalog-sources/20261007T155420Z-29cef9/lab_ambiguity.html",
+      "bytes": 55402
+    },
+    {
+      "id": "math_placement",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/math-mathematics/100/math-120",
+      "status": "retrieved",
+      "final_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/math-mathematics/100/math-120",
+      "sha256": "f7864466853ed244dcc61276964b4219aabc20fa3b1a8392085d4d5d4df228db",
+      "local_archive": "logs/catalog-sources/20261007T155420Z-29cef9/math_placement.html",
+      "bytes": 54282
+    }
+  ]
+}

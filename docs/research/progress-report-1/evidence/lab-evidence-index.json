@@ -1,0 +1,337 @@
+{
+  "inspected_at_utc": "2026-10-07T16:16:05.145799+00:00",
+  "scope": "Inventory of saved artifacts; not additional model trials",
+  "verification_manifest": "research-verification-20261007.json",
+  "matrix_status": "171 planned cells; full campaign not executed",
+  "browser_status": "Connection blocked; signed-in visual verification pending",
+  "runs": [
+    {
+      "id": "archive-recovery-benchmark",
+      "action": "custom-offline",
+      "execution_status": "completed",
+      "category": "Custom engineering demonstration",
+      "comparison_group": "synthetic-delayed-audit-v1",
+      "artifacts": [
+        {
+          "path": "docs/research/progress-report-1/evidence/recovery-benchmark.json",
+          "sha256_at_inspection": "82196f15cd2a14f8d6c699ff021197261b6d3361f661e6359db27163af1b3955"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "restart",
+          "reward": null,
+          "recovery": true,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "visible_retry",
+          "reward": null,
+          "recovery": false,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "checkpoint",
+          "reward": null,
+          "recovery": false,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "source_rollback",
+          "reward": null,
+          "recovery": true,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "selective",
+          "reward": null,
+          "recovery": true,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "archive-fisk-case-study-20261007",
+      "action": "fisk-case-study",
+      "execution_status": "completed",
+      "category": "Source-grounded partial academic audit",
+      "comparison_group": "fisk-partial-audit-2024-2025",
+      "artifacts": [
+        {
+          "path": "docs/research/progress-report-1/evidence/fisk-case-study-20261007.json",
+          "sha256_at_inspection": "8af6c0c74db8b4d32fbc59dbf8f2f069f5b1856b6a07f064b2b71befb8fdde3d"
+        },
+        {
+          "path": "docs/research/fisk-catalog-rules.json",
+          "sha256_at_inspection": "3d6100fc3b1fc6ba423d0d6184b0430618037bcbce58d53bf0746633818fe23d"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "known_rules_met_review_still_required",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": "manual_review_required"
+        },
+        {
+          "method_or_case": "missing_required_course",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": "requirements_not_met"
+        },
+        {
+          "method_or_case": "major_grade_below_C",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": "requirements_not_met"
+        },
+        {
+          "method_or_case": "duplicate_credit_attempt",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": "invalid_record"
+        }
+      ]
+    },
+    {
+      "id": "archive-live-recovery-network-retry-2026-10-07",
+      "action": "custom-live",
+      "execution_status": "completed",
+      "category": "Custom model smoke test",
+      "comparison_group": "synthetic-delayed-audit-v1",
+      "artifacts": [
+        {
+          "path": "docs/research/progress-report-1/evidence/live-recovery-network-retry-2026-10-07.json",
+          "sha256_at_inspection": "1d3af18aaf781669912b239815ba16fbaefa47f560e139acb1f1d468c2ca0ab9"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "agent_selective",
+          "reward": null,
+          "recovery": true,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "archive-live-recovery-2026-10-07",
+      "action": "custom-live",
+      "execution_status": "failed",
+      "category": "Custom model smoke test",
+      "comparison_group": "synthetic-delayed-audit-v1",
+      "artifacts": [
+        {
+          "path": "docs/research/progress-report-1/evidence/live-recovery-2026-10-07.json",
+          "sha256_at_inspection": "bce3d194eef67251db3f4d0cca990246667e311ec4304b70c11f18c4b4c05017"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "agent_selective",
+          "reward": null,
+          "recovery": false,
+          "fault_exercised": null,
+          "execution_error": true,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "tau-smoke-20261007T150829Z-ec909b",
+      "action": "tau-smoke",
+      "execution_status": "completed",
+      "category": "Official task smoke test",
+      "comparison_group": "tau-retail-task0-seed300-gemini-3.5-flash-lite",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-smoke-20261007T150829Z-ec909b/manifest.json",
+          "sha256_at_inspection": "6258df9fab65235564cccd38ca2ad0d5a0c661628263f52033c4cc08ce6810ee"
+        },
+        {
+          "path": "docs/research/baselines/results/tau-smoke-20261007T150829Z-ec909b/official-results.json",
+          "sha256_at_inspection": "0dedf42686370d48a4dc23f0527378f76b74be80822c4aa38f0101ee9c45fc7b"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "official llm_agent",
+          "reward": 0.0,
+          "recovery": null,
+          "fault_exercised": null,
+          "execution_error": false,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "tau-check-20261007T150735Z-6a8eb7",
+      "action": "tau-check",
+      "execution_status": "completed",
+      "category": "Official environment verification",
+      "comparison_group": "official-setup",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-check-20261007T150735Z-6a8eb7/manifest.json",
+          "sha256_at_inspection": "3fe69b4f0b8e978d96dc727a8c6b96c23fc94122f13b1fa61f2bd401f14713a7"
+        }
+      ],
+      "outcomes": []
+    },
+    {
+      "id": "tau-check-20261007T150510Z-a7f337",
+      "action": "tau-check",
+      "execution_status": "failed",
+      "category": "Official environment verification",
+      "comparison_group": "official-setup",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-check-20261007T150510Z-a7f337/manifest.json",
+          "sha256_at_inspection": "22526583b077a9dbc1c97f6a24a7fc273300ab7607fd372d9eba84dee76f60f8"
+        }
+      ],
+      "outcomes": []
+    },
+    {
+      "id": "agentrx-ir-20261007T150510Z-0ac0b6",
+      "action": "agentrx-ir",
+      "execution_status": "completed",
+      "category": "Official preprocessing stage",
+      "comparison_group": "official-setup",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/agentrx-ir-20261007T150510Z-0ac0b6/manifest.json",
+          "sha256_at_inspection": "103a68bf0059de50aeefbcb0c37000071de9b4d7725f22cc85d1e6ff955a227e"
+        }
+      ],
+      "outcomes": []
+    },
+    {
+      "id": "agentrx-full-20261007T160911Z-bb49ae",
+      "action": "agentrx-full",
+      "execution_status": "blocked",
+      "category": "Published pipeline \u00b7 access required",
+      "comparison_group": "official-setup",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/agentrx-full-20261007T160911Z-bb49ae/manifest.json",
+          "sha256_at_inspection": "1e01cef087142644f63a93109f45724d20e415b2e0c8ce6d079998610f2d5375"
+        }
+      ],
+      "outcomes": []
+    },
+    {
+      "id": "tau-recovery-pilot-sandbox-20261007",
+      "action": "tau-recovery",
+      "execution_status": "failed",
+      "category": "Controlled extension on official tasks",
+      "comparison_group": "tau-controlled-e50e84261bbf-05ac31769b71-task0-seed300-empty_read",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-recovery-pilot-sandbox-20261007/recovery-results.json",
+          "sha256_at_inspection": "109aacbe327987a26dd94a682db667f19e873f637894f76f5bd235e5afb16b43"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "no_recovery",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": false,
+          "execution_error": true,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "selective",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": false,
+          "execution_error": true,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "tau-recovery-pilot-paced-20261007",
+      "action": "tau-recovery",
+      "execution_status": "completed",
+      "category": "Controlled extension on official tasks",
+      "comparison_group": "tau-controlled-35e9cb0079c2-68c7214b4219-task0-seed300-empty_read",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-recovery-pilot-paced-20261007/recovery-results.json",
+          "sha256_at_inspection": "203a384d46b5b62b2836180d4eb781c788c0f23bfe0924f18a4893225784b452"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "no_recovery",
+          "reward": 1.0,
+          "recovery": null,
+          "fault_exercised": true,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "selective",
+          "reward": 1.0,
+          "recovery": null,
+          "fault_exercised": true,
+          "execution_error": false,
+          "partial_audit_status": null
+        }
+      ]
+    },
+    {
+      "id": "tau-recovery-pilot-network-20261007",
+      "action": "tau-recovery",
+      "execution_status": "failed",
+      "category": "Controlled extension on official tasks",
+      "comparison_group": "tau-controlled-e50e84261bbf-05ac31769b71-task0-seed300-empty_read",
+      "artifacts": [
+        {
+          "path": "docs/research/baselines/results/tau-recovery-pilot-network-20261007/recovery-results.json",
+          "sha256_at_inspection": "db748c5b9551426d20ecc96f3522792faca2448b91315e76391b3447f1e43cb4"
+        }
+      ],
+      "outcomes": [
+        {
+          "method_or_case": "no_recovery",
+          "reward": 1.0,
+          "recovery": null,
+          "fault_exercised": true,
+          "execution_error": false,
+          "partial_audit_status": null
+        },
+        {
+          "method_or_case": "selective",
+          "reward": null,
+          "recovery": null,
+          "fault_exercised": false,
+          "execution_error": true,
+          "partial_audit_status": null
+        }
+      ]
+    }
+  ]
+}

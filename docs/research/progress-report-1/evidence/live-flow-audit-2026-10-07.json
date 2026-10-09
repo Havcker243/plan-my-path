@@ -1,0 +1,106 @@
+{
+  "audit_date": "2026-10-07",
+  "recovery_source": "live-recovery-network-retry-2026-10-07.json",
+  "recovery_source_sha256": "1d3af18aaf781669912b239815ba16fbaefa47f560e139acb1f1d468c2ca0ab9",
+  "recovery_checks": {
+    "live_model_call_recorded": true,
+    "initial_validator_exposes_failure": true,
+    "diagnosis_has_source_confidence_rationale": true,
+    "diagnosis_matches_hidden_source": true,
+    "affected_task_nodes_are_invalidated": true,
+    "correct_source_and_branch_nodes_reused": true,
+    "exactly_three_task_nodes_replayed": true,
+    "final_validation_passes": true,
+    "dependencies_exist_and_precede_consumer": true
+  },
+  "recovery_checks_all_pass": true,
+  "recovery_metrics": {
+    "success": true,
+    "repeated_steps": 3,
+    "preserved_valid_steps": 4,
+    "tokens": 875,
+    "recovery_ms": 1994.669,
+    "invalidation_f1": 1.0
+  },
+  "planning_attempts": [
+    {
+      "file": "live-planning-2026-10-07.json",
+      "sha256": "f759fd75fa0c6ae433dad96a0e49ca7dc5c729ec43bc127ab982d2f421cf4b7b",
+      "model": "gemini-3.6-flash",
+      "success": false,
+      "model_calls": 1,
+      "tool_calls": [],
+      "valid_proposal_emitted": false,
+      "final_response_emitted": false,
+      "final_trace_emitted": true,
+      "errors": [
+        {
+          "error_type": "ConnectError",
+          "provider_code": null,
+          "provider_status": null
+        }
+      ]
+    },
+    {
+      "file": "live-planning-alternate-model-2026-10-07.json",
+      "sha256": "3bf8598be7409e6da3cf8677a13fb4133643238aae5ff89f1debda6d23a258c8",
+      "model": "gemini-3.5-flash-lite",
+      "success": true,
+      "model_calls": 3,
+      "tool_calls": [
+        "read_catalog",
+        "propose_plan"
+      ],
+      "valid_proposal_emitted": true,
+      "final_response_emitted": true,
+      "final_trace_emitted": true,
+      "errors": []
+    },
+    {
+      "file": "live-planning-network-retry-2026-10-07.json",
+      "sha256": "ccd10c3642bbe7ad071e7bab928b3807565203aca23bc3d9166c94c783f9cd03",
+      "model": "gemini-3.6-flash",
+      "success": false,
+      "model_calls": 1,
+      "tool_calls": [],
+      "valid_proposal_emitted": false,
+      "final_response_emitted": false,
+      "final_trace_emitted": true,
+      "errors": [
+        {
+          "error_type": "ServerError",
+          "provider_code": 503,
+          "provider_status": "UNAVAILABLE"
+        }
+      ]
+    },
+    {
+      "file": "live-planning-provider-retry-2026-10-07.json",
+      "sha256": "f8c6d67f0ce5cbcb21e2797c58706d56c59a69ce08e9e1ee666278148f6845f7",
+      "model": "gemini-3.6-flash",
+      "success": false,
+      "model_calls": 1,
+      "tool_calls": [],
+      "valid_proposal_emitted": false,
+      "final_response_emitted": false,
+      "final_trace_emitted": true,
+      "errors": [
+        {
+          "error_type": "ServerError",
+          "provider_code": 503,
+          "provider_status": "UNAVAILABLE"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Planning and recovery are separate harnesses, not one integrated live recovery session.",
+    "Recovery uses Gemini for diagnosis; replayed computation and proposal are deterministic.",
+    "One synthetic fault, not verified Fisk catalog rules or a multi-scenario evaluation.",
+    "Checkpoint baseline is a simulated boundary, not durable environment restoration.",
+    "Model cost is not calculated; estimated_model_cost_usd is null.",
+    "Source/rule versions, full generation settings, and collection timestamps are not embedded consistently in the current harness outputs.",
+    "Retained node count includes a sections lookup unused by the final proposal.",
+    "The diagnosis node is also marked invalidated because it depends on the old trace; its output is preserved as evidence."
+  ]
+}

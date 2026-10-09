@@ -1,4 +1,4 @@
-const DEFAULT_ALLOWED_EMAIL_DOMAINS = ["my.fisk.edu"];
+const DEFAULT_ALLOWED_EMAIL_DOMAINS = ["my.fisk.edu", "fisk.edu"];
 
 function getAllowedEmailDomains(): string[] {
   const configured = process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS;

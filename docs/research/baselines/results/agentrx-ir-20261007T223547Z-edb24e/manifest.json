@@ -1,0 +1,162 @@
+{
+  "action": "agentrx-ir",
+  "started_at_utc": "2026-10-07T22:35:47.604709+00:00",
+  "upstream": {
+    "repository": "https://github.com/microsoft/AgentRx.git",
+    "commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+    "local_path": ".research-upstream/AgentRx",
+    "paper": "https://arxiv.org/abs/2602.02475v2",
+    "dataset": "https://huggingface.co/datasets/microsoft/AgentRx",
+    "dataset_access": "gated; not downloaded",
+    "initial_scope": "official public tau-retail samples; IR normalization only"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\hallucination_doubt.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\hallucination_doubt",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:47.605862+00:00",
+      "ended_at_utc": "2026-10-07T22:35:47.766530+00:00",
+      "exit_code": 0,
+      "log": "hallucination_doubt.txt",
+      "log_sha256": "a6d5cccc103b6d291e8c658c4b075ed290bd89db3924fd884de1550d60446bf8"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\instruction_adherence_failure.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\instruction_adherence_failure",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:47.768858+00:00",
+      "ended_at_utc": "2026-10-07T22:35:47.930369+00:00",
+      "exit_code": 0,
+      "log": "instruction_adherence_failure.txt",
+      "log_sha256": "8d62489423d8ae902fb545799aa45295d1177865d2d2a2b6e43755b627028a3f"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\intent_plan_misalignment.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\intent_plan_misalignment",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:47.932235+00:00",
+      "ended_at_utc": "2026-10-07T22:35:48.076778+00:00",
+      "exit_code": 0,
+      "log": "intent_plan_misalignment.txt",
+      "log_sha256": "80361cd4cfd3501121fda204ddeca366472db444aae1fd5581f3594dca0b75a1"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\invalid_invocation.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\invalid_invocation",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:48.078160+00:00",
+      "ended_at_utc": "2026-10-07T22:35:48.213428+00:00",
+      "exit_code": 0,
+      "log": "invalid_invocation.txt",
+      "log_sha256": "333d39948f4898606ebe0fd00afc707ed0b4138fc454a2d07be956141f2bc53e"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\invention_new_info.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\invention_new_info",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:48.215027+00:00",
+      "ended_at_utc": "2026-10-07T22:35:48.372882+00:00",
+      "exit_code": 0,
+      "log": "invention_new_info.txt",
+      "log_sha256": "668b7626e6913052faec5b65720e1dfcca67b3913eee36590e7fab77de8c1591"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\misinterpretation_tool_output.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\misinterpretation_tool_output",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:48.374557+00:00",
+      "ended_at_utc": "2026-10-07T22:35:48.518250+00:00",
+      "exit_code": 0,
+      "log": "misinterpretation_tool_output.txt",
+      "log_sha256": "6da011efa783609b9cf1d7763f0da3e973303985533e0b77e884048117b90aa5"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "run.py",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx\\trajectories\\tau-retail\\underspecified_intent.json",
+        "--domain",
+        "tau",
+        "--run-dir",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\agentrx-ir-20261007T223547Z-edb24e\\underspecified_intent",
+        "--stage",
+        "ir"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\AgentRx",
+      "started_at_utc": "2026-10-07T22:35:48.520864+00:00",
+      "ended_at_utc": "2026-10-07T22:35:48.676600+00:00",
+      "exit_code": 0,
+      "log": "underspecified_intent.txt",
+      "log_sha256": "8d05b7709678cbd53afd398f8fb35842ef7050cc1a84431c237009dc54fdc413"
+    }
+  ],
+  "input_sha256": {
+    "trajectories\\tau-retail\\hallucination_doubt.json": "eca3a4465978af89ef384026d1ff94c8b7ba91ed2a88b4fdaf9f87c204d2ef0e",
+    "trajectories\\tau-retail\\instruction_adherence_failure.json": "8c6579ed82d379012118d2aa8b9fc82a95b004d89ecd76a9890081721acf1137",
+    "trajectories\\tau-retail\\intent_plan_misalignment.json": "4650cfb534bc08e631daeca149576a6bd85c557f66c93eb7c3f6721eb1ec6b32",
+    "trajectories\\tau-retail\\invalid_invocation.json": "872e849c7b8407846b6d1be853e6d6981481499876789e9a1f840c00d143c1d7",
+    "trajectories\\tau-retail\\invention_new_info.json": "8e9e977b8a35d5b4d9d41086d24e0f609d8d619ad5e669399ec47a943b98fa19",
+    "trajectories\\tau-retail\\misinterpretation_tool_output.json": "e662a563b79f1995ad81fe6fdedd07958bae4959bc9d9ddad4f1a540a1423359",
+    "trajectories\\tau-retail\\underspecified_intent.json": "fc208fa7831cc6b7b66a83b347fbaceac2b5bc3a31e7a77615461f45b5be917e"
+  },
+  "evidence_scope": "preprocessing/setup smoke test, not a benchmark-wide reproduction",
+  "limitation": "Public released samples only; no full-benchmark accuracy measured. Preprocessing only; no diagnosis.",
+  "ended_at_utc": "2026-10-07T22:35:48.677297+00:00"
+}

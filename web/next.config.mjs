@@ -1,5 +1,11 @@
+import { fileURLToPath } from 'node:url'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep CSS resolution in this app; the parent has a separate Tailwind 3 install.
+  turbopack: {
+    root: fileURLToPath(new URL('.', import.meta.url)),
+  },
   images: {
     unoptimized: true,
   },

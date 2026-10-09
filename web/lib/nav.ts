@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   TrendingUp,
   Compass,
+  FlaskConical,
 } from "lucide-react";
 
 /**
@@ -30,6 +31,7 @@ export const NAV_ITEMS = [
   { href: "/gpa",           label: "GPA Calculator", icon: TrendingUp },
   { href: "/balance-sheet", label: "Degree Audit",  icon: FileSpreadsheet },
   { href: "/profile",       label: "Profile",       icon: User },
+  { href: "/research",      label: "Research Lab",  icon: FlaskConical },
 ] as const;
 
 export type NavItem = (typeof NAV_ITEMS)[number];

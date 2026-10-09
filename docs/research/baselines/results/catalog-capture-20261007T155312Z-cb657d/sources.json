@@ -1,0 +1,37 @@
+{
+  "edition_selected": "Undergraduate Bulletin 2024-2025",
+  "facts_sha256": "3d6100fc3b1fc6ba423d0d6184b0430618037bcbce58d53bf0746633818fe23d",
+  "retrieved_at_utc": "2026-10-07T15:53:12.646188+00:00",
+  "sources": [
+    {
+      "id": "major",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/school-of-natural-science-and-mathematics/department-of-mathematics-and-computer-science/computer-science-bs/",
+      "status": "failed",
+      "error": "URLError: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+    },
+    {
+      "id": "degree",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/academic-requirement-and-standards/undergraduate-degree-requirements",
+      "status": "failed",
+      "error": "URLError: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+    },
+    {
+      "id": "core",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/core",
+      "status": "failed",
+      "error": "URLError: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+    },
+    {
+      "id": "lab_ambiguity",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/csci-computer-science/200/csci-282l",
+      "status": "failed",
+      "error": "URLError: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+    },
+    {
+      "id": "math_placement",
+      "requested_url": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/math-mathematics/100/math-120",
+      "status": "failed",
+      "error": "URLError: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+    }
+  ]
+}

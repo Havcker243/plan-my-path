@@ -1,5 +1,7 @@
 # FiskGrad
 
+Before publishing changes, see [what to push and keep local](docs/github-publishing.md), including research evidence, credentials and generated files. Run `python Backend/scripts/check_publish.py` for a limited, read-only check of staged and candidate content.
+
 FiskGrad is an academic planning system for Fisk University students. It connects transcript history, degree requirements, course planning, section selection, calendar export, course reviews, professor ratings, GPA projection, AI advising, and advisor-ready balance sheets into a single workflow.
 
 The purpose is simple: a student should be able to understand where they are, what they still need, and how to finish — without jumping between a transcript PDF, a catalog page, a balance sheet, registration tools, advisor notes, and a spreadsheet.
@@ -54,7 +56,7 @@ FiskGrad reduces those gaps. The system helps students and advisors work from th
 
 | Area | What it does |
 |---|---|
-| **Authentication** | Restricts access to Fisk student emails (`@my.fisk.edu`). |
+| **Authentication** | Restricts access to Fisk University emails (`@my.fisk.edu` and `@fisk.edu`). |
 | **Dashboard** | Quick view of progress, plan status, transcript import, and next actions. |
 | **Onboarding** | Collects major, timeline, and completed courses; supports transcript upload and manual search. |
 | **Transcript Import** | Parses unofficial transcript PDFs (including AES-encrypted Fisk exports) into completed and in-progress courses. |
@@ -157,7 +159,7 @@ fiskgrad/
 | Frontend | Next.js 14 App Router, React 18, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
 | Backend | FastAPI, Python 3.11 |
 | Database | Supabase Postgres (via pgbouncer pooler) |
-| Auth | Supabase Auth (JWT, `@my.fisk.edu` enforcement) |
+| Auth | Supabase Auth (JWT, Fisk email-domain enforcement for `@my.fisk.edu` and `@fisk.edu`) |
 | AI | OpenRouter (OpenAI-compatible client) |
 | Transcript Parsing | pypdf + cryptography (AES-encrypted PDF support) |
 | Calendar Export | Frontend-generated `.ics` files |
@@ -225,7 +227,7 @@ Adds Supabase-side email enforcement, row-level security policies, and storage p
 
 ## Security Model
 
-- Frontend and backend both reject emails outside `@my.fisk.edu`.
+- Frontend and backend both reject emails outside `@my.fisk.edu` and `@fisk.edu`.
 - Supabase hardening SQL enforces the domain at the database/auth layer.
 - JWT validation requires signed Supabase tokens.
 - IP-based rate limits on transcript, AI, reviews, and balance-sheet endpoints.
@@ -352,7 +354,7 @@ FiskGrad is a feature-rich beta. All major product flows are implemented and wor
 | Set Supabase redirect URLs | **High** | Without it, email verification links don't work |
 | Run `security_hardening.sql` in Supabase | **High** | Adds RLS, storage policies, and auth-layer email enforcement |
 | Seed requirements for non-CS majors | **Medium** | Requirements page is empty for all majors except CS |
-| Test real Fisk student signup/login flows | **Medium** | Verify `@my.fisk.edu` domain works end-to-end |
+| Test real Fisk student/professor signup/login flows | **Medium** | Verify `@my.fisk.edu` and `@fisk.edu` work end-to-end |
 | Test transcript import with real student PDFs | **Medium** | Verify parser handles all Fisk transcript formats |
 | Section availability alerts | **Low** | Notify when a closed section gets a seat (not built) |
 | Schedule optimizer | **Low** | "Build me a schedule with no Friday classes" (not built) |

@@ -1,0 +1,25 @@
+{
+  "report_date": "2026-10-08",
+  "github": "https://github.com/Havcker243/plan-my-path",
+  "pages": 4,
+  "fresh_model_calls": 0,
+  "inputs": [
+    {
+      "path": "docs/research/baselines/results/tau-recovery-pilot-paced-20261007/recovery-results.json",
+      "sha256": "203a384d46b5b62b2836180d4eb781c788c0f23bfe0924f18a4893225784b452"
+    },
+    {
+      "path": "docs/research/progress-report-1/evidence/recovery-benchmark.json",
+      "sha256": "82196f15cd2a14f8d6c699ff021197261b6d3361f661e6359db27163af1b3955"
+    },
+    {
+      "path": "docs/research/progress-report-1/evidence/fisk-case-study-20261007.json",
+      "sha256": "8af6c0c74db8b4d32fbc59dbf8f2f069f5b1856b6a07f064b2b71befb8fdde3d"
+    },
+    {
+      "path": "docs/research/progress-report-1/evidence/research-verification-20261007.json",
+      "sha256": "d5d9ac01597f5a0d9e4eaf27d265cf25b23f59c75daf30e14b2f05265e3471c0"
+    }
+  ],
+  "pdf_sha256": "1926d04901f62fb64c5649bf9e905988010f711b929c7df11c2c0605c462cb9a"
+}

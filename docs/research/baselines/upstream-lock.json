@@ -1,0 +1,20 @@
+{
+  "recorded_date": "2026-10-07",
+  "agentrx": {
+    "repository": "https://github.com/microsoft/AgentRx.git",
+    "commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+    "local_path": ".research-upstream/AgentRx",
+    "paper": "https://arxiv.org/abs/2602.02475v2",
+    "dataset": "https://huggingface.co/datasets/microsoft/AgentRx",
+    "dataset_access": "gated; not downloaded",
+    "initial_scope": "official public tau-retail samples; IR normalization only"
+  },
+  "tau_bench": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  }
+}

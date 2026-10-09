@@ -1,0 +1,173 @@
+{
+  "synthetic": true,
+  "agent_in_loop": true,
+  "model": "gemini-3.6-flash",
+  "success": false,
+  "events": [
+    {
+      "agent_status": "Reading your academic information",
+      "run_id": "c0a4c4de-f8f1-40ba-9d16-01cbfc651690"
+    },
+    {
+      "agent_trace": {
+        "run_id": "c0a4c4de-f8f1-40ba-9d16-01cbfc651690",
+        "steps": [
+          {
+            "id": "1",
+            "name": "student",
+            "inputs": {
+              "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+            },
+            "dependencies": [],
+            "output": {
+              "sha256": "7e6018dbc3e67aa5aca2ab37e123d1a2d573c464deaedbf6cc35af0672e1083a"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.1,
+            "error": null
+          },
+          {
+            "id": "2",
+            "name": "requirements",
+            "inputs": {
+              "sha256": "e64bde960d6cfe29456540a33e9e4ff0b9dde2e25e3cb2d61b931adb3997ae25"
+            },
+            "dependencies": [
+              "1"
+            ],
+            "output": {
+              "sha256": "a425692b8d5cc6bd2af1c31cbcbe545f18624271f0d7491d25c5412033747abe"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.04,
+            "error": null
+          },
+          {
+            "id": "3",
+            "name": "gemini",
+            "inputs": {
+              "sha256": "060b53664a542d66742c84db30ef3b64b6b0026797aaed71d6d90ef300089f5c"
+            },
+            "dependencies": [
+              "1",
+              "2"
+            ],
+            "output": {
+              "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+            },
+            "status": "error",
+            "elapsed_ms": 7066.99,
+            "error": "ServerError"
+          }
+        ],
+        "events": [
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "2"
+          }
+        ],
+        "usage": {
+          "model_calls": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "thought_tokens": 0
+        },
+        "elapsed_ms": 8244.78
+      }
+    },
+    {
+      "error_type": "ServerError",
+      "provider_code": 503,
+      "provider_status": "UNAVAILABLE"
+    }
+  ],
+  "trace": {
+    "run_id": "c0a4c4de-f8f1-40ba-9d16-01cbfc651690",
+    "steps": [
+      {
+        "id": "1",
+        "name": "student",
+        "inputs": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "dependencies": [],
+        "output": {
+          "sha256": "7e6018dbc3e67aa5aca2ab37e123d1a2d573c464deaedbf6cc35af0672e1083a"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.1,
+        "error": null
+      },
+      {
+        "id": "2",
+        "name": "requirements",
+        "inputs": {
+          "sha256": "e64bde960d6cfe29456540a33e9e4ff0b9dde2e25e3cb2d61b931adb3997ae25"
+        },
+        "dependencies": [
+          "1"
+        ],
+        "output": {
+          "sha256": "a425692b8d5cc6bd2af1c31cbcbe545f18624271f0d7491d25c5412033747abe"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.04,
+        "error": null
+      },
+      {
+        "id": "3",
+        "name": "gemini",
+        "inputs": {
+          "sha256": "060b53664a542d66742c84db30ef3b64b6b0026797aaed71d6d90ef300089f5c"
+        },
+        "dependencies": [
+          "1",
+          "2"
+        ],
+        "output": {
+          "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+        },
+        "status": "error",
+        "elapsed_ms": 7066.99,
+        "error": "ServerError"
+      }
+    ],
+    "events": [
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "2"
+      }
+    ],
+    "usage": {
+      "model_calls": 1,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "thought_tokens": 0
+    },
+    "elapsed_ms": 8245.11
+  }
+}

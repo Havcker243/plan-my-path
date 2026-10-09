@@ -1,0 +1,20 @@
+test_ambiguous_requisite_is_not_silently_validated (test_agent.AcademicTests.test_ambiguous_requisite_is_not_silently_validated) ... ok
+test_choice_group_requires_only_one (test_agent.AcademicTests.test_choice_group_requires_only_one) ... ok
+test_completed_failed_course_not_counted (test_agent.AcademicTests.test_completed_failed_course_not_counted) ... ok
+test_earlier_prerequisite_required_not_same_semester (test_agent.AcademicTests.test_earlier_prerequisite_required_not_same_semester) ... ok
+test_unknown_duplicate_completed_courses (test_agent.AcademicTests.test_unknown_duplicate_completed_courses) ... ok
+test_agent_locator_is_scored_against_hidden_source (test_agent.RecoveryTests.test_agent_locator_is_scored_against_hidden_source) ... ok
+test_delayed_failure_benchmark_has_expected_outcomes (test_agent.RecoveryTests.test_delayed_failure_benchmark_has_expected_outcomes) ... ok
+test_invalidation_preserves_independent_branch_and_copies (test_agent.RecoveryTests.test_invalidation_preserves_independent_branch_and_copies) ... ok
+test_no_cross_student_cache (test_agent.RecoveryTests.test_no_cross_student_cache) ... ok
+test_rejected_plan_then_repair_reuses_catalog (test_agent.RecoveryTests.test_rejected_plan_then_repair_reuses_catalog) ... ok
+test_trace_redacts_academic_records (test_agent.RecoveryTests.test_trace_redacts_academic_records) ... ok
+test_transient_read_retry_is_recorded (test_agent.RecoveryTests.test_transient_read_retry_is_recorded) ... ok
+test_wrong_agent_localization_is_not_converted_to_success (test_agent.RecoveryTests.test_wrong_agent_localization_is_not_converted_to_success) ... ok
+test_step_budget_stops_loop (test_agent.RuntimeTests.test_step_budget_stops_loop) ... ok
+test_tool_roundtrip_preserves_signature_and_repairs (test_agent.RuntimeTests.test_tool_roundtrip_preserves_signature_and_repairs) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.012s
+
+OK

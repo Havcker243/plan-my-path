@@ -3,6 +3,51 @@
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 let subjectsCache: Major[] | null = null;
 let subjectsPromise: Promise<Major[]> | null = null;
+const COURSE_SUBJECT_CACHE_TTL_MS = 10 * 60 * 1000;
+const courseSubjectCache = new Map<string, { expiresAt: number; data: BackendSubjectCourse[] }>();
+const courseSubjectPromiseCache = new Map<string, Promise<BackendSubjectCourse[]>>();
+
+function courseSubjectStorageKey(subject: string) {
+  return `fiskgrad:courses-by-subject:${subject.toUpperCase()}`;
+}
+
+function readCachedSubjectCourses(subject: string): BackendSubjectCourse[] | null {
+  const key = subject.toUpperCase();
+  const now = Date.now();
+  const memoryHit = courseSubjectCache.get(key);
+  if (memoryHit && memoryHit.expiresAt > now) return memoryHit.data;
+  if (memoryHit) courseSubjectCache.delete(key);
+
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(courseSubjectStorageKey(key));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { expiresAt?: number; data?: BackendSubjectCourse[] };
+    if (!parsed.expiresAt || !parsed.data || parsed.expiresAt <= now) {
+      window.sessionStorage.removeItem(courseSubjectStorageKey(key));
+      return null;
+    }
+    courseSubjectCache.set(key, { expiresAt: parsed.expiresAt, data: parsed.data });
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedSubjectCourses(subject: string, data: BackendSubjectCourse[]) {
+  const key = subject.toUpperCase();
+  const expiresAt = Date.now() + COURSE_SUBJECT_CACHE_TTL_MS;
+  courseSubjectCache.set(key, { expiresAt, data });
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      courseSubjectStorageKey(key),
+      JSON.stringify({ expiresAt, data })
+    );
+  } catch {
+    // Ignore storage failures; memory cache is still enough for this session.
+  }
+}
 
 async function get<T>(path: string, token?: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
@@ -246,9 +291,25 @@ export async function fetchSubjects(): Promise<Major[]> {
 }
 
 export async function fetchCoursesBySubject(subject: string): Promise<BackendSubjectCourse[]> {
-  const params = new URLSearchParams({ subject });
-  const res = await get<{ data: BackendSubjectCourse[] }>(`/api/courses?${params}`);
-  return res.data;
+  const normalizedSubject = subject.trim().toUpperCase();
+  const cached = readCachedSubjectCourses(normalizedSubject);
+  if (cached) return cached;
+
+  const inFlight = courseSubjectPromiseCache.get(normalizedSubject);
+  if (inFlight) return inFlight;
+
+  const request = (async () => {
+    const params = new URLSearchParams({ subject: normalizedSubject });
+    const res = await get<{ data: BackendSubjectCourse[] }>(`/api/courses?${params}`);
+    const data = res.data ?? [];
+    writeCachedSubjectCourses(normalizedSubject, data);
+    return data;
+  })().finally(() => {
+    courseSubjectPromiseCache.delete(normalizedSubject);
+  });
+
+  courseSubjectPromiseCache.set(normalizedSubject, request);
+  return request;
 }
 
 export async function searchCourses(
@@ -480,6 +541,21 @@ export interface AdvisorMessage {
   role: "user" | "assistant";
   content: string;
   reasoning_details?: unknown;
+  agent_status?: string;
+  agent_trace?: AgentTrace;
+}
+
+export interface AgentTrace {
+  run_id: string;
+  steps: Array<{ id: string; name: string; status: string; dependencies: string[]; elapsed_ms: number }>;
+  events: Array<Record<string, unknown>>;
+  usage: { model_calls: number; input_tokens: number; output_tokens: number; thought_tokens: number };
+  elapsed_ms: number;
+}
+
+export interface AgentEvent {
+  agent_status?: string;
+  agent_trace?: AgentTrace;
 }
 
 export class AdvisorBusyError extends Error {
@@ -491,7 +567,8 @@ export async function callAdvisor(
   message: string,
   history: AdvisorMessage[] = [],
   onChunk?: (chunk: string) => void,
-  onReasoningDetails?: (reasoningDetails: unknown) => void
+  onReasoningDetails?: (reasoningDetails: unknown) => void,
+  onAgentEvent?: (event: AgentEvent) => void
 ): Promise<string> {
   const res = await fetch(`${BASE}/api/ai/advise`, {
     method: "POST",
@@ -524,7 +601,7 @@ export async function callAdvisor(
       const raw = dataLine.slice(6).trim();
       if (raw === "[DONE]") return full;
       try {
-        const parsed = JSON.parse(raw) as { chunk?: string; error?: string; reasoning_details?: unknown };
+        const parsed = JSON.parse(raw) as AgentEvent & { chunk?: string; error?: string; reasoning_details?: unknown };
         if (parsed.error) throw new Error(parsed.error);
         if (parsed.chunk) {
           full += parsed.chunk;
@@ -533,6 +610,7 @@ export async function callAdvisor(
         if (parsed.reasoning_details !== undefined) {
           onReasoningDetails?.(parsed.reasoning_details);
         }
+        if (parsed.agent_status || parsed.agent_trace) onAgentEvent?.(parsed);
       } catch (e) {
         if (e instanceof SyntaxError) continue;
         throw e;

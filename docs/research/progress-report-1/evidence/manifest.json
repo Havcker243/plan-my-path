@@ -1,0 +1,36 @@
+{
+  "generated_at_utc": "2026-10-07T14:17:04.555883+00:00",
+  "fresh_external_api_calls": 0,
+  "executions": [
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "log": "backend-tests.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\.venv\\Scripts\\python.exe",
+        "-m",
+        "research.benchmark",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\progress-report-1\\evidence\\recovery-benchmark.json"
+      ],
+      "exit_code": 0,
+      "log": "benchmark-console.txt"
+    }
+  ],
+  "files": {
+    "archived-live-summary.json": "08f24fa0402d965d3e41d821725c4cc8985b2b367946a2966db4dcdf8ccf064e",
+    "backend-tests.txt": "4a79812ccd0144fdd406e4d43c65f7c42ef309c8f7765a460b9d932c0142eed5",
+    "benchmark-console.txt": "2f3181a9521b1d5ec6eacce2c9f3a5264a4ca809231d7ccae00163011fcf4766",
+    "recovery-benchmark.json": "82196f15cd2a14f8d6c699ff021197261b6d3361f661e6359db27163af1b3955"
+  }
+}

@@ -1,0 +1,484 @@
+{
+  "synthetic": true,
+  "agent_in_loop": true,
+  "model": "gemini-3.5-flash-lite",
+  "success": true,
+  "events": [
+    {
+      "agent_status": "Reading your academic information",
+      "run_id": "3c40adf9-6910-4434-8b66-e433a02f16ce"
+    },
+    {
+      "agent_status": "Read catalog",
+      "run_id": "3c40adf9-6910-4434-8b66-e433a02f16ce"
+    },
+    {
+      "agent_status": "Propose plan",
+      "run_id": "3c40adf9-6910-4434-8b66-e433a02f16ce"
+    },
+    {
+      "proposal": {
+        "semesters": [
+          {
+            "term": "Fall",
+            "year": 2026,
+            "courses": [
+              "CSCI-201"
+            ]
+          },
+          {
+            "term": "Spring",
+            "year": 2027,
+            "courses": [
+              "CSCI-301"
+            ]
+          }
+        ]
+      },
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "warnings": [
+          "Future section availability and meeting conflicts have not been validated. Existing planned courses are not assumed completed."
+        ],
+        "audit": {
+          "completed_credits": 3.0,
+          "total_credits_required": 9,
+          "groups": [
+            {
+              "name": "Core",
+              "type": "all_of",
+              "options": [
+                "CSCI-101",
+                "CSCI-201",
+                "CSCI-301"
+              ],
+              "matched": [
+                "CSCI-101",
+                "CSCI-201",
+                "CSCI-301"
+              ],
+              "credits": 9.0,
+              "courses_required": null,
+              "credits_required": null,
+              "satisfied": true
+            }
+          ],
+          "coverage": "partial",
+          "limitations": [
+            "Course-label data may omit overlapping or empty groups. Subject-level elective rules, grade minima, residency and transfer equivalencies need advisor review."
+          ],
+          "projected_credits": 9.0
+        },
+        "official_degree_clearance": false
+      }
+    },
+    {
+      "chunk": "Proposed plan (not saved):\nFall 2026: CSCI-201\nSpring 2027: CSCI-301\nPassed the prototype's course, credit-load, and supported prerequisite checks. Degree coverage remains partial.\nProjected credits: 9 / 9 required.\nFuture section availability and meeting conflicts have not been validated. Existing planned courses are not assumed completed.\nConfirm degree completion, transfer credit, and grade requirements with your advisor."
+    },
+    {
+      "agent_trace": {
+        "run_id": "3c40adf9-6910-4434-8b66-e433a02f16ce",
+        "steps": [
+          {
+            "id": "1",
+            "name": "student",
+            "inputs": {
+              "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+            },
+            "dependencies": [],
+            "output": {
+              "sha256": "7e6018dbc3e67aa5aca2ab37e123d1a2d573c464deaedbf6cc35af0672e1083a"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.04,
+            "error": null
+          },
+          {
+            "id": "2",
+            "name": "requirements",
+            "inputs": {
+              "sha256": "e64bde960d6cfe29456540a33e9e4ff0b9dde2e25e3cb2d61b931adb3997ae25"
+            },
+            "dependencies": [
+              "1"
+            ],
+            "output": {
+              "sha256": "a425692b8d5cc6bd2af1c31cbcbe545f18624271f0d7491d25c5412033747abe"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.03,
+            "error": null
+          },
+          {
+            "id": "3",
+            "name": "gemini",
+            "inputs": {
+              "sha256": "bda11f351d8910a3206c13f82cddc4bec76c9e99b8e167577f941590316bb007"
+            },
+            "dependencies": [
+              "1",
+              "2"
+            ],
+            "output": {
+              "sha256": "d794baa1c6d5fc98236c2a62af1d38637844592eeec6ced6f39f08dce62acc8b"
+            },
+            "status": "ok",
+            "elapsed_ms": 1937.04,
+            "error": null
+          },
+          {
+            "id": "4",
+            "name": "catalog",
+            "inputs": {
+              "sha256": "688389627dc4ced77c2fa699ccbbf9499a8871ade4f3ca51444d84bea647004a"
+            },
+            "dependencies": [],
+            "output": {
+              "sha256": "f12a01b296ecad4b836293fac83b8bf29628e7041ae15a152513f31b7dc6157a"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.06,
+            "error": null
+          },
+          {
+            "id": "5",
+            "name": "gemini",
+            "inputs": {
+              "sha256": "e429abccef859af23819e9a4552af82b9914d0fdddc94a8d9b9670942eb9489f"
+            },
+            "dependencies": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "output": {
+              "sha256": "0b4d258060eab7a773a45f7a3d102d3c697874ff51136e44504fc1941622aa5c"
+            },
+            "status": "ok",
+            "elapsed_ms": 11385.99,
+            "error": null
+          },
+          {
+            "id": "6",
+            "name": "proposal",
+            "inputs": {
+              "sha256": "2506e9df3b7c6417bca20138b0ecd1d9f7fa6d31d7ab4671955aa3aab86b4ab6"
+            },
+            "dependencies": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "output": {
+              "sha256": "2506e9df3b7c6417bca20138b0ecd1d9f7fa6d31d7ab4671955aa3aab86b4ab6"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.02,
+            "error": null
+          },
+          {
+            "id": "7",
+            "name": "validate",
+            "inputs": {
+              "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+            },
+            "dependencies": [
+              "6",
+              "1",
+              "2",
+              "4"
+            ],
+            "output": {
+              "sha256": "ad2c7024b398dbddbe758ff570952c8bd8dbb0940228e54a99350b2cd2763724"
+            },
+            "status": "ok",
+            "elapsed_ms": 0.11,
+            "error": null
+          },
+          {
+            "id": "8",
+            "name": "gemini",
+            "inputs": {
+              "sha256": "4fe85e80567bd395bde6815ca3e542adf719f1a1766541be95e6e7ec4e7c19b3"
+            },
+            "dependencies": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "output": {
+              "sha256": "7a3e25c06b6e0efebe3573e078491ecae529396d6adb7498b149c10219b292dd"
+            },
+            "status": "ok",
+            "elapsed_ms": 102553.75,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "2"
+          },
+          {
+            "event": "tool_call",
+            "name": "read_catalog",
+            "model_step": "3",
+            "result_step": "4",
+            "error": null
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "2"
+          },
+          {
+            "event": "reuse",
+            "step_id": "4"
+          },
+          {
+            "event": "tool_call",
+            "name": "propose_plan",
+            "model_step": "5",
+            "result_step": "7",
+            "error": null
+          }
+        ],
+        "usage": {
+          "model_calls": 3,
+          "input_tokens": 3728,
+          "output_tokens": 158,
+          "thought_tokens": 0
+        },
+        "elapsed_ms": 117030.94
+      }
+    }
+  ],
+  "trace": {
+    "run_id": "3c40adf9-6910-4434-8b66-e433a02f16ce",
+    "steps": [
+      {
+        "id": "1",
+        "name": "student",
+        "inputs": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "dependencies": [],
+        "output": {
+          "sha256": "7e6018dbc3e67aa5aca2ab37e123d1a2d573c464deaedbf6cc35af0672e1083a"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.04,
+        "error": null
+      },
+      {
+        "id": "2",
+        "name": "requirements",
+        "inputs": {
+          "sha256": "e64bde960d6cfe29456540a33e9e4ff0b9dde2e25e3cb2d61b931adb3997ae25"
+        },
+        "dependencies": [
+          "1"
+        ],
+        "output": {
+          "sha256": "a425692b8d5cc6bd2af1c31cbcbe545f18624271f0d7491d25c5412033747abe"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.03,
+        "error": null
+      },
+      {
+        "id": "3",
+        "name": "gemini",
+        "inputs": {
+          "sha256": "bda11f351d8910a3206c13f82cddc4bec76c9e99b8e167577f941590316bb007"
+        },
+        "dependencies": [
+          "1",
+          "2"
+        ],
+        "output": {
+          "sha256": "d794baa1c6d5fc98236c2a62af1d38637844592eeec6ced6f39f08dce62acc8b"
+        },
+        "status": "ok",
+        "elapsed_ms": 1937.04,
+        "error": null
+      },
+      {
+        "id": "4",
+        "name": "catalog",
+        "inputs": {
+          "sha256": "688389627dc4ced77c2fa699ccbbf9499a8871ade4f3ca51444d84bea647004a"
+        },
+        "dependencies": [],
+        "output": {
+          "sha256": "f12a01b296ecad4b836293fac83b8bf29628e7041ae15a152513f31b7dc6157a"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.06,
+        "error": null
+      },
+      {
+        "id": "5",
+        "name": "gemini",
+        "inputs": {
+          "sha256": "e429abccef859af23819e9a4552af82b9914d0fdddc94a8d9b9670942eb9489f"
+        },
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "output": {
+          "sha256": "0b4d258060eab7a773a45f7a3d102d3c697874ff51136e44504fc1941622aa5c"
+        },
+        "status": "ok",
+        "elapsed_ms": 11385.99,
+        "error": null
+      },
+      {
+        "id": "6",
+        "name": "proposal",
+        "inputs": {
+          "sha256": "2506e9df3b7c6417bca20138b0ecd1d9f7fa6d31d7ab4671955aa3aab86b4ab6"
+        },
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "output": {
+          "sha256": "2506e9df3b7c6417bca20138b0ecd1d9f7fa6d31d7ab4671955aa3aab86b4ab6"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.02,
+        "error": null
+      },
+      {
+        "id": "7",
+        "name": "validate",
+        "inputs": {
+          "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "dependencies": [
+          "6",
+          "1",
+          "2",
+          "4"
+        ],
+        "output": {
+          "sha256": "ad2c7024b398dbddbe758ff570952c8bd8dbb0940228e54a99350b2cd2763724"
+        },
+        "status": "ok",
+        "elapsed_ms": 0.11,
+        "error": null
+      },
+      {
+        "id": "8",
+        "name": "gemini",
+        "inputs": {
+          "sha256": "4fe85e80567bd395bde6815ca3e542adf719f1a1766541be95e6e7ec4e7c19b3"
+        },
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7"
+        ],
+        "output": {
+          "sha256": "7a3e25c06b6e0efebe3573e078491ecae529396d6adb7498b149c10219b292dd"
+        },
+        "status": "ok",
+        "elapsed_ms": 102553.75,
+        "error": null
+      }
+    ],
+    "events": [
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "2"
+      },
+      {
+        "event": "tool_call",
+        "name": "read_catalog",
+        "model_step": "3",
+        "result_step": "4",
+        "error": null
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "1"
+      },
+      {
+        "event": "reuse",
+        "step_id": "2"
+      },
+      {
+        "event": "reuse",
+        "step_id": "4"
+      },
+      {
+        "event": "tool_call",
+        "name": "propose_plan",
+        "model_step": "5",
+        "result_step": "7",
+        "error": null
+      }
+    ],
+    "usage": {
+      "model_calls": 3,
+      "input_tokens": 3728,
+      "output_tokens": 158,
+      "thought_tokens": 0
+    },
+    "elapsed_ms": 117031.94
+  }
+}

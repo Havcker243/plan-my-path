@@ -1,0 +1,1221 @@
+{
+  "synthetic_records": true,
+  "catalog_edition": "Undergraduate Bulletin 2024-2025",
+  "rules_sha256": "3d6100fc3b1fc6ba423d0d6184b0430618037bcbce58d53bf0746633818fe23d",
+  "scope": "Source-grounded research rules, separate from production requirements and illustrative nine-credit fixture",
+  "cases": [
+    {
+      "case": "known_rules_met_review_still_required",
+      "student": [
+        {
+          "code": "CSCI 110",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 110L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 210",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 291",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 310",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 411",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 412",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 120",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 130",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 125",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 240",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "NSCI 360",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk",
+          "note": "Candidate identifier, unresolved catalog ambiguity"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 00",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 01",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 02",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 03",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 04",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 05",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 06",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 07",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 08",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 09",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 10",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 11",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 12",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 13",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 14",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 15",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 16",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 17",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 18",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 19",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 20",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 21",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        }
+      ],
+      "result": {
+        "status": "manual_review_required",
+        "degree_cleared": false,
+        "earned_credits": 120,
+        "fisk_gpa": 3.0,
+        "gpa_credits": 120,
+        "quality_points": 360,
+        "missing_known_courses": [],
+        "failed_known_rules": [],
+        "invalid_records": [],
+        "unverified_scope": [
+          "Catalog lab identifier ambiguity requires confirmation before course matching.",
+          "CORE text and tables give inconsistent credit ranges; some 2-credit arts options appear under a 3-credit group total.",
+          "Suggested plan misnames MATH 120 as Calculus II; its linked course page identifies Calculus I.",
+          "Complete course prerequisite/corequisite extraction, substitutions, repeats/transfer-credit handling and student-specific exceptions remain to be verified.",
+          "Exit examination, application deadline and other non-course graduation approvals require external verification.",
+          "Synthetic elective credits are transcript assumptions, not verified CORE, elective, residency or language satisfaction."
+        ]
+      }
+    },
+    {
+      "case": "missing_required_course",
+      "student": [
+        {
+          "code": "CSCI 110",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 110L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 210",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 291",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 310",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 411",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 412",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 120",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 130",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 125",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 240",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "NSCI 360",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk",
+          "note": "Candidate identifier, unresolved catalog ambiguity"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 00",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 01",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 02",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 03",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 04",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 05",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 06",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 07",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 08",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 09",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 10",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 11",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 12",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 13",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 14",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 15",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 16",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 17",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 18",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 19",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 20",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 21",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        }
+      ],
+      "result": {
+        "status": "requirements_not_met",
+        "degree_cleared": false,
+        "earned_credits": 117,
+        "fisk_gpa": 3.0,
+        "gpa_credits": 117,
+        "quality_points": 351,
+        "missing_known_courses": [
+          "CSCI 241"
+        ],
+        "failed_known_rules": [
+          "Fewer than 120 earned credits",
+          "Known required coursework is missing"
+        ],
+        "invalid_records": [],
+        "unverified_scope": [
+          "Catalog lab identifier ambiguity requires confirmation before course matching.",
+          "CORE text and tables give inconsistent credit ranges; some 2-credit arts options appear under a 3-credit group total.",
+          "Suggested plan misnames MATH 120 as Calculus II; its linked course page identifies Calculus I.",
+          "Complete course prerequisite/corequisite extraction, substitutions, repeats/transfer-credit handling and student-specific exceptions remain to be verified.",
+          "Exit examination, application deadline and other non-course graduation approvals require external verification.",
+          "Synthetic elective credits are transcript assumptions, not verified CORE, elective, residency or language satisfaction."
+        ]
+      }
+    },
+    {
+      "case": "major_grade_below_C",
+      "student": [
+        {
+          "code": "CSCI 110",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 110L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 210",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241",
+          "credits": 3,
+          "grade": "D",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 291",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 310",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 411",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 412",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 120",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 130",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 125",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 240",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "NSCI 360",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk",
+          "note": "Candidate identifier, unresolved catalog ambiguity"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 00",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 01",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 02",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 03",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 04",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 05",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 06",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 07",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 08",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 09",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 10",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 11",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 12",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 13",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 14",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 15",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 16",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 17",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 18",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 19",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 20",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 21",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        }
+      ],
+      "result": {
+        "status": "requirements_not_met",
+        "degree_cleared": false,
+        "earned_credits": 120,
+        "fisk_gpa": 2.95,
+        "gpa_credits": 120,
+        "quality_points": 354,
+        "missing_known_courses": [],
+        "failed_known_rules": [
+          "CSCI 241 below C"
+        ],
+        "invalid_records": [],
+        "unverified_scope": [
+          "Catalog lab identifier ambiguity requires confirmation before course matching.",
+          "CORE text and tables give inconsistent credit ranges; some 2-credit arts options appear under a 3-credit group total.",
+          "Suggested plan misnames MATH 120 as Calculus II; its linked course page identifies Calculus I.",
+          "Complete course prerequisite/corequisite extraction, substitutions, repeats/transfer-credit handling and student-specific exceptions remain to be verified.",
+          "Exit examination, application deadline and other non-course graduation approvals require external verification.",
+          "Synthetic elective credits are transcript assumptions, not verified CORE, elective, residency or language satisfaction."
+        ]
+      }
+    },
+    {
+      "case": "duplicate_credit_attempt",
+      "student": [
+        {
+          "code": "CSCI 110",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 110L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 120L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 210",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 230L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 241L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 261L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 291",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 310",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 312L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 411",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 412",
+          "credits": 2,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 120",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 130",
+          "credits": 4,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 125",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "MATH 240",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "NSCI 360",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 282L",
+          "credits": 1,
+          "grade": "B",
+          "institution": "Fisk",
+          "note": "Candidate identifier, unresolved catalog ambiguity"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 00",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 01",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 02",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 03",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 04",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 05",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 06",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 07",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 08",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 09",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 10",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 11",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 12",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 13",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 14",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 15",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 16",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 17",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 18",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 19",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 20",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "SYNTHETIC ELECTIVE 21",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        },
+        {
+          "code": "CSCI 110",
+          "credits": 3,
+          "grade": "B",
+          "institution": "Fisk"
+        }
+      ],
+      "result": {
+        "status": "invalid_record",
+        "degree_cleared": false,
+        "earned_credits": 120,
+        "fisk_gpa": 3.0,
+        "gpa_credits": 120,
+        "quality_points": 360,
+        "missing_known_courses": [],
+        "failed_known_rules": [],
+        "invalid_records": [
+          "Duplicate course CSCI 110; repeat-credit policy not inferred"
+        ],
+        "unverified_scope": [
+          "Catalog lab identifier ambiguity requires confirmation before course matching.",
+          "CORE text and tables give inconsistent credit ranges; some 2-credit arts options appear under a 3-credit group total.",
+          "Suggested plan misnames MATH 120 as Calculus II; its linked course page identifies Calculus I.",
+          "Complete course prerequisite/corequisite extraction, substitutions, repeats/transfer-credit handling and student-specific exceptions remain to be verified.",
+          "Exit examination, application deadline and other non-course graduation approvals require external verification.",
+          "Synthetic elective credits are transcript assumptions, not verified CORE, elective, residency or language satisfaction."
+        ]
+      }
+    }
+  ]
+}

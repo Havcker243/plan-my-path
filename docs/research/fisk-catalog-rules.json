@@ -1,0 +1,39 @@
+{
+  "edition": "Undergraduate Bulletin 2024-2025",
+  "selection_reason": "Explicit edition displayed by the university's public catalog; not asserted to be the latest edition or applicable to every student",
+  "reviewed_date": "2026-10-07",
+  "program": "Fisk Computer Science B.S., single major",
+  "scope": "Source-grounded research rules, separate from production requirements and illustrative nine-credit fixture",
+  "sources": {
+    "major": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/school-of-natural-science-and-mathematics/department-of-mathematics-and-computer-science/computer-science-bs/",
+    "degree": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/academic-requirement-and-standards/undergraduate-degree-requirements",
+    "core": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/core",
+    "lab_ambiguity": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/csci-computer-science/200/csci-282l",
+    "math_placement": "https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/courses/math-mathematics/100/math-120"
+  },
+  "degree_rules": {
+    "total_credits_min": 120,
+    "fisk_cumulative_gpa_min": 2.0,
+    "major_and_cognate_grade_min": "C",
+    "residency": {"freshman_entry_semesters_min": 6, "transfer_entry_semesters_min": 4, "final_fisk_credits": 30, "transfer_major_fraction_min": 0.75},
+    "foreign_language": "Placement-based proficiency requirement; do not use a universal fixed-credit threshold",
+    "source": "degree"
+  },
+  "major_required": {
+    "source": "major, Major Required section",
+    "reported_credits": 37,
+    "courses": {"CSCI 110": 3, "CSCI 110L": 1, "CSCI 120": 3, "CSCI 120L": 1, "CSCI 210": 1, "CSCI 230": 3, "CSCI 230L": 1, "CSCI 241": 3, "CSCI 241L": 1, "CSCI 261": 3, "CSCI 261L": 1, "CSCI 282": 3, "CSCI 291": 3, "CSCI 310": 1, "CSCI 312": 3, "CSCI 312L": 1, "CSCI 411": 2, "CSCI 412": 2},
+    "unresolved_lab_entry": {"displayed_code": "CSCI 282", "candidate_code": "CSCI 282L", "credits": 1, "source": "lab_ambiguity", "status": "requires_department_confirmation; do not collapse into lecture or silently normalize"}
+  },
+  "cognates": {"source": "major, Cognate Courses section", "reported_credits": 17, "courses": {"MATH 120": 4, "MATH 130": 4, "MATH 125": 3, "MATH 240": 3, "NSCI 360": 3}},
+  "major_electives": {"source": "major, Major Electives section", "credits_range_displayed": [6, 8], "course_level_min": 300, "department_approval_required": true},
+  "core_math_substitution": {"source": "major, Mathematics requirement section", "replaces": "CORE 131", "with": "MATH 120", "additional_placement_prerequisites_possible": true},
+  "unresolved": [
+    "Catalog lab identifier ambiguity requires confirmation before course matching.",
+    "CORE text and tables give inconsistent credit ranges; some 2-credit arts options appear under a 3-credit group total.",
+    "Suggested plan misnames MATH 120 as Calculus II; its linked course page identifies Calculus I.",
+    "Complete course prerequisite/corequisite extraction, substitutions, repeats/transfer-credit handling and student-specific exceptions remain to be verified.",
+    "Exit examination, application deadline and other non-course graduation approvals require external verification."
+  ],
+  "graduation_clearance_enabled": false
+}

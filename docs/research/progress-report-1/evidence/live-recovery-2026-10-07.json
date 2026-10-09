@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "agent_in_loop": true,
+  "model": "gemini-3.5-flash-lite",
+  "attempted_runs": 1,
+  "completed_runs": 0,
+  "recovery_successes": 0,
+  "exact_source_matches": 0,
+  "limitations": "One controlled synthetic fault. Results measure a smoke test, not general recovery effectiveness.",
+  "results": [
+    {
+      "run": 1,
+      "strategy": "agent_selective",
+      "success": false,
+      "provider_error": {
+        "error_type": "ConnectError",
+        "provider_code": null,
+        "provider_status": null,
+        "provider_message": "[WinError 10061] No connection could be made because the target machine actively refused it"
+      }
+    }
+  ]
+}

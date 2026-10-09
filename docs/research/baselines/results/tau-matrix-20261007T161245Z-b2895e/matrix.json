@@ -1,0 +1,1034 @@
+{
+  "protocol_sha256": "35e9cb0079c2050e59594c217312be416a11e733c0372b837f50613197f695e3",
+  "adapter_sha256": "ee4859b2909f661cb52e026efb84af889019bc5ffa18ebf68c0fe325815e43bc",
+  "status": "planned_only",
+  "planned_cells": 171,
+  "cells": [
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "0",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "1",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "none",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "restart"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "visible_retry"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "checkpoint"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "source_rollback"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "selective"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "no_recovery"
+    },
+    {
+      "task": "2",
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "restart"
+    }
+  ]
+}

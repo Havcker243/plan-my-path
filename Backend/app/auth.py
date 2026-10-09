@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import HTTPException
 from jose import JWTError, jwt
 
-DEFAULT_ALLOWED_EMAIL_DOMAINS = ("my.fisk.edu",)
+DEFAULT_ALLOWED_EMAIL_DOMAINS = ("my.fisk.edu", "fisk.edu")
 SUPPORTED_ASYMMETRIC_ALGORITHMS = ("ES256", "RS256")
 _JWKS_CACHE: dict[str, tuple[float, dict[str, object]]] = {}
 _JWKS_CACHE_SECONDS = 60 * 60

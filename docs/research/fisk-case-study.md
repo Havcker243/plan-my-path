@@ -1,0 +1,11 @@
+# Fisk catalog case-study provenance
+
+Research rules now reference the university's [2024–2025 B.S. Computer Science catalog](https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/school-of-natural-science-and-mathematics/department-of-mathematics-and-computer-science/computer-science-bs/), [degree requirements](https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/academic-requirement-and-standards/undergraduate-degree-requirements) and [CORE curriculum](https://fisk.smartcatalogiq.com/en/bulletin/undergraduate/core). The edition is explicit; it is not assumed to be the latest or to govern every student. This is separate from the production `data/cs_requirements.json` and earlier nine-credit illustration, which were not silently replaced.
+
+[Structured facts](fisk-catalog-rules.json) contain source references, known credit/GPA/major-grade rules, major/cognate lists and unresolved conditions. The five source pages were retrieved successfully; manifests under `baselines/results/catalog-capture-*/sources.json` record URLs, retrieval time, content hashes and local raw archives. An earlier sandbox retrieval failure is retained. Raw copies are in ignored `logs/catalog-sources/`.
+
+The catalog displays the programming-languages laboratory with an ambiguous identifier, inconsistent CORE totals/options, and a suggested-plan calculus naming discrepancy. These are recorded for department confirmation. A complete prerequisite/corequisite extraction and full student-specific graduation conditions are still pending. Unknown requirements are never silently satisfied.
+
+The partial audit computes earned credit and Fisk GPA from synthetic transcript entries, checks known major/cognate courses against the minimum grade, and rejects duplicate credit and mismatched known course credits. Synthetic elective credits are transcript assumptions and do not prove elective, CORE, residency or language satisfaction. Even a record meeting all implemented conditions returns manual review, never graduation clearance.
+
+Four synthetic cases and their full calculation results are saved in `progress-report-1/evidence/fisk-case-study-20261007.json` and available through the site's **Fisk catalog case-study checks**. They are engineering evidence, not a nationally recognized benchmark or real student records.

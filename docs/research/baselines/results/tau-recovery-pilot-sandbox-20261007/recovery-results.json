@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "action": "tau-recovery",
+  "started_at": "2026-10-07T15:50:42.777617+00:00",
+  "upstream": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  },
+  "configuration": {
+    "domain": "retail",
+    "task_set_name": null,
+    "task_split_name": "base",
+    "task_ids": null,
+    "num_tasks": null,
+    "llm_user": "gemini/gemini-3.5-flash-lite",
+    "llm_args_user": {
+      "temperature": 0,
+      "timeout": 45,
+      "num_retries": 0
+    },
+    "num_trials": 1,
+    "max_errors": 10,
+    "timeout": 180.0,
+    "save_to": null,
+    "max_concurrency": 3,
+    "workers": 0,
+    "provider_limits": null,
+    "seed": 300,
+    "log_level": "ERROR",
+    "verbose_logs": false,
+    "max_retries": 3,
+    "retry_delay": 1.0,
+    "auto_resume": false,
+    "auto_review": false,
+    "review_mode": "full",
+    "review_model": "claude-opus-4-5",
+    "hallucination_retries": 3,
+    "is_remote": false,
+    "retrieval_config": null,
+    "retrieval_config_kwargs": null,
+    "agent": "llm_agent",
+    "llm_agent": "gemini/gemini-3.5-flash-lite",
+    "llm_args_agent": {
+      "temperature": 0,
+      "timeout": 45,
+      "num_retries": 0
+    },
+    "user": "user_simulator",
+    "max_steps": 60,
+    "enforce_communication_protocol": false,
+    "text_streaming_config": null
+  },
+  "protocol": "docs/research/tau-recovery-protocol.json",
+  "task": {
+    "id": "0",
+    "description": {
+      "purpose": null,
+      "relevant_policies": null,
+      "notes": null
+    },
+    "user_scenario": {
+      "persona": null,
+      "instructions": {
+        "domain": "retail",
+        "reason_for_call": "You received your order #W2378156 and wish to exchange the mechanical keyboard for the same one but with clicky switches and the smart thermostat for one compatible with Google Home instead of Apple HomeKit. If there is no keyboard that is clicky, RGB backlight, full size, you'd go for no backlight.",
+        "known_info": "You are Yusuf Rossi in zip code 19122.",
+        "unknown_info": "You do not remember your email address.",
+        "task_instructions": "You are detail-oriented and want to make sure everything is addressed in one go."
+      }
+    },
+    "ticket": null,
+    "initial_state": null,
+    "evaluation_criteria": {
+      "actions": [
+        {
+          "action_id": "0_0",
+          "requestor": "assistant",
+          "name": "find_user_id_by_name_zip",
+          "arguments": {
+            "first_name": "Yusuf",
+            "last_name": "Rossi",
+            "zip": "19122"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_1",
+          "requestor": "assistant",
+          "name": "get_order_details",
+          "arguments": {
+            "order_id": "#W2378156"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_2",
+          "requestor": "assistant",
+          "name": "get_product_details",
+          "arguments": {
+            "product_id": "1656367028"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_3",
+          "requestor": "assistant",
+          "name": "get_product_details",
+          "arguments": {
+            "product_id": "4896585277"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_4",
+          "requestor": "assistant",
+          "name": "exchange_delivered_order_items",
+          "arguments": {
+            "order_id": "#W2378156",
+            "item_ids": [
+              "1151293680",
+              "4983901480"
+            ],
+            "new_item_ids": [
+              "7706410293",
+              "7747408585"
+            ],
+            "payment_method_id": "credit_card_9513926"
+          },
+          "info": null,
+          "compare_args": null
+        }
+      ],
+      "env_assertions": null,
+      "communicate_info": [],
+      "nl_assertions": null,
+      "reward_basis": [
+        "DB",
+        "NL_ASSERTION"
+      ]
+    },
+    "issues": null,
+    "required_documents": null,
+    "user_tools": null
+  },
+  "protocol_sha256": "e50e84261bbfd24c16e74cf9cde9b6fd599fc269de37a8c70caffdce951964b5",
+  "adapter_sha256": "05ac31769b71279b6cf7b7c4aa7c9031b0df453859d6b204f9ed75250ab54566",
+  "input_sha256": {
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\db.json": "dbde692e380bb4ad17f9f7841172cf1e69bebad2daa405628ccdc52a42b3b9b0",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\policy.md": "4313d3fef8acf919f555fa17fbce929cc3ed1cef2dd8f0d35ff5c8c3364de176",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\split_tasks.json": "5f9949b833e6b99584b87e84ef22f9d81789ea67a52e534c6f7aa91eff08adc7",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\tasks.json": "f44563d8f36362e2dc58282bb02cfb85010d22f27d9439808758d3e9b2bc16d2"
+  },
+  "limitations": "Controlled-fault extension on released tasks; not unchanged suite scores or a published recovery implementation. Conservative dependencies may yield no selective advantage.",
+  "results": [
+    {
+      "strategy": "no_recovery",
+      "task_id": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "reward": null,
+      "execution_error": "APIConnectionError: litellm.APIConnectionError: GeminiException - [WinError 10061] No connection could be made because the target machine actively refused it",
+      "trace": [
+        {
+          "id": "1",
+          "kind": "dispatch",
+          "depends_on": [],
+          "attempt_step": 0,
+          "status": "active",
+          "recipient": "Role.USER"
+        }
+      ],
+      "events": [],
+      "source_scoring_only": null,
+      "fault_exercised": false,
+      "total_attempt_steps": 0,
+      "cost_usage_complete": false
+    },
+    {
+      "strategy": "selective",
+      "task_id": "0",
+      "seed": 300,
+      "fault": "empty_read",
+      "reward": null,
+      "execution_error": "APIConnectionError: litellm.APIConnectionError: GeminiException - [WinError 10061] No connection could be made because the target machine actively refused it",
+      "trace": [
+        {
+          "id": "1",
+          "kind": "dispatch",
+          "depends_on": [],
+          "attempt_step": 0,
+          "status": "active",
+          "recipient": "Role.USER"
+        }
+      ],
+      "events": [],
+      "source_scoring_only": null,
+      "fault_exercised": false,
+      "total_attempt_steps": 0,
+      "cost_usage_complete": false
+    }
+  ],
+  "ended_at": "2026-10-07T15:50:47.364215+00:00"
+}

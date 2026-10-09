@@ -11,33 +11,41 @@
 -- Supabase Auth email-domain guard
 -- ---------------------------------------------------------------------------
 
--- Fisk student accounts must use @my.fisk.edu. This trigger blocks direct
--- Supabase signups or email changes that bypass the frontend/backend checks.
+-- Fisk student and professor accounts must use either @my.fisk.edu or
+-- @fisk.edu. This trigger blocks direct Supabase signups or email changes
+-- that bypass the frontend/backend checks.
 -- Review existing auth users before enabling this if you already have test
 -- accounts with other domains:
 --
--- SELECT id, email FROM auth.users WHERE lower(email) NOT LIKE '%@my.fisk.edu';
+-- SELECT id, email
+-- FROM auth.users
+-- WHERE lower(email) NOT LIKE '%@my.fisk.edu'
+--   AND lower(email) NOT LIKE '%@fisk.edu';
 
-CREATE OR REPLACE FUNCTION public.enforce_my_fisk_email()
+CREATE OR REPLACE FUNCTION public.enforce_fisk_email_domains()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NEW.email IS NULL OR lower(NEW.email) NOT LIKE '%@my.fisk.edu' THEN
-    RAISE EXCEPTION 'Only @my.fisk.edu email addresses are allowed';
+  IF NEW.email IS NULL OR (
+    lower(NEW.email) NOT LIKE '%@my.fisk.edu'
+    AND lower(NEW.email) NOT LIKE '%@fisk.edu'
+  ) THEN
+    RAISE EXCEPTION 'Only @my.fisk.edu or @fisk.edu email addresses are allowed';
   END IF;
   RETURN NEW;
 END;
 $$;
 
 DROP TRIGGER IF EXISTS enforce_my_fisk_email_on_auth_users ON auth.users;
-CREATE TRIGGER enforce_my_fisk_email_on_auth_users
+DROP TRIGGER IF EXISTS enforce_fisk_email_domains_on_auth_users ON auth.users;
+CREATE TRIGGER enforce_fisk_email_domains_on_auth_users
 BEFORE INSERT OR UPDATE OF email
 ON auth.users
 FOR EACH ROW
-EXECUTE FUNCTION public.enforce_my_fisk_email();
+EXECUTE FUNCTION public.enforce_fisk_email_domains();
 
 -- ---------------------------------------------------------------------------
 -- User-owned app tables

@@ -1,0 +1,67 @@
+{
+  "action": "tau-check",
+  "started_at_utc": "2026-10-07T15:07:35.295218+00:00",
+  "upstream": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [
+    {
+      "command": [
+        "uv",
+        "pip",
+        "freeze",
+        "--python",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-07T15:07:35.299847+00:00",
+      "ended_at_utc": "2026-10-07T15:07:35.345426+00:00",
+      "exit_code": 0,
+      "log": "installed-dependencies.txt",
+      "log_sha256": "78e0d1b3fde4a19815ba11a72078090ef2167597cbb430c5e9e7bfe42ae7cfe6"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\tau2.exe",
+        "check-data"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-07T15:07:35.346631+00:00",
+      "ended_at_utc": "2026-10-07T15:07:43.681356+00:00",
+      "exit_code": 0,
+      "log": "check-data.txt",
+      "log_sha256": "44f09d7b5585c9f9ceae75fbebd7c97cff5c51e3a1cec9b2a5fb1cd785ebbcb7"
+    },
+    {
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_domains/test_retail/test_tools_retail.py",
+        "-q"
+      ],
+      "cwd": "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench",
+      "started_at_utc": "2026-10-07T15:07:43.682031+00:00",
+      "ended_at_utc": "2026-10-07T15:07:53.510058+00:00",
+      "exit_code": 0,
+      "log": "official-retail-tests.txt",
+      "log_sha256": "cd116765ef35bea1b078ca5c3af5acee2d3c99f4aaaf023c8026cf2cec6aa4b7"
+    }
+  ],
+  "input_sha256": {
+    "data\\tau2\\domains\\retail\\tasks.json": "f44563d8f36362e2dc58282bb02cfb85010d22f27d9439808758d3e9b2bc16d2",
+    "data\\tau2\\domains\\retail\\split_tasks.json": "5f9949b833e6b99584b87e84ef22f9d81789ea67a52e534c6f7aa91eff08adc7",
+    "data\\tau2\\domains\\retail\\policy.md": "4313d3fef8acf919f555fa17fbce929cc3ed1cef2dd8f0d35ff5c8c3364de176",
+    "data\\tau2\\domains\\retail\\db.json": "dbde692e380bb4ad17f9f7841172cf1e69bebad2daa405628ccdc52a42b3b9b0",
+    "uv.lock": "a53fbbea32e711935e7f4eaad23075f5c962b895c40c0ec9c1419256582ae4bf"
+  },
+  "evidence_scope": "preprocessing/setup smoke test, not a benchmark-wide reproduction",
+  "ended_at_utc": "2026-10-07T15:07:53.510784+00:00"
+}

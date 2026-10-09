@@ -1,0 +1,56 @@
+{
+  "source": "logs/agent-recovery-runs.json",
+  "source_sha256": "8223adf791763f730b9ae6cc51c8b54dc25bd9a1a3a4fabd4812d30bb07fb43b",
+  "provenance_note": "Earlier live smoke tests documented September 15, 2026; summarized October 7, not rerun today. The source JSON has no embedded collection date.",
+  "model": "gemini-3.5-flash-lite",
+  "results": [
+    {
+      "run": 1,
+      "success": true,
+      "predicted_source_step": "3",
+      "true_source_step": "3",
+      "exact_source_accuracy": true,
+      "repeated_steps": 3,
+      "preserved_valid_steps": 4,
+      "invalidation_precision": 1.0,
+      "invalidation_recall": 1.0,
+      "invalidation_f1": 1.0,
+      "tokens": 868,
+      "recovery_ms": 1759.017,
+      "model_calls": 1,
+      "provider_error": null
+    },
+    {
+      "run": 2,
+      "success": true,
+      "predicted_source_step": "3",
+      "true_source_step": "3",
+      "exact_source_accuracy": true,
+      "repeated_steps": 3,
+      "preserved_valid_steps": 4,
+      "invalidation_precision": 1.0,
+      "invalidation_recall": 1.0,
+      "invalidation_f1": 1.0,
+      "tokens": 856,
+      "recovery_ms": 836.767,
+      "model_calls": 1,
+      "provider_error": null
+    },
+    {
+      "run": 3,
+      "success": true,
+      "predicted_source_step": "3",
+      "true_source_step": "3",
+      "exact_source_accuracy": true,
+      "repeated_steps": 3,
+      "preserved_valid_steps": 4,
+      "invalidation_precision": 1.0,
+      "invalidation_recall": 1.0,
+      "invalidation_f1": 1.0,
+      "tokens": 852,
+      "recovery_ms": 1299.157,
+      "model_calls": 1,
+      "provider_error": null
+    }
+  ]
+}

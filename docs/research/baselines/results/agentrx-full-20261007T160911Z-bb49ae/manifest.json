@@ -1,0 +1,20 @@
+{
+  "action": "agentrx-full",
+  "started_at_utc": "2026-10-07T16:09:11.684661+00:00",
+  "upstream": {
+    "repository": "https://github.com/microsoft/AgentRx.git",
+    "commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+    "local_path": ".research-upstream/AgentRx",
+    "paper": "https://arxiv.org/abs/2602.02475v2",
+    "dataset": "https://huggingface.co/datasets/microsoft/AgentRx",
+    "dataset_access": "gated; not downloaded",
+    "initial_scope": "official public tau-retail samples; IR normalization only"
+  },
+  "upstream_tracked_files_unchanged": true,
+  "assumption_register": "docs/research/assumptions.md",
+  "executions": [],
+  "input_sha256": {},
+  "evidence_scope": "Full pipeline preflight only; no inference executed",
+  "status": "blocked",
+  "limitation": "Isolated environment or supported authenticated provider CLI unavailable; not a completed reproduction"
+}

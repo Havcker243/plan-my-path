@@ -50,3 +50,22 @@ coverage/
 data/*.pdf
 data/*.docx
 Backend/payload.json
+
+# Pinned third-party research checkouts and their isolated environments.
+# Revisions and reproduction outputs are tracked under docs/research/baselines/.
+.research-upstream/
+
+# Generated compiler state and local publishing audits
+*.tsbuildinfo
+.publish-audit/
+
+# Private uploads, exports, credentials and recordings stay local.
+private/
+uploads/
+*.pem
+*.key
+*.p12
+*.pfx
+*.mp4
+*.mov
+*.webm

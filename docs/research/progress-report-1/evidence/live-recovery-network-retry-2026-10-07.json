@@ -1,0 +1,342 @@
+{
+  "synthetic": true,
+  "agent_in_loop": true,
+  "model": "gemini-3.5-flash-lite",
+  "attempted_runs": 1,
+  "completed_runs": 1,
+  "recovery_successes": 1,
+  "exact_source_matches": 1,
+  "limitations": "One controlled synthetic fault. Results measure a smoke test, not general recovery effectiveness.",
+  "results": [
+    {
+      "strategy": "agent_selective",
+      "success": true,
+      "repeated_steps": 3,
+      "diagnostic_steps": 1,
+      "preserved_valid_steps": 4,
+      "predicted_source_step": "3",
+      "true_source_step": "3",
+      "exact_source_accuracy": true,
+      "safe_boundary": true,
+      "true_affected_steps": [
+        "3",
+        "6",
+        "7"
+      ],
+      "invalidated_steps": [
+        "3",
+        "6",
+        "7"
+      ],
+      "invalidation_precision": 1.0,
+      "invalidation_recall": 1.0,
+      "invalidation_f1": 1.0,
+      "recovery_ms": 1994.669,
+      "model_calls": 1,
+      "tokens": 875,
+      "estimated_model_cost_usd": null,
+      "trace": {
+        "run_id": "93fd5d5c-d880-4ffb-ba7a-236b4f3380ff",
+        "steps": [
+          {
+            "id": "1",
+            "name": "student",
+            "inputs": {},
+            "dependencies": [],
+            "output": {
+              "profile": {
+                "major_code": "CSCI",
+                "graduation_year": 2027,
+                "graduation_term": "Spring"
+              },
+              "plan": {
+                "semesters": [
+                  {
+                    "term": "Spring",
+                    "year": 2026,
+                    "courses": [
+                      {
+                        "code": "CSCI-101",
+                        "credits": 3,
+                        "grade": "A",
+                        "status": "completed"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "status": "ok",
+            "elapsed_ms": 0.04,
+            "error": null
+          },
+          {
+            "id": "2",
+            "name": "requirements",
+            "inputs": {},
+            "dependencies": [],
+            "output": {
+              "total_credits": 9,
+              "labels": {
+                "CSCI-101": {
+                  "group_name": "Core",
+                  "group_type": "all_of",
+                  "credits": 3
+                },
+                "CSCI-201": {
+                  "group_name": "Core",
+                  "group_type": "all_of",
+                  "credits": 3
+                },
+                "CSCI-301": {
+                  "group_name": "Core",
+                  "group_type": "all_of",
+                  "credits": 3
+                }
+              },
+              "coreqs": {},
+              "rules": []
+            },
+            "status": "ok",
+            "elapsed_ms": 0.03,
+            "error": null
+          },
+          {
+            "id": "3",
+            "name": "remaining",
+            "inputs": {},
+            "dependencies": [
+              "1",
+              "2"
+            ],
+            "output": [],
+            "status": "invalidated",
+            "elapsed_ms": 0.04,
+            "error": null
+          },
+          {
+            "id": "4",
+            "name": "catalog",
+            "inputs": {},
+            "dependencies": [],
+            "output": [
+              {
+                "course_code": "CSCI-101",
+                "title": "Introduction",
+                "credits_min": 3,
+                "credits_max": 3,
+                "requisites": {
+                  "prerequisites": [],
+                  "corequisites": []
+                },
+                "terms": []
+              },
+              {
+                "course_code": "CSCI-201",
+                "title": "Data Structures",
+                "credits_min": 3,
+                "credits_max": 3,
+                "requisites": {
+                  "prerequisites": [
+                    "CSCI-101"
+                  ],
+                  "corequisites": []
+                },
+                "terms": []
+              },
+              {
+                "course_code": "CSCI-301",
+                "title": "Algorithms",
+                "credits_min": 3,
+                "credits_max": 3,
+                "requisites": {
+                  "prerequisites": [
+                    "CSCI-201"
+                  ],
+                  "corequisites": []
+                },
+                "terms": []
+              }
+            ],
+            "status": "ok",
+            "elapsed_ms": 0.06,
+            "error": null
+          },
+          {
+            "id": "5",
+            "name": "sections",
+            "inputs": {},
+            "dependencies": [
+              "4"
+            ],
+            "output": {
+              "CSCI-101": [],
+              "CSCI-201": [],
+              "CSCI-301": []
+            },
+            "status": "ok",
+            "elapsed_ms": 0.01,
+            "error": null
+          },
+          {
+            "id": "6",
+            "name": "proposal",
+            "inputs": {},
+            "dependencies": [
+              "3",
+              "4"
+            ],
+            "output": [],
+            "status": "invalidated",
+            "elapsed_ms": 0.0,
+            "error": null
+          },
+          {
+            "id": "7",
+            "name": "validate",
+            "inputs": {},
+            "dependencies": [
+              "1",
+              "2",
+              "6"
+            ],
+            "output": {
+              "valid": false,
+              "violation": {
+                "rule": "proposal_covers_remaining_requirements",
+                "message": "The proposal does not cover the independently recomputed remaining requirements.",
+                "expected_courses": [
+                  "CSCI-201",
+                  "CSCI-301"
+                ],
+                "proposal_courses": []
+              }
+            },
+            "status": "invalidated",
+            "elapsed_ms": 0.02,
+            "error": null
+          },
+          {
+            "id": "8",
+            "name": "diagnose",
+            "inputs": {
+              "failure_step_id": "7"
+            },
+            "dependencies": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7"
+            ],
+            "output": {
+              "source_step_id": "3",
+              "confidence": 1.0,
+              "rationale": "Step 3 erroneously outputs an empty list of remaining courses despite the requirements showing 6 credits remaining (CSCI-201 and CSCI-301) and student having only completed CSCI-101. This incorrect empty output propagates to proposal generation and causes the validation failure in step 7.",
+              "usage": {
+                "model_calls": 1,
+                "input_tokens": 787,
+                "output_tokens": 88,
+                "thought_tokens": 0
+              }
+            },
+            "status": "invalidated",
+            "elapsed_ms": 1994.46,
+            "error": null
+          },
+          {
+            "id": "9",
+            "name": "remaining",
+            "inputs": {},
+            "dependencies": [
+              "1",
+              "2"
+            ],
+            "output": [
+              "CSCI-201",
+              "CSCI-301"
+            ],
+            "status": "ok",
+            "elapsed_ms": 0.02,
+            "error": null
+          },
+          {
+            "id": "10",
+            "name": "proposal",
+            "inputs": {},
+            "dependencies": [
+              "9",
+              "4"
+            ],
+            "output": [
+              "CSCI-201",
+              "CSCI-301"
+            ],
+            "status": "ok",
+            "elapsed_ms": 0.01,
+            "error": null
+          },
+          {
+            "id": "11",
+            "name": "validate",
+            "inputs": {},
+            "dependencies": [
+              "1",
+              "2",
+              "10"
+            ],
+            "output": {
+              "valid": true,
+              "violation": null
+            },
+            "status": "ok",
+            "elapsed_ms": 0.01,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "event": "invalidate",
+            "sources": [
+              "3"
+            ],
+            "affected": [
+              "3",
+              "6",
+              "7",
+              "8"
+            ],
+            "reason": "Recovery from localized inconsistency"
+          },
+          {
+            "event": "reuse",
+            "step_id": "1"
+          },
+          {
+            "event": "reuse",
+            "step_id": "2"
+          },
+          {
+            "event": "reuse",
+            "step_id": "4"
+          },
+          {
+            "event": "reuse",
+            "step_id": "5"
+          }
+        ],
+        "usage": {
+          "model_calls": 1,
+          "input_tokens": 787,
+          "output_tokens": 88,
+          "thought_tokens": 0
+        },
+        "elapsed_ms": 1995.06
+      },
+      "run": 1,
+      "provider_error": null
+    }
+  ]
+}

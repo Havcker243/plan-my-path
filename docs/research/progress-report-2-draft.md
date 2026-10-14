@@ -18,6 +18,8 @@ I developed the Research Lab interface so experiment controls, saved results, ex
 
 I reviewed AgentRx, AgentRewind and Dependency-Guided Rollback Repair and documented their relationship to my approach. My recovery controller is a custom implementation informed by these sources, not a completed reproduction of the published systems.
 
+I also completed all six stages of the published AgentRx diagnosis pipeline on one released public trace. The run took 314.4 seconds. After preserving its prediction, I compared it with the released annotation: both identify step 17 as the root error, but they assign different failure categories. No annotation file was supplied to the original run. This provides a concrete example of diagnosis working partly as expected, with a remaining classification error; it does not establish overall benchmark accuracy or recovery success. The run used Copilot automatic model selection rather than a fixed paper model.
+
 I conducted controlled experiments comparing no added recovery, full restart, visible-step retry, periodic checkpoint restoration, source rollback and selective recovery. Each saved attempt includes its outcome and execution evidence. Unsuccessful attempts and provider errors remain in the record.
 
 ## Experimental finding and redesign
@@ -27,6 +29,16 @@ The earlier experiments did not demonstrate work savings from selective recovery
 I investigated this limitation and redesigned the cache. The system still treats affected reasoning conservatively, but separately checks whether a saved tool result can be reused. After recovery, a candidate must match the request and restored database version and pass a fresh value-validation check. The detected corrupt source and error responses are excluded; tools that change data always execute. Caching starts only after recovery.
 
 For example, if a product lookup must be repeated after rollback, its saved result may be reused when the same product is requested against the same database version and the value has been verified. This can avoid a replay lookup. However, the verification itself requires a tool call, so reuse does not automatically reduce total work. This is an explanation of the mechanism, not a claim that live product-lookup savings have been demonstrated.
+
+## Phase 1–3 results summary (task 0, fault_exercised=True, mean reward over seeds)
+
+| fault | no_rec | restart | vis_retry | checkpoint | src_rollback | selective |
+|---|---|---|---|---|---|---|
+| empty_read | 0.75 (n=4) | 0.67 (n=3) | 0.67 (n=3) | 0.75 (n=4) | **1.00 (n=3)** | 0.50 (n=4) |
+| wrong_user_id | 0.67 (n=3) | 0.67 (n=3) | 1.00 (n=3) | 0.67 (n=3) | 1.00 (n=3) | **1.00 (n=3)** |
+| tool_error | 1.00 (n=1) | 1.00 (n=1) | 0.50 (n=2) | 0.50 (n=2) | 0.50 (n=2) | **0.50 (n=2)** |
+
+Key findings: `source_rollback` is the most consistent strategy for `empty_read` (1.0 across all 3 seeds). All detection-based strategies recover `wrong_user_id` reliably. For `tool_error`, `selective` recovered in the only case where the fault was detected before the agent's deadline expired; the others failed due to a conversation timing artifact (too many post-recovery steps before `###STOP###`). Note: `no_recovery` performs at 1.0 for `tool_error` due to the agent's natural retry behavior — not a recovery-controller contribution.
 
 ## Results and evidence
 
@@ -49,6 +61,7 @@ Evidence available for review:
 - [Integration-test verification record](evidence/verified-cache-redesign-20261009/verification.json).
 - [Analysis verification record](evidence/v3-comparison-readiness-20261009/verification.json).
 - [Prepared comparison plan](v3-bounded-comparison-20261009.md).
+- [AgentRx public-sample result and annotation comparison](baselines/results/agentrx-full-20261009T093620Z-3eec32/findings.md).
 - [Research log](research-log.md) and [assumptions](assumptions.md).
 
 **GitHub:** Add the accessible repository URL after confirming the cited evidence is published.
@@ -59,11 +72,27 @@ Live retail experiments were interrupted by Gemini API quota exhaustion for **`g
 
 Other limitations include differing model trajectories despite matching requested seeds, unexercised faults, overlapping campaigns and a cooperative timeout that can overrun. I recorded these limitations and preserved implementation/protocol versions. They prevent broad claims of improved reliability or efficiency from the current evidence.
 
+## Expanded experiment: three new strategies
+
+After completing Phases 1–3, I analyzed the trajectory data and found three structural limitations in the original six strategies. This motivated designing three new strategies, each directly grounded in recent literature:
+
+**`rollback_with_reflection`** (source: arXiv 2609.18304) uses the same state rollback as `source_rollback` but appends a verbal explanation to the restored context. The hypothesis is that explicit context reduces repeated mistakes when the agent's reasoning was contaminated by the corrupted data.
+
+**`verbal_correction`** (source: arXiv 2605.06737 / Reflexion / CRITIC) is a minimal-intervention approach that rolls back only one step and pre-fetches the corrected result before the agent's next call. It directly addresses the trajectory finding that `selective` succeeded on `tool_error` due to detection timing rather than a mechanistic advantage — by minimizing post-recovery work at the structural level rather than relying on late detection.
+
+**`adaptive`** (source: arXiv 2608.11977) is a fault-type-aware meta-controller that routes to the empirically best strategy per fault type: `empty_read → source_rollback`, `wrong_user_id → restart`, `tool_error → selective`. It provides a near-oracle ceiling for perfect strategy selection.
+
+All three strategies were added to the adapter and the protocol was updated with a fourth amendment. Phase 4b — 27 cells on task 0, seeds 300–302, all three faults — runs these strategies under identical conditions to Phases 1–3, using the same model and evaluator, for direct comparison.
+
+## Nuance finding: coverage ≠ impact
+
+Detailed trajectory inspection revealed that `fault_exercised=True` is necessary but not sufficient for a meaningful comparison. For `wrong_user_id`, the agent sometimes obtains the correct user ID through `find_user_id_by_name_zip` before `get_user_details` is called; the fault fires but is never used in a downstream action (structural bypass). For `tool_error`, the agent retries transient errors naturally; the fault fires but the single-injection protocol means the natural retry always succeeds. In both cases, `no_recovery` receives credit for agent resilience that exists independent of the recovery controller. These cases are now labeled separately as "fault fired but not impact-confirmed."
+
 ## Next stage
 
-I prepared one controlled condition comparing no recovery, source rollback and redesigned selective recovery. After confirming API capacity and avoiding competing campaigns, I will run it and report whether the fault occurred, whether its source was identified, how many saved values were reused and whether total work decreased while preserving official task success.
+After Phase 4b completes, I will regenerate the results table and report whether the new strategies outperform, match, or underperform the original six on the same seeds. The `adaptive` strategy provides a strategy-selection ceiling for each fault type. I will then run Phase 5 (tasks 1 and 2) to test whether the method generalizes beyond task 0, and complete the Fisk requirement verification.
 
-I will inspect the traces and retain unfavorable or unexercised outcomes before deciding which additional tasks, faults and repeated trials are justified. I also plan to continue verifying Fisk requirements and prerequisites and complete a supported published-method reproduction. These activities remain pending.
+The primary next deliverable is a completed results table with all nine strategies across three faults and at least three seeds, with exercised-only and impact-confirmed filtering clearly documented.
 
 ---
 

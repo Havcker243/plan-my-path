@@ -1,0 +1,59 @@
+{
+  "evaluation_type": "posthoc_read_only_frozen_prediction_vs_released_annotation",
+  "created_at_utc": "2026-10-09T09:56:39.308875+00:00",
+  "upstream_commit": "7a18c79708e7671be15124460f4f7296107c2a55",
+  "run_id": "agentrx-full-20261009T093620Z-3eec32",
+  "trajectory_id": "39",
+  "unique_trajectories": 1,
+  "judge_repetitions": 1,
+  "ground_truth_supplied_to_original_run": false,
+  "new_model_calls": 0,
+  "annotation_copies_agree": true,
+  "annotation": {
+    "failure_id": 20,
+    "step_number": 17,
+    "step_reason": "At step 17, the assistant agent believes that it cannot find the latest address from the current orders using get_order_details and hence is unable to modify the existing user address in an order to the latest one.",
+    "failure_category": "Intent Plan Misalignment",
+    "category_reason": "The assistant wrongly reasons that it cannot find the latest address from the current orders using get_order_details and hence is unable to modify the existing user address in an order to the latest one.",
+    "failed_agent": "Assistant"
+  },
+  "root_cause": {
+    "failure_id": 20,
+    "reason_for_root_cause": "Since the assistant was not able to update the address, it led to incorrect final outcome as compared to ground truth actions."
+  },
+  "prediction": {
+    "step_number": 17,
+    "failure_case": 2,
+    "failure_category": "Invention of New Information"
+  },
+  "comparison": {
+    "exact_root_step_match": true,
+    "absolute_step_error": 0,
+    "category_match": false,
+    "annotation_category_id": 5
+  },
+  "predicted_trace_step": {
+    "index": 17,
+    "substeps": [
+      {
+        "sub_index": 1,
+        "role": "assistant",
+        "content": "Unfortunately, I can't fetch your new address from your order details since they only reflect the current default address. If you can recall the full details of your new address, I can update it for you. Let me know when you're ready!"
+      }
+    ]
+  },
+  "indexing": "IR explicit index is 1-based; step 17 is array position 16.",
+  "inputs_sha256": {
+    "docs/research/baselines/results/agentrx-full-20261009T093620Z-3eec32/hallucination_doubt/judge_output/runs/run1.json": "97519848e6ea4ac42ee7f265c719ac12e7bfcb5416879d386c3cbc20c0d1c71e",
+    "docs/research/baselines/results/agentrx-full-20261009T093620Z-3eec32/hallucination_doubt/trajectory_ir.json": "d3321dc6427f0096e09c9754b54c258b62b795337f79e1aab1c94ed951d18bed",
+    ".research-upstream/AgentRx-clean-20261009/agentrx/judge/judge.py": "6a51c25a7b70934d65be79f2ceb6d20d51be73144dde1d9cf7df93795ce546a2",
+    ".research-upstream/AgentRx-clean-20261009/data/ground_truth/tau_ground_truth.json": "e9a9a17db91c046b78dc30c8dcf73ed0f1fb3569f134c37dfec843d8023e0922",
+    ".research-upstream/AgentRx-clean-20261009/data/ground_truth/tau_retail.json": "a0e6fa3b7a8889f6728562c38ca6f708ecf6300806ccebd86639ad901c1f61e9"
+  },
+  "limitations": [
+    "One public sample and one judge pass; no dataset-level accuracy or significance.",
+    "Copilot auto routed model not recorded; no paper-model reproduction.",
+    "Labels were not explicitly supplied to the original judge; prior benchmark exposure or few-shot overlap is not excluded.",
+    "Matching an annotation does not demonstrate recovery success or minimal safe boundary."
+  ]
+}

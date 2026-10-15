@@ -1,0 +1,15 @@
+Task 0, seed 301, fault wrong_user_id, strategy adaptive
+
+Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+Reward: None; fault exercised: False; error: True
+python-dotenv could not parse statement starting at line 9
+2026-10-14 16:09:33.346 | ERROR    | tau2.utils.llm_utils:generate:417 - litellm.ServiceUnavailableError: GeminiException - {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+

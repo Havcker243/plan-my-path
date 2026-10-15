@@ -1,0 +1,15 @@
+Task 0, seed 302, fault empty_read, strategy rollback_with_reflection
+
+Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+Reward: None; fault exercised: False; error: True
+python-dotenv could not parse statement starting at line 9
+2026-10-14 16:17:19.896 | ERROR    | tau2.utils.llm_utils:generate:417 - litellm.InternalServerError: GeminiException InternalServerError - {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+

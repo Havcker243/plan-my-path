@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "Backend"))
 from research.official_baselines import BASELINES, verify_checkout, redact
 
-STRATEGIES = ("no_recovery", "restart", "visible_retry", "checkpoint", "source_rollback", "selective")
+STRATEGIES = ("no_recovery", "restart", "visible_retry", "checkpoint", "source_rollback", "selective",
+              "rollback_with_reflection", "verbal_correction", "adaptive")
 FAULTS = ("none", "empty_read", "wrong_user_id", "tool_error")
 FIELDS = ("agent_state", "user_state", "trajectory", "message", "from_role", "to_role", "step_count", "num_errors", "done", "termination_reason")
 
@@ -190,10 +191,28 @@ class RecoveryController:
             # Fixed periodic checkpoint rule, deliberately independent of source.
             target = next(s for s in reversed(self.snapshots) if s["attempt_step"] % 4 == 0)
             invalidated = {n["id"] for n in self.nodes if n["attempt_step"] >= target["attempt_step"]}
-        else:
+        elif self.strategy in ("source_rollback", "selective"):
             target = self.snapshots[suspect["snapshot_index"]]
             invalidated = affected if self.strategy == "selective" else {
                 n["id"] for n in self.nodes if n["attempt_step"] >= target["attempt_step"]}
+        elif self.strategy == "rollback_with_reflection":
+            target = self.snapshots[suspect["snapshot_index"]]
+            invalidated = {n["id"] for n in self.nodes if n["attempt_step"] >= target["attempt_step"]}
+        elif self.strategy == "verbal_correction":
+            target = self.snapshots[-1]
+            invalidated = {n["id"] for n in self.nodes if n["attempt_step"] >= target["attempt_step"]}
+        else:  # adaptive
+            fault_to_effective = {"empty_read": "source_rollback", "wrong_user_id": "restart", "tool_error": "selective"}
+            effective = fault_to_effective.get(self.fault, "source_rollback")
+            if effective == "restart":
+                target = self.snapshots[0]
+                invalidated = {n["id"] for n in self.nodes}
+            elif effective == "selective":
+                target = self.snapshots[suspect["snapshot_index"]]
+                invalidated = affected
+            else:
+                target = self.snapshots[suspect["snapshot_index"]]
+                invalidated = {n["id"] for n in self.nodes if n["attempt_step"] >= target["attempt_step"]}
         self.invalidated.update(invalidated)
         for node in self.nodes:
             if node["id"] in invalidated:
@@ -209,6 +228,35 @@ class RecoveryController:
         if self.strategy == "selective":
             self.verify_recovery_cache()
             self.events[-1]["verified_cache_entries"] = len(self.verified_cache)
+        elif self.strategy == "rollback_with_reflection":
+            try:
+                from tau2.data_model.simulation import Message
+                note = Message(role="user", content=(
+                    "[System note: a tool call earlier in this conversation "
+                    "returned invalid data. The conversation has been rolled "
+                    "back to just before that call. Please continue normally.]"))
+                self.o.trajectory.append(note)
+                self.events[-1]["reflection_injected"] = True
+            except Exception:
+                self.events[-1]["reflection_injected"] = False
+        elif self.strategy == "verbal_correction":
+            fresh = self.original_response(suspect["call"])
+            self.tool_executions += 1
+            if not fresh.error:
+                key = suspect["cache_key"]
+                self.cache[key] = {"node_id": suspect["node_id"], "response": deepcopy(fresh),
+                                   "call": suspect["call"], "db_hash": suspect["db_hash"]}
+                self.verified_cache.add(key)
+                self.events[-1]["verbal_correction_prefetched"] = True
+            else:
+                self.events[-1]["verbal_correction_prefetched"] = False
+        elif self.strategy == "adaptive":
+            fault_to_effective = {"empty_read": "source_rollback", "wrong_user_id": "restart", "tool_error": "selective"}
+            effective = fault_to_effective.get(self.fault, "source_rollback")
+            self.events[-1]["effective_strategy"] = effective
+            if effective == "selective":
+                self.verify_recovery_cache()
+                self.events[-1]["verified_cache_entries"] = len(self.verified_cache)
 
     def run(self):
         from tau2.data_model.simulation import TerminationReason
@@ -285,7 +333,7 @@ def main():
     os.environ.setdefault("LOGURU_LEVEL", "ERROR")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--task", choices=("0", "1", "2"), default="0")
-    parser.add_argument("--seed", type=int, choices=(300, 301, 302), default=300)
+    parser.add_argument("--seed", type=int, choices=(300, 301, 302, 303, 304, 305), default=300)
     parser.add_argument("--fault", choices=FAULTS, default="empty_read")
     parser.add_argument("--strategies", nargs="+", choices=STRATEGIES, default=["no_recovery", "selective"])
     parser.add_argument("--output", required=True)

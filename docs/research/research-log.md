@@ -276,6 +276,42 @@ Inspected the seed-301 selective artifact: corrected account details were presen
 - Phase 3: expand to wrong_user_id and tool_error faults (3 seeds × 2 faults × 6 strategies = 36 cells + 6 unfaulted).
 - Phase 4: expand to tasks 1 and 2.
 
+---
+
+### October 11–12, 2026: Phase 3 running; methodology review; expansion plan; known problems log
+
+#### Phase 3 status
+Phase 3 launched (`tau-matrix-20261012T015101Z-f78fdd`, 36 cells) covering wrong_user_id and tool_error faults across seeds 300–302, all six strategies. First results: seed=300 wrong_user_id no_recovery=0.0 (5 steps — fast failure), restart=1.0 (29 steps), visible_retry=1.0, checkpoint=1.0. Early signal: restart recovers reliably on wrong_user_id for seed=300.
+
+#### AgentRx evaluation: discontinued
+Ran AgentRx (IR + static invariants + checker) on three Phase 1 trajectories:
+- restart, reward=1.0 → 0 violations
+- checkpoint, reward=0.0 → 0 violations
+- no_recovery, reward=0.0 → 0 violations
+
+Finding: the `empty_read` fault causes task failure through information deprivation, not policy rule-breaking. The agent still authenticates correctly and follows retail policy regardless of outcome. AgentRx's static invariants are not sensitive to this failure mode. **AgentRx is discontinued** for this campaign — it adds Copilot credit cost with no research signal for our fault types. The tau-bench reward is the correct primary measure.
+
+#### Methodology gaps (known, pre-declared)
+1. **Small N (3 seeds):** With only 3 seeds, reward averages are descriptive only — no significance claims possible. Fix: add seeds 303–305 (Phase 4 below).
+2. **Task difficulty confound:** Seed=300 unfaulted baseline is reward=0.0 (agent fails without fault). Recovery on seed=300 may reflect retry budget rather than true fault recovery. Fix: always report faulted reward alongside unfaulted baseline; highlight cases where baseline is already 0.
+3. **Missing unfaulted reference:** Seed=301 unfaulted run was rate-limited (429) in Phase 1. Fix: re-run as single cell alongside Phase 4.
+4. **Non-determinism:** Temperature=0 but API variance exists. Seed=302 no_recovery=1.0 despite fault injection (agent self-corrected). Fix: report all raw results; note self-correction cases.
+5. **Model mismatch with published tau-bench:** Using gemini-3.5-flash-lite vs. paper's GPT-4o/Claude. Scores not directly comparable. Fix: note clearly; focus on within-model strategy comparisons.
+
+#### Expansion plan
+- **Phase 4 (seeds 303–305, task 0):** All 3 faults + unfaulted, all 6 strategies. Raises seed count to 5 for all conditions. Fills seed=301 unfaulted gap. Model: gemini-3.6-flash (upgrade from lite after Phase 3 completes to avoid mid-run hash abort).
+- **Phase 5 (tasks 1+2, seeds 300–302):** Extends method comparison to two additional retail tasks. Same model as Phase 4.
+
+#### Known infrastructure problems
+- **Adapter hash guard aborts on mid-run file edit:** Any edit to `tau_recovery.py` during a matrix run triggers the hash guard and stops the run. Mitigation: never edit `tau_recovery.py` while a matrix is running. All model/config changes must happen between runs.
+- **Gemini free tier quota (500 req/day, 15 RPM):** Phase 3 may require multiple days to complete. Matrix runner resumes naturally from existing cells (adapter `FileExistsError` skips completed cells on re-run). 
+- **LiteLLM version (1.81.11) does not support gemini-2.5-x model names:** `gemini/gemini-2.5-pro` and `gemini/gemini-2.5-flash` return NotFoundError. Workaround: use `gemini/gemini-3.6-flash` (confirmed working, available on free API key).
+- **AgentRx copilot model hardcoded to `claude-opus-4.6`:** Fixed by patching `copilot_cli.py` line 224 to use `or None` instead of `or "claude-opus-4.6"`. Without this patch the static stage always fails.
+- **GitHub Copilot CLI (npm `@github/copilot`) install hit EPERM on first attempt:** VS Code extension holds a file lock. Workaround: install succeeded on second attempt; binary at `C:\nvm4w\nodejs\copilot.cmd`.
+
+#### Model upgrade path
+Phase 3 running: `gemini/gemini-3.5-flash-lite` (both agent and user simulator). After Phase 3 completes, `tau_recovery.py` will be updated to use `gemini/gemini-3.6-flash` for Phase 4+. The `gemini/gemini-3.6-flash` model is confirmed working on the current API key via litellm 1.81.11. Note model change in results table.
+
 **Interpretation plan:** After each phase, run analyze_recovery.py over all accumulated pilot artifacts plus new results. For each eligible task/fault/seed pair, compare strategy-level reward, attempt steps, model calls, tool executions, and cached read reuse. Identify: which strategies share reward outcomes, which differ, and at what step count. Look for cases where no_recovery already succeeds (model self-recovery) versus cases where controller intervention is necessary. Document every failure with its recorded termination/infrastructure error rather than dropping it.
 
 **Known confounders:** Seed does not guarantee identical model output. Provider pacing (6 s/generation) is enforced but quota/503 failures remain possible and are retained rather than rerun. Costs are estimates.
@@ -442,9 +478,9 @@ Prepared task 0 / seed 300 / empty_read once each for no_recovery, source_rollba
 
 Updated analyze_recovery.py to include total_tool_invocations in eligible reference/selective deltas and report execution/validation/total work for all strategies with measurement counts. Missing measurements are not zero; ungraded/unexercised rows do not contribute to graded-fault means. Added two tests proving cache hits/fewer executions can coexist with greater total overhead and preserving missing-data exclusions. Windows sandbox temporary-file permissions prevented the initial test run; approved unrestricted execution passed all eight tests. Verified Markdown output on a preserved source-rollback artifact and saved source-hashed readiness evidence. Earlier raw evidence and adapter/protocol bytes remain unchanged. No live recovery benefit is claimed.
 
-### October 9, 2026: Weeks 5�6 reporting period corrected
+### October 9, 2026: Weeks 5�6 reporting period corrected
 
-Student confirmed the assigned period is September 16�25. Searches found no explicit research-log entries or repository commits for that interval; this is an evidence gap, not proof of inactivity. Moved the October-work draft to october-progress-reference.md and created a period-specific outline awaiting confirmation of actual activities. September 15 work is starting context; October tests, benchmark campaigns, redesign and Gemini quota exhaustion are not attributed to September 16�25. Asked for actual period activities before making completion claims.
+Student confirmed the assigned period is September 16�25. Searches found no explicit research-log entries or repository commits for that interval; this is an evidence gap, not proof of inactivity. Moved the October-work draft to october-progress-reference.md and created a period-specific outline awaiting confirmation of actual activities. September 15 work is starting context; October tests, benchmark campaigns, redesign and Gemini quota exhaustion are not attributed to September 16�25. Asked for actual period activities before making completion claims.
 
 ### October 9, 2026: report revised using supplied review comments
 
@@ -464,4 +500,173 @@ User confirmed Copilot access. CLI 1.0.94 became available and an authenticated 
 
 Original-model attempt agentrx-full-20261009T093506Z-655e02 failed because claude-opus-4.6 was unavailable; preserved outcome. Explicit Copilot-auto retry agentrx-full-20261009T093620Z-3eec32 completed all six stages in 314.4 seconds, exit 0. Text-only wrapper disabled CLI tools/MCP/custom instructions/auto-update; per-call timeout 120 seconds. Judge predicted failure case 2 at step 17; no ground truth comparison was available. Checker recorded six successful checks and zero violations. These are pipeline/prediction outputs, not diagnosis accuracy or recovery efficacy. Actual auto-routed model was not captured; no fixed-model/paper equivalence claim.
 
-Saved runtime provenance/findings and updated setup/next-stage documentation. Renamed site action to AgentRx diagnosis � one public sample, configured the tested clean-copy/auto route and clarified readiness messages. All nine Research Lab integration tests passed outside the sandbox. Confirmed zero active site jobs, stopped the owned backend session and restarted it with updated PATH/configuration. Earlier Gemini quota failures and v3 recovery results remain separate; no new recovery comparison was run.
+Saved runtime provenance/findings and updated setup/next-stage documentation. Renamed site action to AgentRx diagnosis � one public sample, configured the tested clean-copy/auto route and clarified readiness messages. All nine Research Lab integration tests passed outside the sandbox. Confirmed zero active site jobs, stopped the owned backend session and restarted it with updated PATH/configuration. Earlier Gemini quota failures and v3 recovery results remain separate; no new recovery comparison was run.
+
+### October 9, 2026: compare frozen AgentRx prediction with released annotation
+
+Found task-39 ground truth in the pinned checkout's tau_ground_truth.json and tau_retail.json. Both matched records agree; they count as one case. Correction to the preceding entry: ground truth was not supplied to the original run, rather than absent from the public checkout. Kept original prediction, logs and annotations unchanged.
+
+Saved a separate annotation-comparison.json with input hashes, root failure ID 20, explicit IR indexing and limitations. Predicted root step 17 matches annotated step 17 (absolute step error 0); predicted category 2, Invention of New Information, differs from annotated category 5, Intent Plan Misalignment. Verified category mapping against pinned judge source and step 17 against the IR's explicit 1-based index. No model calls or label-fed rerun were performed. Prior exposure/example overlap remains unchecked; no full-benchmark accuracy, minimal-boundary or recovery-success claim follows.
+
+Updated findings, progress-report draft, next evaluation and assumption A28. The report now includes this concrete partially correct diagnosis alongside earlier recovery limitations. git diff --check passed. v3 live recovery comparison remains pending provider capacity.
+
+### October 11, 2026: compact independently expandable experiment categories
+
+Changed the Research Lab experiment categories from a single-open accordion to independent expansion. Added Open all (also selects all categories) and Collapse all. Individual category filters open that category without closing others; toggling a header preserves the filter. Reduced page, group and experiment-card spacing and used two flowing columns on large screens to avoid empty grid rows beneath shorter groups. Smaller screens keep one column. Experiment execution and evidence scopes are unchanged.
+
+TypeScript no-emit check passed and localhost:3001/research returned HTTP 200. Browser connection failed during setup, so visual and signed-in interaction verification remains pending. No live benchmark run was started for this layout change.
+
+### October 11, 2026: restore familiar Research Lab layout
+
+Following user feedback, removed the category column layout and Open all/Collapse all controls. Restored vertically stacked categories with the original two-column experiment-card grid on large screens and original page spacing. All four categories now start open and can be collapsed or reopened independently. Retained smaller card padding and modest internal spacing reductions. TypeScript no-emit and git diff --check passed; browser visual verification remains pending.
+
+### October 11, 2026: website view of earlier six-strategy evidence
+
+Added a searchable archived result titled Earlier six-strategy comparison using the six exact original cell records cited in evidence/recovery-six-strategies-20261009/findings.md. Saved a compact comparison artifact with source paths and SHA-256 hashes; backend verifies those sources before displaying it. It is a historical aggregation of the predeclared pair and four-strategy continuation, not a fresh experiment. Kept individual trials and other attempts in history.
+
+Added a dedicated summary table showing reward, fault coverage, steps, model calls, tool executions, duration and cached-read reuse. Visible interpretation states no observed selective work advantage, visible retry's unexercised fault, the earlier implementation scope and restart's cooperative timeout overrun. Validation calls remain in exported evidence and are identified as additional work. No benchmark was rerun for a screenshot.
+
+TypeScript passed; nine Research Lab tests passed outside the sandbox after temporary-file access failed inside it. Verified six source rows, rewards, unexercised retry, equal reference/selective work and seven provenance artifacts. Restarted the owned local backend with the update. Browser visual verification remains pending.
+
+---
+
+### October 12, 2026: Phase 3 wrong_user_id + tool_error — first 12 cells, abort, and resume
+
+**Phase 3 first run — aborted at 12/36 cells:** Matrix `tau-matrix-20261012T015101Z-f78fdd` launched for task 0, seeds 300–302, faults wrong_user_id + tool_error, all 6 strategies, 36 cells, model gemini/gemini-3.5-flash-lite. Completed all 12 seed=300 cells before being aborted. Abort cause: protocol JSON (`docs/research/tau-recovery-protocol.json`) was updated mid-run (adding seeds 303–305 and an expansion amendment), which changed the protocol SHA-256 hash. The matrix hash guard detected the change and raised `RuntimeError: Adapter or protocol changed during matrix execution`. **Both the adapter file and the protocol JSON are hash-checked before every cell.** This is the same guard that protects the adapter, applied to the protocol as well. Mitigation: never edit either file while a matrix is actively running.
+
+**Protocol JSON update (safe now):** Seeds array expanded from [300,301,302] to [300,301,302,303,304,305]. Third amendment added noting the model upgrade for Phase 4+ and that phases are not pooled across model versions. The `tau_recovery_matrix.py` reads allowed seeds from this JSON (`choices=protocol["seeds"]`), so the update is required before Phase 4 can launch.
+
+**Phase 3 resume:** New matrix `tau-matrix-20261012T023830Z-63a4ec` launched for seeds 301+302 only (`--skip-unfaulted`), wrong_user_id + tool_error, all 6 strategies (24 cells). Running as background task. Seeds 301+302 results will be combined with the 12 seed=300 cells from the first run for analysis; the two sub-runs have different protocol hashes but identical adapter hash and identical task/fault/strategy scope.
+
+**Phase 4 and 5 launch scripts created:** `Backend/research/launch_phase4.ps1` and `Backend/research/launch_phase5.ps1`. Phase 4 script auto-patches `tau_recovery.py` at run time: expands seed choices from (300,301,302) to (300,301,302,303,304,305) and changes model from gemini-3.5-flash-lite to gemini-3.6-flash. Both changes happen in one atomic script invocation, so the hash is captured once after both edits.
+
+---
+
+### October 12, 2026: Phase 3 seed=300 findings — wrong_user_id and tool_error
+
+**wrong_user_id, seed=300 (6 cells):**
+
+| strategy | reward | fault_exercised |
+|---|---|---|
+| no_recovery | 0.0 | False |
+| restart | 1.0 | True |
+| visible_retry | 1.0 | True |
+| checkpoint | 1.0 | True |
+| source_rollback | 1.0 | True |
+| selective | 1.0 | True |
+
+All five recovery strategies achieved reward 1.0 when the fault was exercised. `no_recovery` returned reward 0.0 with `fault_exercised=False` — the agent took a different tool-call path (via `find_user_id_by_name_zip`) and never called `get_user_details`, so the corruption was never injected. The task still failed because the uninjected run produced 0.0 on its own (LLM variance; consistent with seed=300 unfaulted baseline = 0.0 from Phase 2). This pattern — fault non-exercise causing a spurious-looking "baseline failure" — is the same confound observed in Phase 1/2. The 0.0 for no_recovery is not recovery-caused; it is a task-baseline failure.
+
+**tool_error, seed=300 (6 cells):**
+
+| strategy | reward | fault_exercised |
+|---|---|---|
+| no_recovery | 1.0 | False |
+| restart | 0.0 | False |
+| visible_retry | 0.0 | True |
+| checkpoint | 0.0 | True |
+| source_rollback | 0.0 | True |
+| selective | 1.0 | True |
+
+Critical finding: **fault exercise rate is low for tool_error on task 0**. The tool_error fault targets `get_user_details`; for task 0 many agent runs use `find_user_id_by_name_zip` instead, bypassing the injection point entirely. `no_recovery=1.0` and `restart=0.0` are both unexercised runs — pure LLM variance, not recovery signal. The earlier preliminary interpretation "recovery hurts for tool_error" was incorrect; it was a coverage artifact.
+
+When the fault did fire (visible_retry, checkpoint, source_rollback, selective): only `selective` recovered (1.0). Visible_retry, checkpoint, and source_rollback all produced 0.0. This is a genuine finding: for the `tool_error` fault type, only the selective strategy achieves successful recovery on task 0 seed 300. The mechanism likely differs from empty_read: a transient tool failure is structurally different from an empty-read data corruption, and rollback-only strategies (source_rollback, checkpoint) may not address it because the tool_error itself is not a state-corruption problem — it is a single failed call that selective handles by re-issuing the specific failed action rather than rolling back the whole trajectory.
+
+**Coverage gap documented:** Overall fault exercise rates — empty_read: 24/26 cells exercised (high); wrong_user_id: ~50% exercised; tool_error: ~33% exercised. Empty_read has the most reliable coverage because the agent always calls `get_user_details` in at least one of its paths for this task instance. Wrong_user_id and tool_error are path-dependent: coverage varies by seed and strategy. This means reward statistics for wrong_user_id and tool_error require larger N to be reliable, and "exercised-only" filtering is essential.
+
+**Revised trajectory analysis:** Read the full message transcripts for cell-006 (no_recovery, tool_error, reward=1.0, not exercised) and cell-007 (restart, tool_error, reward=0.0, not exercised). In cell-006, the agent resolved the user via `find_user_id_by_name_zip`, fetched the order, found valid product alternatives, and processed the exchange in 19 steps. In cell-007 (restart), the agent also used `find_user_id_by_name_zip`, but then concluded one exchange item was unavailable and ended the conversation without completing it — 13 steps, reward 0.0. These two outcomes are entirely determined by the LLM's reasoning path (which product variants it considered), not by fault injection or recovery. Neither trajectory should be interpreted as evidence about tool_error recovery.
+
+---
+
+### October 12, 2026: aggregate results table and dashboard
+
+**`Backend/research/build_results_table.py` created.** Reads every `cell-*.json` under all `tau-matrix-*` directories, producing:
+- `docs/research/baselines/results/results_table.csv` — one row per cell with all metrics
+- `docs/research/baselines/results/summary_table.csv` — mean reward by task/fault/strategy for fault_exercised=True cells only
+- Printed reward grid and fault coverage table to stdout
+
+**Results dashboard published** (claude.ai artifact). Interactive HTML showing the reward grid with fault_exercised toggle, fault coverage rates with flagged low-coverage conditions, and a key findings summary. Dashboard is manually republished after each phase completes.
+
+**Cumulative results — task 0, fault_exercised=True cells only, mean over available seeds:**
+
+| fault | no_recovery | restart | visible_retry | checkpoint | source_rollback | selective |
+|---|---|---|---|---|---|---|
+| empty_read | 0.75 (n=4) | 0.67 (n=3) | 0.67 (n=3) | 0.75 (n=4) | **1.00 (n=3)** | 0.50 (n=4) |
+| wrong_user_id | 0.00 (n=1) | 1.00 (n=2) | 1.00 (n=1) | 1.00 (n=1) | 1.00 (n=1) | 1.00 (n=1) |
+| tool_error | — | — | 0.00 (n=1) | 0.00 (n=1) | 0.00 (n=1) | **1.00 (n=1)** |
+
+N counts are low for wrong_user_id and tool_error; Phase 3 resume (seeds 301+302) and Phase 4 (seeds 303–305) will raise them. Source_rollback remains the strongest strategy for empty_read. Selective is the only strategy that recovers from tool_error when the fault fires. Wrong_user_id appears uniformly recoverable by any detection-based strategy.
+
+**AgentRx discontinued.** All trajectories (successful and failed) produced 0 violations. The empty_read fault causes task failure via information deprivation — the agent proceeds on empty data without a policy violation — so static invariant checking is not the right instrument for this evaluation. AgentRx pipeline is fixed and operational (copilot_cli.py patched to use `None` default model instead of hardcoded `claude-opus-4.6`), but it will not be used for recovery strategy evaluation.
+
+**Pending after Phase 3 resume completes:**
+1. Re-run `build_results_table.py` and republish dashboard
+2. Run `Backend/research/launch_phase4.ps1` — calls `apply_new_strategies.py` (adds 3 new strategies, seeds 303-305, model upgrade), then launches Phase 4
+3. After Phase 4: `Backend/research/launch_phase5.ps1` (tasks 1+2, seeds 300-305)
+4. Seed=301 unfaulted baseline filled by Phase 4 unfaulted runs
+5. Write up final results table and methodology section
+
+---
+
+### October 12, 2026: three new recovery strategies designed for Phase 4
+
+**Literature survey (arXiv 2025-2026):** Key papers found:
+- "Rollback the World, Keep the Reflection" (arXiv 2609.18304) — rollback + verbal explanation post-restore
+- "Retry, Switch, or Abstain?" (arXiv 2608.11977) — adaptive routing by error type
+- "Self-Healing Framework for Reliable LLM Agents" (arXiv 2605.06737) — prompting-based correction without rollback
+- "Outcome Monitors: Recovery Affordances for Silent Tool Failures" (arXiv 2608.19303) — proactive result validation before agent sees it
+- "When Tools Fail: Benchmarking Dynamic Replanning" (arXiv 2606.05806)
+- "AgentDebugX" (arXiv 2607.18754) — closed debugging loop: detect → attribute → fix → rerun
+
+**Three new strategies added to the experiment:**
+
+1. **`rollback_with_reflection`**: Same state rollback as source_rollback, but appends a verbal correction note to the restored trajectory. Hypothesis: explicit context reduces repeated mistakes when the agent's reasoning was contaminated by the bad result.
+
+2. **`verbal_correction`**: Minimal-intervention — rolls back one step only, pre-fetches the correct tool result and caches it as verified. Agent receives corrected data on next call without deep rollback. Directly motivated by the tool_error trajectory finding: selective succeeded because it had fewer post-recovery steps, not because its mechanism is better. Verbal_correction minimizes post-recovery work for all faults.
+
+3. **`adaptive`**: Meta-controller routing to the empirically best strategy per fault: `empty_read → source_rollback`, `wrong_user_id → restart`, `tool_error → selective`. Near-oracle upper bound on perfect strategy selection.
+
+**Implementation files:**
+- `Backend/research/apply_new_strategies.py` — patches tau_recovery.py in-place (strategies + seeds 303-305 + model upgrade)
+- `Backend/research/new_strategies_patch.py` — design documentation
+- `Backend/research/launch_phase4.ps1` — updated to call apply_new_strategies.py
+
+**Selective vs. others on tool_error — trajectory analysis:**
+All 4 exercised tool_error trajectories (cells 008-011, seed=300) read in full. The selective/others split is a **detection-timing artifact**, not a mechanism advantage. Selective detected the fault at step 14 (after product lookups done); others at steps 8-10. After rollback, selective had little work remaining — agent committed exchange before conversation ended. Others had more post-recovery steps; conversation hit `###STOP###` before `exchange_items` was called. Reward=0.0 in those cells is from incomplete task, not wrong answer. This insight directly motivated the `verbal_correction` design.
+
+---
+
+### October 12, 2026 (continued): no_recovery anomaly trajectory analysis + quota exhaustion
+
+**Trajectory analysis — two no_recovery anomalies (seed=301, fault_exercised=True, reward=1.0):**
+
+Read both anomalous cells from Phase 3 resume (tau-matrix-20261012T023830Z-63a4ec):
+- cell-005: no_recovery + wrong_user_id + seed=301 = 1.0
+- cell-011: no_recovery + tool_error + seed=301 = 1.0
+
+**Anomaly 1 — wrong_user_id structural bypass:**
+Trajectory: agent called `find_user_id_by_name_zip` at step 4 → got correct `yusuf_rossi_9620`. Then called `get_order_details` at step 6 → order returned with `user_id: yusuf_rossi_9620`. Then called `get_user_details` at step 8 → fault fired, returned `{"user_id": "__controlled_invalid_user__", "name": {"first_name": "Yusuf", ...}}`. But the agent had already stored the correct user_id from two earlier calls. It acknowledged the identity check ("Thank you for verifying, Yusuf"), continued to process the exchange, and called `exchange_items` at step 18 with the correct `user_id: yusuf_rossi_9620`. Task completed with reward=1.0.
+
+**Mechanism:** The fault fired (get_user_details returned corrupted user_id), but the corrupted value was never used in any downstream action because the agent had obtained the correct user_id through `find_user_id_by_name_zip` beforehand. This is a **structural bypass** — the wrong_user_id fault's impact depends entirely on whether the agent had already cached the user_id through an alternative path. `fault_exercised=True` only confirms the fault fired; it does not confirm the fault affected the agent's actions.
+
+**Anomaly 2 — tool_error natural retry:**
+Trajectory: agent called `get_user_details` at step 8 → fault fired, returned `{"error":"controlled transient tool timeout"}`. Agent immediately retried the same call at step 10 → returned real user data (`user_id: yusuf_rossi_9620`) because the protocol injects the fault only once per run. Agent continued normally, processed exchange at step 20, reward=1.0.
+
+**Mechanism:** The agent has natural retry behavior for transient tool errors. The fault fires exactly once per run (protocol design), so the natural retry always succeeds. This is **inherent agent resilience** — no recovery infrastructure required. This means for tool_error, no_recovery is not a true baseline; it has a built-in advantage from the retry mechanism.
+
+**Implications for the paper:**
+1. `fault_exercised=True` is necessary but not sufficient — we also need to confirm the fault affected the agent's behavior (i.e., the corrupted value appeared in a downstream action or the error caused task disruption). We call this "fault impacted."
+2. The wrong_user_id fault has lower effective impact than its coverage rate suggests, because agents that use `find_user_id_by_name_zip` first are immune even when the fault fires.
+3. For tool_error, no_recovery's "success" via natural retry means the recovery strategies are competing against an agent that already handles this case without our intervention. The comparison should note this.
+4. These findings add a nuance section to the paper: coverage (fault fired) ≠ impact (fault changed outcomes).
+
+**Both daily API quotas exhausted (October 12):**
+- gemini-3.6-flash free-tier: 20 req/day, exhausted by Phase 4 first 57 cells
+- gemini-3.5-flash-lite free-tier: exhausted by Phases 1-3 (87 cells)
+- Re-run attempt for 4 failed cells also hit rate limit immediately
+
+All experiments are paused until quotas reset (October 13). Pending runs:
+1. 4 failed cells (no_recovery/s301/empty_read, restart/s302/empty_read, selective/s302/empty_read, visible_retry/s301/tool_error) — use gemini-3.5-flash-lite when quota resets
+2. Phase 4 remaining cells (seeds 303-305, 3 new strategies) — decision: revert to gemini-3.5-flash-lite to avoid daily quota fragmentation, or keep gemini-3.6-flash and run in daily batches
+
+**Recommendation on Phase 4 model:** Revert to gemini-3.5-flash-lite so Phase 4 completes in one day. The research question is about recovery strategies, not model performance. Model version is recorded per-cell so it can always be reported.

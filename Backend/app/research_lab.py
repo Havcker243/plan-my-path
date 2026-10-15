@@ -259,6 +259,25 @@ def history() -> list[dict]:
                           "evidence": describe(path, "tau-recovery")})
         except (OSError, ValueError, KeyError):
             continue
+    # Curated historical comparison: verify its six frozen sources before display.
+    comparison_path = BASELINES / "six-strategy-comparison-20261009/comparison.json"
+    if comparison_path.exists():
+        try:
+            comparison = read_json(comparison_path)
+            sources = [(ROOT / source["path"]).resolve() for source in comparison["sources"]]
+            for source, path in zip(comparison["sources"], sources):
+                if not path.is_relative_to(BASELINES.resolve()) or hashlib.sha256(path.read_bytes()).hexdigest() != source["sha256"]:
+                    raise ValueError("Historical comparison source changed")
+            evidence = describe(comparison_path, "tau-recovery")
+            evidence["comparison_kind"] = "historical-six-strategy"
+            evidence["artifacts"].extend(artifact_record(path) for path in sources)
+            evidence["protocol"]["method"] = "Earlier six custom recovery controllers; before the verified-cache redesign"
+            evidence["protocol"]["design"] = "Saved task 0 / seed 300 / empty_read pair and four-strategy continuation; six outcomes, not a new run"
+            items.append({"id": "six-strategy-comparison-20261009", "title": comparison["title"],
+                          "action": "tau-recovery", "status": "completed", "archived": True,
+                          "started_at": comparison["started_at"], "evidence": evidence})
+        except (OSError, ValueError, KeyError):
+            pass
     # The official wrapper also archives lab runs; show each execution only once.
     linked = {item.get("artifact_id") for item in items if not item.get("archived")}
     return [item for item in items if not item.get("archived") or item["id"] not in linked]

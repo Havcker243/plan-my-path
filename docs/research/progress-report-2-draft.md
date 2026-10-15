@@ -18,6 +18,8 @@ I developed the Research Lab interface so experiment controls, saved results, ex
 
 I reviewed AgentRx, AgentRewind and Dependency-Guided Rollback Repair and documented their relationship to my approach. My recovery controller is a custom implementation informed by these sources, not a completed reproduction of the published systems.
 
+I also completed all six stages of the published AgentRx diagnosis pipeline on one released public trace. The run took 314.4 seconds. After preserving its prediction, I compared it with the released annotation: both identify step 17 as the root error, but they assign different failure categories. No annotation file was supplied to the original run. This provides a concrete example of diagnosis working partly as expected, with a remaining classification error; it does not establish overall benchmark accuracy or recovery success. The run used Copilot automatic model selection rather than a fixed paper model.
+
 I conducted controlled experiments comparing no added recovery, full restart, visible-step retry, periodic checkpoint restoration, source rollback and selective recovery. Each saved attempt includes its outcome and execution evidence. Unsuccessful attempts and provider errors remain in the record.
 
 ## Experimental finding and redesign
@@ -49,6 +51,7 @@ Evidence available for review:
 - [Integration-test verification record](evidence/verified-cache-redesign-20261009/verification.json).
 - [Analysis verification record](evidence/v3-comparison-readiness-20261009/verification.json).
 - [Prepared comparison plan](v3-bounded-comparison-20261009.md).
+- [AgentRx public-sample result and annotation comparison](baselines/results/agentrx-full-20261009T093620Z-3eec32/findings.md).
 - [Research log](research-log.md) and [assumptions](assumptions.md).
 
 **GitHub:** Add the accessible repository URL after confirming the cited evidence is published.

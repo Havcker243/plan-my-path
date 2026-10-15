@@ -1,0 +1,594 @@
+<title>Recovery Results</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f8f8f7;--surface:#fff;--border:#e0ddd8;--fg:#1a1917;--fg2:#5a5753;--accent:#2563eb;--good:#16a34a;--warn:#d97706;--bad:#dc2626;--na:#94908a;--good-bg:#dcfce7;--warn-bg:#fef3c7;--bad-bg:#fee2e2;--na-bg:#f0eeec;--mono:'IBM Plex Mono','Courier New',monospace;--sans:'IBM Plex Sans',system-ui,sans-serif;color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141412;--surface:#1f1e1c;--border:#2e2c29;--fg:#e8e5e0;--fg2:#888480;--good-bg:#14532d;--warn-bg:#451a03;--bad-bg:#450a0a;--na-bg:#2a2825;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141412;--surface:#1f1e1c;--border:#2e2c29;--fg:#e8e5e0;--fg2:#888480;--good-bg:#14532d;--warn-bg:#451a03;--bad-bg:#450a0a;--na-bg:#2a2825;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5;padding-inline:16px;padding-block:24px}
+header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-block-end:16px;border-bottom:1px solid var(--border);margin-block-end:24px}
+h1{font-size:18px;font-weight:600;letter-spacing:-.3px}
+.meta{font-size:12px;color:var(--fg2);font-family:var(--mono)}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--fg2);margin-block-end:10px}
+section{margin-block-end:36px}
+.controls{display:flex;gap:8px;margin-block-end:14px;flex-wrap:wrap}
+.toggle-btn{font:500 12px var(--sans);padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--fg2);cursor:pointer;transition:background .15s,color .15s}
+.toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.grid-wrap{overflow-x:auto}
+table{border-collapse:collapse;min-width:600px;width:100%;font-size:12px}
+thead th{background:var(--surface);border:1px solid var(--border);padding:7px 10px;font-family:var(--mono);font-weight:500;font-size:11px;white-space:nowrap;text-align:center;color:var(--fg2)}
+thead th:first-child{text-align:left;min-width:120px}
+tbody td{border:1px solid var(--border);padding:6px 10px;text-align:center;font-family:var(--mono);white-space:nowrap}
+tbody tr:first-child td{border-top:2px solid var(--border)}
+tbody td:first-child{text-align:left;font-weight:500;font-size:11px;color:var(--fg2);background:var(--surface)}
+.cell-good{background:var(--good-bg);color:var(--good);font-weight:600}
+.cell-warn{background:var(--warn-bg);color:var(--warn);font-weight:500}
+.cell-bad{background:var(--bad-bg);color:var(--bad)}
+.cell-na{background:var(--na-bg);color:var(--na);font-size:11px}
+.cov-pct{display:inline-block;height:8px;background:var(--accent);opacity:.5;border-radius:2px;vertical-align:middle;margin-inline-start:6px}
+.note{font-size:11px;color:var(--fg2);margin-block-start:8px;font-style:italic}
+</style>
+<header>
+  <div><h1>Recovery Results — tau-bench Retail</h1><div class="meta" id="meta-line">loading…</div></div>
+  <div class="controls">
+    <button class="toggle-btn active" onclick="setMode('exercised')">Fault exercised only</button>
+    <button class="toggle-btn" onclick="setMode('all')">All cells</button>
+  </div>
+</header>
+<section>
+  <h2>Reward Grid — task 0 <span id="mode-label" style="text-transform:none;font-weight:400;color:var(--fg)">(fault_exercised=True, mean over seeds)</span></h2>
+  <div class="grid-wrap"><table><thead><tr><th>fault</th><th>no_recovery</th><th>restart</th><th>visible_retry</th><th>checkpoint</th><th>source_rollback</th><th>selective</th><th>rollback_w_refl</th><th>verbal_corr</th><th>adaptive</th></tr></thead><tbody id="tbl"></tbody></table></div>
+  <div class="note" id="ex-note">Only cells where the fault was injected and observed are counted.</div>
+</section>
+<section>
+  <h2>Fault Exercise Coverage</h2>
+  <div class="grid-wrap"><table><thead><tr><th style="text-align:left">seed</th><th style="text-align:left">fault</th><th style="text-align:left">exercised/total</th><th style="text-align:left">rate</th></tr></thead><tbody id="cov"></tbody></table></div>
+  <div class="note">Low coverage (&lt;70%) means agent bypassed get_user_details via an alternate path.</div>
+</section>
+<script>
+const DATA = {
+  "cells": [
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "restart",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "checkpoint",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "selective",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "no_recovery",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "none",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": false
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "strategy": "selective",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "restart",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "none",
+      "strategy": "no_recovery",
+      "reward": 0.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "restart",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "visible_retry",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery",
+      "reward": 0.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "restart",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "restart",
+      "reward": 0.0,
+      "exercised": false
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "visible_retry",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "checkpoint",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "source_rollback",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "restart",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "restart",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "checkpoint",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "selective",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "checkpoint",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "source_rollback",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "selective",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "no_recovery",
+      "reward": 1.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "strategy": "restart",
+      "reward": 0.0,
+      "exercised": true
+    },
+    {
+      "seed": 302,
+      "fault": "tool_error",
+      "strategy": "visible_retry",
+      "reward": 1.0,
+      "exercised": true
+    }
+  ],
+  "coverage": [
+    {
+      "seed": 300,
+      "fault": "empty_read",
+      "ex": 8,
+      "total": 13
+    },
+    {
+      "seed": 300,
+      "fault": "tool_error",
+      "ex": 4,
+      "total": 12
+    },
+    {
+      "seed": 300,
+      "fault": "wrong_user_id",
+      "ex": 6,
+      "total": 17
+    },
+    {
+      "seed": 301,
+      "fault": "empty_read",
+      "ex": 8,
+      "total": 12
+    },
+    {
+      "seed": 301,
+      "fault": "tool_error",
+      "ex": 6,
+      "total": 10
+    },
+    {
+      "seed": 301,
+      "fault": "wrong_user_id",
+      "ex": 6,
+      "total": 11
+    },
+    {
+      "seed": 302,
+      "fault": "empty_read",
+      "ex": 8,
+      "total": 12
+    },
+    {
+      "seed": 302,
+      "fault": "tool_error",
+      "ex": 2,
+      "total": 10
+    },
+    {
+      "seed": 302,
+      "fault": "wrong_user_id",
+      "ex": 6,
+      "total": 6
+    },
+    {
+      "seed": 303,
+      "fault": "empty_read",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 303,
+      "fault": "tool_error",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 303,
+      "fault": "wrong_user_id",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 304,
+      "fault": "empty_read",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 304,
+      "fault": "tool_error",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 304,
+      "fault": "wrong_user_id",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 305,
+      "fault": "empty_read",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 305,
+      "fault": "tool_error",
+      "ex": 0,
+      "total": 6
+    },
+    {
+      "seed": 305,
+      "fault": "wrong_user_id",
+      "ex": 0,
+      "total": 6
+    }
+  ],
+  "last_matrix": "tau-matrix-20261014T204529Z-81c4b6",
+  "total_cells": 165
+};
+const STRATS=["no_recovery","restart","visible_retry","checkpoint","source_rollback","selective","rollback_with_reflection","verbal_correction","adaptive"];
+const FAULTS=["empty_read","wrong_user_id","tool_error"];
+let mode="exercised";
+document.getElementById("meta-line").textContent=`task 0 · ${DATA.total_cells} cells from ${DATA.last_matrix.slice(0,26)}…`;
+function cls(v){if(v===null)return"cell-na";if(v>=.9)return"cell-good";if(v>=.45)return"cell-warn";return"cell-bad";}
+function buildGrid(){
+  const body=document.getElementById("tbl");body.innerHTML="";
+  for(const fault of FAULTS){
+    const tr=document.createElement("tr");
+    const td0=document.createElement("td");td0.textContent=fault;tr.appendChild(td0);
+    for(const st of STRATS){
+      const vals=DATA.cells.filter(c=>c.fault===fault&&c.strategy===st&&(mode==="all"||c.exercised)).map(c=>c.reward);
+      const td=document.createElement("td");
+      if(!vals.length){td.className="cell-na";td.textContent="—";}
+      else{const m=vals.reduce((a,b)=>a+b,0)/vals.length;td.className=cls(m);td.innerHTML=`${m.toFixed(2)}<span style="font-size:10px;opacity:.65"> n=${vals.length}</span>`;}
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+}
+function buildCov(){
+  const body=document.getElementById("cov");body.innerHTML="";
+  for(const row of DATA.coverage){
+    const pct=Math.round(row.ex/row.total*100);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${row.seed}</td><td>${row.fault}</td><td>${row.ex}/${row.total}</td><td>${pct}%<span class="cov-pct" style="width:${pct*.7}px"></span>${pct<70?"<span style='color:var(--warn);font-size:11px'> ⚠ low</span>":""}</td>`;
+    body.appendChild(tr);
+  }
+}
+function setMode(m){
+  mode=m;
+  document.querySelectorAll(".toggle-btn").forEach((b,i)=>b.classList.toggle("active",i===(m==="exercised"?0:1)));
+  document.getElementById("mode-label").textContent=m==="exercised"?"(fault_exercised=True, mean over seeds)":"(all cells including unexercised)";
+  document.getElementById("ex-note").style.display=m==="exercised"?"":"none";
+  buildGrid();
+}
+buildGrid();buildCov();
+</script>

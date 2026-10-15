@@ -4,7 +4,11 @@ All six official stages completed on October 9, 2026: IR normalization, static i
 
 ## Observed diagnosis
 
-The judge flagged failure case 2 at trace step 17: an unsupported claim about what order details could reveal, used instead of checking available information. This is a **model prediction**. The official judge output explicitly says no ground-truth comparison was available; do not report localization accuracy.
+The judge flagged failure case 2 at trace step 17: an unsupported claim about what order details could reveal, used instead of checking available information. No ground-truth file was supplied to the original run, so its raw output contains no comparison.
+
+Subsequent inspection found a released annotation for task 39 in the pinned checkout. A separate, read-only comparison of the frozen prediction found an **exact root-step match (17)** but a **category mismatch**: the judge predicted "Invention of New Information" (2), whereas the annotation labels "Intent Plan Misalignment" (5). Both released annotation copies agree and represent the same single case. [Comparison and input hashes](annotation-comparison.json) preserve the evidence without changing the raw run or making new model calls.
+
+At step 17, the assistant claims it cannot retrieve the requested address from order details instead of checking them. The released annotation identifies that decision as the root failure. This is one annotated case and one judge pass, not dataset-level accuracy, proof of a minimal recovery boundary or demonstrated recovery success. Prior benchmark exposure or overlap with upstream examples has not been excluded.
 
 The checker recorded six successful Python checks and an empty violations list. The judge's diagnosis despite that list shows why process completion and successful individual checks cannot establish complete failure-detection coverage. No recovery controller was evaluated by this diagnostic run.
 
@@ -23,6 +27,7 @@ The checker recorded six successful Python checks and an empty violations list. 
 - [Complete console output](hallucination_doubt.txt)
 - [Stage completion state](hallucination_doubt/state.json)
 - [Judge prediction](hallucination_doubt/judge_output/runs/run1.json)
+- [Post-run annotation comparison](annotation-comparison.json)
 - [Checker telemetry](hallucination_doubt/checker_results/39/telemetry_tau.json)
 - [Checker violations](hallucination_doubt/checker_results/39/violations_tau.json)
 - [Generated plot](hallucination_doubt/plots/predicted.png)

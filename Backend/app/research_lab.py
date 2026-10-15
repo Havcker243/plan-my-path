@@ -21,6 +21,9 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "logs/research-lab"
 BASELINES = ROOT / "docs/research/baselines/results"
 EVIDENCE = ROOT / "docs/research/progress-report-1/evidence"
+_WIN = sys.platform == "win32"
+_BIN = "Scripts" if _WIN else "bin"
+_EXE = ".exe" if _WIN else ""
 MODEL = "gemini-3.5-flash-lite"
 LOCK = threading.Lock()
 
@@ -154,17 +157,19 @@ def clean(text: str) -> str:
 
 def readiness(action: str) -> str | None:
     if action == "agentrx-full":
-        if not (ROOT / ".research-upstream/AgentRx/.venv/Scripts/python.exe").exists():
+        if not (ROOT / f".research-upstream/AgentRx/.venv/{_BIN}/python{_EXE}").exists():
             return "AgentRx's isolated Python environment is missing."
         if not (ROOT / ".research-upstream/AgentRx-clean-20261009/run.py").exists():
             return "The clean pinned AgentRx checkout is missing; preserve local edits and prepare the clean checkout."
-        if not shutil.which("copilot.cmd"):
+        copilot = shutil.which("copilot.cmd") or shutil.which("copilot")
+        if not copilot:
             return "GitHub Copilot CLI is not on the backend PATH. Install/sign in, then restart the backend from a fresh terminal."
-        if not (ROOT / "Backend/research/agentrx_copilot_text_only.cmd").exists():
+        wrapper = ROOT / ("Backend/research/agentrx_copilot_text_only.cmd" if _WIN else "Backend/research/agentrx_copilot_text_only.sh")
+        if not wrapper.exists():
             return "The AgentRx text-only Copilot wrapper is missing."
         return None
     if action.startswith("tau"):
-        if not (ROOT / ".research-upstream/tau-bench/.venv/Scripts/tau2.exe").exists():
+        if not (ROOT / f".research-upstream/tau-bench/.venv/{_BIN}/tau2{_EXE}").exists():
             return "Install the pinned τ-bench checkout and isolated environment (see research-lab.md)."
     if action == "agentrx-ir" and not (ROOT / ".research-upstream/AgentRx/run.py").exists():
         return "Install the pinned AgentRx checkout."

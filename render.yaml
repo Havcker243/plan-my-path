@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: Backend
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    buildCommand: bash render_build.sh
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
@@ -26,3 +26,5 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.6-flash
+      - key: RESEARCH_LAB_ENABLED
+        value: "true"

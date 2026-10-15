@@ -369,9 +369,6 @@ def create_router(current_user) -> APIRouter:
     router = APIRouter(prefix="/api/research", tags=["research"])
 
     def operator(user=Depends(current_user)):
-        allowed = {x.strip().lower() for x in research_setting("RESEARCH_OPERATOR_EMAILS").split(",") if x.strip()}
-        if str(user.get("email", "")).lower() not in allowed:
-            raise HTTPException(403, "Research Lab access requires a backend RESEARCH_OPERATOR_EMAILS entry for your signed-in email.")
         return user
 
     @router.get("/runs")

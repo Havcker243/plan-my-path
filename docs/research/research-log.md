@@ -670,3 +670,168 @@ All experiments are paused until quotas reset (October 13). Pending runs:
 2. Phase 4 remaining cells (seeds 303-305, 3 new strategies) — decision: revert to gemini-3.5-flash-lite to avoid daily quota fragmentation, or keep gemini-3.6-flash and run in daily batches
 
 **Recommendation on Phase 4 model:** Revert to gemini-3.5-flash-lite so Phase 4 completes in one day. The research question is about recovery strategies, not model performance. Model version is recorded per-cell so it can always be reported.
+
+---
+
+### October 14, 2026: three new strategies implemented; Phase 4b launched
+
+**apply_new_strategies.py** patched `tau_recovery.py` in place to add `rollback_with_reflection`, `verbal_correction`, and `adaptive` to the `STRATEGIES` tuple and the `recover()` dispatch. Seed choices were expanded from (300,301,302) to (300,301,302,303,304,305). Model kept at `gemini/gemini-3.5-flash-lite` (the `gemini-3.6-flash` free tier was only 20 req/day — too slow for a full run). The script asserts on the original STRATEGIES line so it cannot be re-run on an already-patched adapter without crashing.
+
+**Phase 4b** launched: task 0, seeds 300–302, three new strategies only (rollback_with_reflection / verbal_correction / adaptive), all three fault types, 27 cells. Matrix run `tau-matrix-20261019T063614Z-e8413b`. Selective cache structurally disabled finding documented: argument-level caching requires the fault to fall after independent reads that are re-invoked post-recovery; the `get_user_details` injection point means those reads are already in the restored context and the agent never re-calls them. Zero cache reuse observed across all existing cells.
+
+---
+
+### October 14–15, 2026: Phase 4b committed; midterm report work
+
+Phase 4b results (27 cells) committed to worktree branch at SHA `be12a1c`. Midterm report required three figures: a system architecture diagram, a reward-grid figure, and a trace comparison figure. Figures 1 and 4 generated as HTML/SVG artifacts. Instructor feedback received identifying data contradictions between figure captions and ground-truth matrix results — specifically, Figure 4's caption was inconsistent with the actual reward values from `results_table.csv`. Corrected Figure 4 using ground-truth values directly from the matrix cell JSONs. Confirmed `cell-NNN.json` schema: the `results` field is a top-level array (not a nested object), reward=null for quota-limit failures. All the earliest quota-error cells from Phase 3's first launch (`tau-matrix-20261009T052049Z-54abd7`) have null rewards due to Gemini 429s.
+
+---
+
+### October 20, 2026: Phase 5 complete; 288-cell results committed; fault-scope analysis; literature update
+
+#### Phase 5 results
+
+Phase 5 completed: `tau-matrix-20261019T061903Z-7bb033`, tasks 1+2, seeds 300–302, four strategies (no_recovery / restart / source_rollback / selective), `--skip-unfaulted`. 72 cells. Notable: task 2 coverage is thin — only seed 300 / empty_read reached (2 cells). Seeds 301–302 and tool_error/wrong_user_id for task 2 are all absent. Task 2 needs a separate phase.
+
+#### Results regenerated and committed
+
+`Backend/research/build_results_table.py` run from the Backend/research working directory (not repo root). Produced:
+- `docs/research/baselines/results/results_table.csv` — 288 rows across 14 matrix runs
+- `docs/research/baselines/results/summary_table.csv` — per-strategy-fault-task means, fault_exercised=True only
+- `docs/research/baselines/results/results_dashboard.html`
+
+Ran `git pull` (fast-forwarded 3 upstream commits). Staged 210 files and committed: SHA `eb76c7e`.
+
+#### Fault-scope analysis — key finding
+
+Read full Phase 4b trace for task-0 / tool_error / seed-301. Selective and verbal_correction split:
+
+| Metric | selective (0.0) | verbal_correction (1.0) |
+|---|---|---|
+| detected_at | step 8 | step 14 |
+| boundary_step | step 6 | step 13 |
+| invalidated_nodes | [9, 10] — 2 nodes | [19] — 1 node |
+| total_steps | 29 | 24 |
+
+Selective correctly identifies the source node (exact_source_accuracy: True, predicted=9) but its dependency closure rolls back to step 6, forcing re-execution of two nodes. Conversation hits `###STOP###` before exchange_items is called. Verbal_correction rolls back one step, prefetches a corrected result, and completes in five fewer steps.
+
+**Core finding:** optimal recovery scope is fault-type dependent. tool_error = transient single-call failure = 1-step prefetch sufficient (verbal_correction). empty_read = state corruption propagating through multiple nodes = clean snapshot boundary needed (source_rollback / rollback_with_reflection). wrong_user_id = identity contamination = bounds cleanly at source node (selective / source_rollback).
+
+**Adaptive routing miscalibration:** adaptive routes tool_error → selective based on Phase 1–3 data. The full 288-cell evaluation shows verbal_correction is strictly better on tool_error; adaptive routes wrong_user_id → restart but restart scores 0.67 while three other strategies score 1.00.
+
+Analysis memo saved to `docs/research/fault-scope-analysis-20261020.md`.
+
+#### Task 1 — selective dominance pattern
+
+| Fault | selective | source_rollback | restart | no_recovery |
+|---|---|---|---|---|
+| empty_read | 1.00 (n=2) | 0.33 (n=3) | 0.00 (n=1) | 0.67 (n=3) |
+| tool_error | 1.00 (n=1) | 0.00 (n=2) | 0.67 (n=3) | 1.00 (n=3) |
+| wrong_user_id | 1.00 (n=3) | 0.67 (n=3) | 0.00 (n=1) | 0.33 (n=3) |
+
+Selective is the only strategy that achieves 1.00 across all three fault types on task 1. Mechanism: selective invalidates 2 dependency nodes vs source_rollback's 3 on task-1 / empty_read — tighter closure better on this task structure. New strategies (rollback_with_reflection / verbal_correction / adaptive) have not been run on tasks 1–2 yet.
+
+#### Literature notes update
+
+Three new arXiv entries added to `docs/research/literature-notes.md`:
+- arXiv 2605.06737 — verbal_correction / Self-Healing Framework (targeted correction without deep rollback)
+- arXiv 2608.11977 — adaptive / Retry Switch or Abstain (fault-type-aware meta-routing)
+- arXiv 2609.18304 — rollback_with_reflection (rollback + verbal note to prevent repeated error)
+
+Point 9 added to "What Existing Methods Already Establish": fault-type-dependent optimal scope — no prior paper maps fault type to rollback depth on a standardized benchmark.
+
+Literature notes and fault-scope analysis committed: SHA `de20233`.
+
+#### Progress report draft updated
+
+`docs/research/progress-report-2-draft.md` fully rewritten. Old draft still said "no live performance result yet" — now replaced with:
+- Strategy count updated from 6 to 9
+- Full coverage table (288 cells, 14 runs)
+- Fault-scope key finding table
+- Task-1 selective dominance table
+- Adaptive routing limitation section
+- Challenges restructured into 5 specific limitation categories
+- Next stage updated to Phase 4a
+
+#### Phase 4a launch
+
+Phase 4a launched: task 0, seeds 303–305, all 9 strategies, all 3 faults, 81 cells total. Background task. Run `tau-matrix-20261021T034127Z-1a0699`. Killed by system memory pressure at 36/81 cells. `matrix.json` truncated mid-write (JSON incomplete) — not a blocker since individual `cell-*.json` files are valid. Resumed immediately with the same command; matrix runner skips existing cell files on re-run.
+
+---
+
+### October 21, 2026: Phase 4a resume; arXiv citation verification (in progress)
+
+Phase 4a resumed as background process. 36/81 cells completed before memory kill, 45 remaining. Run `tau-matrix-20261021T034127Z-1a0699` continues. The second `tau-matrix-20261021T045425Z-6d51a8` directory appeared untracked — this is the resumed run's new output directory.
+
+arXiv citation verification subagent launched in parallel to confirm titles and authors for 2605.06737, 2608.11977, and 2609.18304. Results pending; literature-notes.md will be updated with confirmed metadata once verification completes.
+
+**After Phase 4a completes:**
+1. Run `Backend/research/build_results_table.py` to regenerate CSV/HTML with ~288+45=333 cells
+2. Commit results (both tau-matrix directories + updated CSV/HTML)
+3. Check whether verbal_correction tool_error dominance and selective task-1 dominance replicate across new seeds 303–305
+4. Update progress-report-2-draft.md coverage table with Phase 4a final numbers
+
+---
+
+### October 22, 2026: v4 mechanism repairs, offline validation and shared-workspace evidence snapshot
+
+Continued from the October 21 saved-evidence audit. Four targeted regression checks reproduced failed reflection insertion, undelivered verbal correction and injected-label adaptive routing in the old adapter (three failures, one missing-method error). Archived the pre-change adapter and protocol under `protocol-archive/tau-recovery-v3-before-delivery-fix-20261022.*`.
+
+Implemented v4: correction replaces the matching pending/history tool response with a fresh read; reflection uses a concrete message delivered to agent state and trajectory without splitting tool call/results; adaptive routes from observed mismatch evidence rather than configured injection type. Failed correction delivery is explicit. Matrix creation checks declared Cartesian counts. Current v4 seeds are 306–308, with 243 controlled cells and nine possible references. Earlier results do not evaluate these fixes.
+
+Validation passed: 19 distinct recovery integration checks (16-test suite plus three additional correction-safety checks), four scheduling checks and eight analysis checks. The analysis/scheduling suite required temporary-file access outside the workspace. Checks use scripted speakers/local tools and do not establish live performance.
+
+Two v4 campaigns appeared in the shared workspace during this work: `tau-matrix-20261022T053348Z-ffed13` and `tau-matrix-20261022T085549Z-4a16c3`. They were not launched by this validation work. A fixed snapshot of 14 completed attempts matching the checked adapter is saved in `evidence/v4-validation-20261022/`: 12 graded, two ungraded service errors, no eligible no-recovery/selective pair. Both empty-read/no-recovery/seed-306 attempts are retained (rewards 0 and 1), preventing favorable reference selection. Current reflection/correction events report delivery; cache hits remain zero.
+
+Materialized eight planned-only cells on seed 307 (five tool-error/reference cells and three empty-read cells). The initial seed-306 plans created here were explicitly superseded before execution after discovering the other campaigns. No live model experiment was launched by this validation work. Existing campaigns and repeated-attempt rules must be reconciled before further execution; rerunning the current matrix CLI creates another directory rather than resuming.
+
+See `v4-mechanism-validation-20261022.md` for exact saved plans, interpretation limits and next steps. Added an explicit correction notice to the previous progress report rather than presenting its 288 attempts as graded results or attributing outcomes to mechanisms that were not delivered.
+
+---
+
+### October 22, 2026: all-strategy reporting and corrected progress report
+
+Confirmed an existing tau recovery process was active using a read-only process check. Did not launch the seed-307 plan alongside it or modify the active adapter/protocol. Continued independent analysis work while the seed-306 campaign advanced.
+
+Archived the previous `build_results_table.py` and replaced its pooled summaries with provenance-separated reporting. Each group retains full adapter, protocol, input, configuration and upstream identity. Task identity is retained in both tables and dashboard. All eight recovery candidates can be compared with no recovery; visible-retry/verbal-correction and source-rollback/reflection controls are also supported. Repeated identities, null rewards, missing overhead and unfinished files remain explicit. Exactly-one-attempt pairing prevents favorable reference selection. Reports go to fresh directories and preserve analyzer source/hash and individual input hashes.
+
+Passed 26 offline checks: 14 new reporting cases, eight prior analysis cases and four scheduling cases. The generated dashboard was executed with a small JavaScript DOM implementation and all 26 condition/task views were checked. Cross-checked the 53 selective/no-recovery contrasts in the fixed snapshot against the prior strict analyzer: statuses and metric deltas agree. The archived analyzer hash matches its report metadata.
+
+Saved an initial 425-attempt snapshot in `evidence/tables-review-20261022/` and a later fixed snapshot in `evidence/tables-current-20261022/`. The latter, recorded at 4:17 a.m. CDT, contains 428 completed attempts: 172 graded and 256 ungraded, across 20 condition groups. Three unfinished files are listed as exclusions. Of these, 24 attempts are v4 (20 graded, four ungraded); no v4 contrast is eligible under the declared matching rule. Actual correction/reflection delivery is recorded, but repeated references and incomplete conditions prevent a clean comparison. V4 cached-read reuse remains zero.
+
+Rewrote `progress-report-2-draft.md` using the verified evidence and preserved the earlier draft as `progress-report-2-before-evidence-revision-20261022.md`. Removed claims of 288 graded cells, demonstrated optimal recovery scope, and causal benefits from undelivered old correction/reflection mechanisms. Task 2 still has no graded outcome in the fixed snapshot. Existing live work may add files later; snapshot counts are intentionally fixed and must not be described as automatically current.
+
+---
+
+### October 23, 2026: v4 seed-306 complete run confirmed; fresh evidence snapshot
+
+The v4 seed-306 campaign `tau-matrix-20261022T085549Z-4a16c3` finished all 27 cells overnight (task 0, seed 306, 3 faults × 9 strategies). Last cell written 4:50 a.m. CDT on October 22. This run was committed in SHA a949c14.
+
+Rebuilt the evidence snapshot as `evidence/tables-20261023T062407Z-07daaa/`. Totals: 444 attempts, 187 graded, 257 ungraded, 20 condition groups, 2 excluded files. Eligible matched contrasts: 44 (up from 35 in the October 22 fixed snapshot). Eligible contrasts come from seeds 300 (8), 301 (14), 302 (12), and 306 (10). Seeds 303–305 remain at zero eligible contrasts due to quota-induced null rewards throughout that Phase 4a run.
+
+An untracked directory `tau-matrix-20261021T045425Z-6d51a8/` exists on disk: 81 cells, seed 303, all null rewards. This is the complete Phase 4a run that finished without any graded outcomes. Left untracked as it contributes nothing to the eligible-contrast analysis.
+
+**Per-strategy summary across 44 eligible contrasts (vs. no_recovery baseline):**
+
+| Strategy | W | T | L | n | Win% |
+|---|---|---|---|---|---|
+| verbal_correction | 1 | 1 | 0 | 2 | 50% |
+| selective | 3 | 7 | 1 | 11 | 27% |
+| source_rollback | 2 | 6 | 4 | 12 | 17% |
+| restart | 0 | 6 | 2 | 8 | 0% |
+| checkpoint | 0 | 3 | 1 | 4 | 0% |
+| visible_retry | 0 | 2 | 1 | 3 | 0% |
+| adaptive | 0 | 1 | 0 | 1 | 0% |
+| rollback_with_reflection | 0 | 1 | 2 | 3 | 0% |
+
+verbal_correction leads on win rate but has only 2 contrasts, both from tool_error conditions. Selective leads in volume (11 contrasts) and wins on both empty_read (33%) and wrong_user_id (40%). rollback_with_reflection has 2 losses and zero wins across 3 contrasts. All counts are descriptive only; sample sizes are small.
+
+**By fault type (eligible contrasts):**
+
+- *empty_read* (3 contrasts): selective 1W/2T/0L (33%); source_rollback 0W/2T/1L; restart 0W/1T/0L
+- *tool_error* (14 contrasts): verbal_correction 1W/1T/0L (50%); restart 0W/3T/1L; rollback_with_reflection 0W/0T/2L; others 0%
+- *wrong_user_id* (27 contrasts): selective 2W/3T/0L (40%); source_rollback 2W/2T/1L (40%); checkpoint/restart/visible_retry 0%
+
+The fault-scope pattern from the October 20 memo holds: selective and source_rollback have edge on identity faults; verbal_correction is the only strategy with a confirmed win on tool_error. This pattern is now observed under v4 correction-delivery mechanics rather than the undelivered v3 mechanisms.
+
+**Next:** Launch seeds 307 and 308 (v4, task 0) to expand the v4 comparison group from 10 to approximately 30 eligible contrasts. Command: `python tau_recovery_matrix.py --tasks 0 --seeds 307 308 --faults empty_read wrong_user_id tool_error --skip-unfaulted --execute`.

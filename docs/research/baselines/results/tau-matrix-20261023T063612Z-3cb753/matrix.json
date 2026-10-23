@@ -1,0 +1,268 @@
+{
+  "protocol_sha256": "cbb93242e6ef797d5792d384e0b984f3dfb9e4d95fbfeaa373cd20b7c0fc9593",
+  "adapter_sha256": "d0ffa207100eb08429e662a38ef541cebe39fc918f8d89433e88481c00c36745",
+  "status": "finished_with_failures",
+  "planned_cells": 5,
+  "cells": [
+    {
+      "task": "0",
+      "seed": 307,
+      "fault": "none",
+      "strategy": "no_recovery",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "307",
+        "--fault",
+        "none",
+        "--strategies",
+        "no_recovery",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261023T063612Z-3cb753\\cell-000.json"
+      ],
+      "started_at": "2026-10-23T06:36:12.954535+00:00",
+      "exit_code": 0,
+      "ended_at": "2026-10-23T06:37:55.319336+00:00",
+      "output": "cell-000.json"
+    },
+    {
+      "task": "0",
+      "seed": 307,
+      "fault": "tool_error",
+      "strategy": "visible_retry",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "307",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "visible_retry",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261023T063612Z-3cb753\\cell-001.json"
+      ],
+      "started_at": "2026-10-23T06:37:55.320367+00:00",
+      "exit_code": 0,
+      "ended_at": "2026-10-23T06:40:16.042653+00:00",
+      "output": "cell-001.json"
+    },
+    {
+      "task": "0",
+      "seed": 307,
+      "fault": "tool_error",
+      "strategy": "verbal_correction",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "307",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "verbal_correction",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261023T063612Z-3cb753\\cell-002.json"
+      ],
+      "started_at": "2026-10-23T06:40:16.043759+00:00",
+      "exit_code": 0,
+      "ended_at": "2026-10-23T06:42:04.229529+00:00",
+      "output": "cell-002.json"
+    },
+    {
+      "task": "0",
+      "seed": 307,
+      "fault": "tool_error",
+      "strategy": "adaptive",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "307",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "adaptive",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261023T063612Z-3cb753\\cell-003.json"
+      ],
+      "started_at": "2026-10-23T06:42:04.230553+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-23T06:42:36.924937+00:00",
+      "output": "cell-003.json"
+    },
+    {
+      "task": "0",
+      "seed": 307,
+      "fault": "tool_error",
+      "strategy": "no_recovery",
+      "command": [
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\.research-upstream\\tau-bench\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\Backend\\research\\tau_recovery.py",
+        "--task",
+        "0",
+        "--seed",
+        "307",
+        "--fault",
+        "tool_error",
+        "--strategies",
+        "no_recovery",
+        "--output",
+        "C:\\Users\\dolap\\Desktop\\Projects\\plan-my-path\\docs\\research\\baselines\\results\\tau-matrix-20261023T063612Z-3cb753\\cell-004.json"
+      ],
+      "started_at": "2026-10-23T06:42:36.925853+00:00",
+      "exit_code": 1,
+      "ended_at": "2026-10-23T06:42:48.352203+00:00",
+      "output": "cell-004.json"
+    }
+  ],
+  "full_protocol_cells": 252,
+  "protocol_definition": {
+    "protocol_id": "tau-retail-controlled-recovery-v4-observed-routing-and-delivery",
+    "amendments": [
+      {
+        "date": "2026-10-22",
+        "reason": "Offline audit found undelivered corrections, failed reflection insertion and injected-label adaptive routing",
+        "change": "New comparison group: deliver fresh corrections directly to matching model-visible tool messages, insert a concrete reflection message into agent input before an outstanding tool call, and route adaptive from observed mismatch evidence. Use fresh seeds 306-308. Old adapters and outcomes remain separate. Historical model/seed/strategy amendments below do not describe this version.",
+        "original_protocol": "docs/research/protocol-archive/tau-recovery-v3-before-delivery-fix-20261022.json",
+        "original_adapter": "docs/research/protocol-archive/tau-recovery-v3-before-delivery-fix-20261022.py",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-07",
+        "reason": "First selective attempt hit provider free-tier per-minute quota",
+        "change": "Six-second fixed delay before every agent/user generation, identical for all strategies; included in 180-second wall budget",
+        "original_protocol": "baselines/results/tau-recovery-pilot-network-20261007/protocol-v1.json",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-09",
+        "reason": "Argument-matched cache reuse needs explicit value validation and recovery-only eligibility",
+        "change": "Validate cached reads against restored identical DB, exclude detected source/error results, no pre-recovery cache hits; count validation overhead and total tool invocations",
+        "original_protocol": "docs/research/protocol-archive/tau-recovery-v2-before-verified-cache-20261009.json",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-12",
+        "reason": "Expand seed coverage to reduce variance; include tasks 1 and 2 to test generalization; upgrade agent/user model",
+        "change": "Seeds expanded from [300,301,302] to [300,301,302,303,304,305]. Tasks 1 and 2 added. Phase 4+ (seeds 303-305) and Phase 5 (tasks 1-2) use gemini/gemini-3.6-flash for both agent and user simulator; Phases 1-3 (seeds 300-302, task 0) used gemini/gemini-3.5-flash-lite. Model version is recorded per-cell in adapter_source. Phases are not pooled across model versions.",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-14",
+        "reason": "Add three literature-motivated recovery strategies to compare against original six on seeds 300-302",
+        "change": "Three new strategies added: rollback_with_reflection (source: arXiv 2609.18304 \u00e2\u20ac\u201d same rollback as source_rollback plus verbal note in restored trajectory), verbal_correction (source: arXiv 2605.06737 / Reflexion / CRITIC \u00e2\u20ac\u201d one-step rollback with corrected result pre-fetched), adaptive (source: arXiv 2608.11977 \u00e2\u20ac\u201d fault-type-aware meta-strategy routing to empirically best method). Phase 4b runs these three strategies on task 0, seeds 300-302, all 3 faults using gemini-3.5-flash-lite for direct comparison with Phases 1-3. controlled_runs_planned updated from 162 to 216 (3 tasks x 3 seeds-base x 3 faults x 9 strategies + 3 new-strategy rows for seeds 300-302). unfaulted references unchanged at 9 for task-0 base seeds.",
+        "original_outcomes_retained": true
+      }
+    ],
+    "frozen_before_first_adapter_trial": "2026-10-22",
+    "scope": "Controlled recovery extension using official released retail tasks, tools, policy and unchanged evaluator; distinct from unmodified benchmark results",
+    "task_split": "base",
+    "task_ids": [
+      "0",
+      "1",
+      "2"
+    ],
+    "seeds": [
+      306,
+      307,
+      308
+    ],
+    "faults": [
+      "empty_read",
+      "wrong_user_id",
+      "tool_error"
+    ],
+    "injection_rule": "First successful get_user_details response, one injection per run; never reinject after rollback",
+    "strategies": [
+      "no_recovery",
+      "restart",
+      "visible_retry",
+      "checkpoint",
+      "source_rollback",
+      "selective",
+      "rollback_with_reflection",
+      "verbal_correction",
+      "adaptive"
+    ],
+    "controlled_runs_planned": 243,
+    "unfaulted_reference_runs_planned": 9,
+    "pilot": {
+      "task_id": "0",
+      "seed": 306,
+      "fault": "empty_read",
+      "strategies": [
+        "no_recovery",
+        "selective"
+      ]
+    },
+    "agent": "official llm_agent",
+    "user": "official user_simulator",
+    "agent_and_user_model": "gemini/gemini-3.5-flash-lite",
+    "temperature": 0,
+    "provider_call_timeout_seconds": 45,
+    "provider_retries": 0,
+    "provider_pacing_seconds_before_each_generation": 6,
+    "attempt_step_budget": 60,
+    "max_tool_errors": 10,
+    "wall_time_seconds": 180,
+    "max_recovery_events": 1,
+    "checkpoint_interval_attempt_steps": 4,
+    "source_detector": "Earliest version-matched recorded read whose canonical content/error differs on deterministic re-execution; after at least one downstream step; hidden injection labels excluded",
+    "dependency_rule": "Model/user generations depend on observed prefix; calls depend on producing dispatch and prior writes; database-version-keyed read cache; conservative closure",
+    "safe_restore": "Retail-only in-memory copy of agent/user states, pending message/routing, trajectory, local counters and DB; global attempt/time/usage counts never reset",
+    "primary_measure": "Official evaluator reward conditional on fault exercised; also report unconditioned reward and coverage",
+    "secondary_measures": [
+      "exact source accuracy",
+      "attempt steps",
+      "tool executions",
+      "validation tool calls",
+      "cached read reuse",
+      "attempted model calls and usage",
+      "wall time",
+      "estimated attempted cost",
+      "total tool invocations including validation"
+    ],
+    "failure_reporting": "Provider/runtime/evaluator failures retained with null reward; fault not reached marked not exercised; no favorable-result replacement",
+    "analysis": "Paired task/fault/seed results, denominators and coverage; descriptive intervals only with sample counts; no significance claim from pilot",
+    "notes": [
+      "Faults are researcher-defined; public tasks/evaluator do not make the fault protocol an official recovery benchmark.",
+      "Seed does not guarantee identical provider output or deterministic paired trajectories.",
+      "Source rollback and selective recovery may coincide under conservative dependencies; do not tune faults to force an advantage.",
+      "Full matrix is planned, not yet completed. Published recovery methods are not relabeled as implemented.",
+      "v4 starts a separate comparison group. Earlier live outcomes do not evaluate corrected mechanisms. Cache-hit counts alone do not establish net work savings.",
+      "Adaptive is a fixed heuristic: observed error flag routes to verbal_correction; all other read mismatches route to source_rollback. It receives no injected fault-type label. Routing is not claimed optimal.",
+      "Verbal correction re-reads against the restored DB and replaces matching pending/history tool messages by call ID, requestor and original value. It does not guarantee repair of derived reasoning. Failed delivery is an ungraded execution failure.",
+      "Reflection is a controller-authored user message in agent state and trajectory, inserted before the outstanding assistant tool call. It is not model-generated reflection. Failed insertion is not silently ignored."
+    ],
+    "cache_reuse_rule": "After selective recovery only; exact tool/arguments/requestor/DB-hash match; saved value independently revalidated against restored DB; detected source and errors excluded; writes never cached. Equal tool outputs do not establish reasoning independence.",
+    "timeout_semantics": "Cooperative upstream timeout, not a hard deadline. Report elapsed time and overruns separately from official reward."
+  },
+  "selection": {
+    "tasks": [
+      "0"
+    ],
+    "seeds": [
+      307
+    ],
+    "faults": [
+      "tool_error"
+    ],
+    "strategies": [
+      "no_recovery",
+      "visible_retry",
+      "verbal_correction",
+      "adaptive"
+    ],
+    "include_unfaulted": true
+  }
+}

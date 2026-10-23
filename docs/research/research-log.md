@@ -835,3 +835,22 @@ verbal_correction leads on win rate but has only 2 contrasts, both from tool_err
 The fault-scope pattern from the October 20 memo holds: selective and source_rollback have edge on identity faults; verbal_correction is the only strategy with a confirmed win on tool_error. This pattern is now observed under v4 correction-delivery mechanics rather than the undelivered v3 mechanisms.
 
 **Next:** Launch seeds 307 and 308 (v4, task 0) to expand the v4 comparison group from 10 to approximately 30 eligible contrasts. Command: `python tau_recovery_matrix.py --tasks 0 --seeds 307 308 --faults empty_read wrong_user_id tool_error --skip-unfaulted --execute`.
+
+---
+
+### October 23, 2026: seeds 307-308 hit quota; 0 new eligible contrasts
+
+Launched `tau_recovery_matrix.py --tasks 0 --seeds 307 308 --faults empty_read wrong_user_id tool_error --skip-unfaulted --execute` as background task. Run completed in directory `tau-matrix-20261023T063045Z-1c99a5` (54 cells). 
+
+Result: 50 of 54 cells returned null rewards (quota exhausted after cell-003). The 4 valid cells are all seed 307, empty_read: restart=0.0, visible_retry=1.0, checkpoint=0.0, source_rollback=1.0. no_recovery is null for seed 307 (cell-008), so no eligible contrasts can form. A separate partial run `tau-matrix-20261023T063612Z-3cb753` (5 cells, different provenance group) also has valid no_recovery=0.0 for seed 307/empty_read but cannot pair with `1c99a5`.
+
+Updated evidence snapshot `tables-20261023T065710Z-a8f766`: 503 attempts, 194 graded, **44 eligible contrasts** (unchanged). Strategy rankings unchanged from the October 23 morning snapshot.
+
+**Quota pattern:** Both Phase 4a (seeds 303-305) and this run hit quota on every attempt. The Gemini free-tier exhausts after ~4 cells per day even with 6-second pacing. Seeds 307 and 308 require a different approach — either running from outside the Claude Code session (user's terminal) or using a different API key.
+
+**To retry seeds 307-308 after quota reset:**
+```
+cd Backend/research
+python tau_recovery_matrix.py --tasks 0 --seeds 307 308 --faults empty_read wrong_user_id tool_error --skip-unfaulted --execute
+```
+Run from a terminal (not within Claude Code) to avoid memory-pressure kills.

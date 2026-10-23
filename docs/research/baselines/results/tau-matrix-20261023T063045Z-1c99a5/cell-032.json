@@ -1,0 +1,311 @@
+{
+  "schema_version": 1,
+  "action": "tau-recovery",
+  "method_version": "v4-observed-routing-and-delivery",
+  "started_at": "2026-10-23T06:50:17.810590+00:00",
+  "upstream": {
+    "repository": "https://github.com/sierra-research/tau2-bench.git",
+    "commit": "4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699",
+    "local_path": ".research-upstream/tau-bench",
+    "package_version": "1.0.1",
+    "initial_scope": "official text-mode retail baseline; installation check before live evaluation",
+    "model_substitution": "Gemini if used; not matching published paper-model scores"
+  },
+  "configuration": {
+    "domain": "retail",
+    "task_set_name": null,
+    "task_split_name": "base",
+    "task_ids": null,
+    "num_tasks": null,
+    "llm_user": "gemini/gemini-3.5-flash-lite",
+    "llm_args_user": {
+      "temperature": 0,
+      "timeout": 45,
+      "num_retries": 0
+    },
+    "num_trials": 1,
+    "max_errors": 10,
+    "timeout": 180.0,
+    "save_to": null,
+    "max_concurrency": 3,
+    "workers": 0,
+    "provider_limits": null,
+    "seed": 308,
+    "log_level": "ERROR",
+    "verbose_logs": false,
+    "max_retries": 3,
+    "retry_delay": 1.0,
+    "auto_resume": false,
+    "auto_review": false,
+    "review_mode": "full",
+    "review_model": "claude-opus-4-5",
+    "hallucination_retries": 3,
+    "is_remote": false,
+    "retrieval_config": null,
+    "retrieval_config_kwargs": null,
+    "agent": "llm_agent",
+    "llm_agent": "gemini/gemini-3.5-flash-lite",
+    "llm_args_agent": {
+      "temperature": 0,
+      "timeout": 45,
+      "num_retries": 0
+    },
+    "user": "user_simulator",
+    "max_steps": 60,
+    "enforce_communication_protocol": false,
+    "text_streaming_config": null
+  },
+  "protocol": "docs/research/tau-recovery-protocol.json",
+  "task": {
+    "id": "0",
+    "description": {
+      "purpose": null,
+      "relevant_policies": null,
+      "notes": null
+    },
+    "user_scenario": {
+      "persona": null,
+      "instructions": {
+        "domain": "retail",
+        "reason_for_call": "You received your order #W2378156 and wish to exchange the mechanical keyboard for the same one but with clicky switches and the smart thermostat for one compatible with Google Home instead of Apple HomeKit. If there is no keyboard that is clicky, RGB backlight, full size, you'd go for no backlight.",
+        "known_info": "You are Yusuf Rossi in zip code 19122.",
+        "unknown_info": "You do not remember your email address.",
+        "task_instructions": "You are detail-oriented and want to make sure everything is addressed in one go."
+      }
+    },
+    "ticket": null,
+    "initial_state": null,
+    "evaluation_criteria": {
+      "actions": [
+        {
+          "action_id": "0_0",
+          "requestor": "assistant",
+          "name": "find_user_id_by_name_zip",
+          "arguments": {
+            "first_name": "Yusuf",
+            "last_name": "Rossi",
+            "zip": "19122"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_1",
+          "requestor": "assistant",
+          "name": "get_order_details",
+          "arguments": {
+            "order_id": "#W2378156"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_2",
+          "requestor": "assistant",
+          "name": "get_product_details",
+          "arguments": {
+            "product_id": "1656367028"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_3",
+          "requestor": "assistant",
+          "name": "get_product_details",
+          "arguments": {
+            "product_id": "4896585277"
+          },
+          "info": null,
+          "compare_args": null
+        },
+        {
+          "action_id": "0_4",
+          "requestor": "assistant",
+          "name": "exchange_delivered_order_items",
+          "arguments": {
+            "order_id": "#W2378156",
+            "item_ids": [
+              "1151293680",
+              "4983901480"
+            ],
+            "new_item_ids": [
+              "7706410293",
+              "7747408585"
+            ],
+            "payment_method_id": "credit_card_9513926"
+          },
+          "info": null,
+          "compare_args": null
+        }
+      ],
+      "env_assertions": null,
+      "communicate_info": [],
+      "nl_assertions": null,
+      "reward_basis": [
+        "DB",
+        "NL_ASSERTION"
+      ]
+    },
+    "issues": null,
+    "required_documents": null,
+    "user_tools": null
+  },
+  "protocol_sha256": "cbb93242e6ef797d5792d384e0b984f3dfb9e4d95fbfeaa373cd20b7c0fc9593",
+  "adapter_sha256": "d0ffa207100eb08429e662a38ef541cebe39fc918f8d89433e88481c00c36745",
+  "adapter_source": "\"\"\"Controlled recovery extension around pinned tau retail code (not a paper reproduction).\n\nRun using the upstream isolated interpreter; upstream files are never edited.\n\"\"\"\nfrom __future__ import annotations\n\nimport argparse\nfrom copy import deepcopy\nfrom datetime import datetime, timezone\nimport hashlib\nimport json\nimport os\nfrom pathlib import Path\nimport sys\nimport time\nimport uuid\n\nROOT = Path(__file__).resolve().parents[2]\nsys.path.insert(0, str(ROOT / \"Backend\"))\nfrom research.official_baselines import BASELINES, verify_checkout, redact\n\nSTRATEGIES = (\"no_recovery\", \"restart\", \"visible_retry\", \"checkpoint\", \"source_rollback\", \"selective\",\n              \"rollback_with_reflection\", \"verbal_correction\", \"adaptive\")\nFAULTS = (\"none\", \"empty_read\", \"wrong_user_id\", \"tool_error\")\nMETHOD_VERSION = \"v4-observed-routing-and-delivery\"\nFIELDS = (\"agent_state\", \"user_state\", \"trajectory\", \"message\", \"from_role\", \"to_role\", \"step_count\", \"num_errors\", \"done\", \"termination_reason\")\n\n\ndef digest(value) -> str:\n    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()\n\n\ndef closure(nodes: list[dict], roots: set[str]) -> set[str]:\n    affected = set(roots)\n    for node in nodes:  # Nodes are appended in topological execution order.\n        if affected.intersection(node[\"depends_on\"]):\n            affected.add(node[\"id\"])\n    return affected\n\n\nclass RecoveryController:\n    \"\"\"Retail-only snapshots, trace DAG, read revalidation, and bounded recovery.\n\n    Detection has no access to injection labels. It re-executes observed reads\n    only against the identical database version and compares canonical content.\n    All model/user generations conservatively depend on the observed prefix.\n    \"\"\"\n\n    def __init__(self, orchestrator, strategy: str, fault: str, max_steps: int = 60, provider_interval: float = 0):\n        if strategy not in STRATEGIES or fault not in FAULTS:\n            raise ValueError(\"Unknown method or fault\")\n        if orchestrator.environment.get_domain_name() != \"retail\" or orchestrator.environment.user_tools is not None:\n            raise ValueError(\"Adapter supports isolated retail environments only\")\n        self.o = orchestrator\n        self.strategy, self.fault, self.max_steps = strategy, fault, max_steps\n        self.nodes, self.context, self.reads, self.events, self.snapshots = [], [], [], [], []\n        self.cache = {}\n        self.verified_cache = set()\n        self.total_steps = self.tool_executions = self.validation_calls = self.cache_hits = 0\n        self.total_errors = 0\n        self.recoveries = 0\n        self.invalidated = set()\n        self.injection = None  # Scoring only; never read by detect().\n        self.detected = None\n        self.original_response = self.o.environment.get_response\n        self.o.environment.get_response = self.response\n        self.current_step = 0\n        self.provider_interval = provider_interval\n\n    def node(self, kind: str, dependencies: list[str], **data) -> str:\n        node_id = str(len(self.nodes) + 1)\n        self.nodes.append({\"id\": node_id, \"kind\": kind, \"depends_on\": list(dependencies),\n                           \"attempt_step\": self.total_steps, \"status\": \"active\", **data})\n        return node_id\n\n    def snapshot(self):\n        state = {name: getattr(self.o, name) for name in FIELDS}\n        # Copy in one operation to retain aliases between pending messages and states.\n        return {\"state\": deepcopy(state), \"db\": deepcopy(self.o.environment.tools.db),\n                \"context\": list(self.context), \"reads\": deepcopy(self.reads),\n                \"attempt_step\": self.total_steps}\n\n    def restore(self, snapshot):\n        for name, value in deepcopy(snapshot[\"state\"]).items():\n            setattr(self.o, name, value)\n        self.o.environment.tools.db = deepcopy(snapshot[\"db\"])\n        self.o.environment.sync_tools()\n        self.context, self.reads = list(snapshot[\"context\"]), deepcopy(snapshot[\"reads\"])\n        # Global steps, wall time, injection, evidence, and usage are never reset.\n\n    @staticmethod\n    def canonical(message):\n        try:\n            content = json.loads(message.content)\n        except (ValueError, TypeError):\n            content = message.content\n        return {\"content\": content, \"error\": bool(message.error)}\n\n    def response(self, call):\n        env = self.o.environment\n        before = env.get_db_hash()\n        mutates = env._is_mutating_tool(call.name)\n        key = digest([call.name, call.arguments, call.requestor, before])\n        dependencies = [self.step_node]\n        # Every call also depends on prior mutations; hashes guard cached read reuse.\n        dependencies += [n[\"id\"] for n in self.nodes if n[\"kind\"] == \"write\" and n[\"status\"] == \"active\"]\n        cached = self.cache.get(key) if self.strategy == \"selective\" and not mutates and self.recoveries else None\n        # Recovery memoization requires an exact request/version match and a\n        # separately verified response. It does not prove reasoning independence.\n        cache_safe = (cached and key in self.verified_cache\n                      and cached[\"node_id\"] != self.detected and not cached[\"response\"].error)\n        if cache_safe:\n            from tau2.utils.utils import get_now\n            result = cached[\"response\"].model_copy(update={\"id\": call.id, \"timestamp\": get_now()}, deep=True)\n            self.cache_hits += 1\n            reused = True\n        else:\n            result = self.original_response(call)\n            self.tool_executions += 1\n            reused = False\n        injected_now = False\n        if self.fault != \"none\" and self.injection is None and call.name == \"get_user_details\" and not result.error:\n            injected_now = True\n            if self.fault == \"empty_read\":\n                result = result.model_copy(update={\"content\": \"{}\"}, deep=True)\n            elif self.fault == \"wrong_user_id\":\n                payload = json.loads(result.content)\n                payload[\"user_id\"] = \"__controlled_invalid_user__\"\n                result = result.model_copy(update={\"content\": json.dumps(payload)}, deep=True)\n            else:\n                result = result.model_copy(update={\"content\": '{\"error\":\"controlled transient tool timeout\"}', \"error\": True}, deep=True)\n        node_id = self.node(\"write\" if mutates else \"read\", dependencies, tool=call.model_dump(mode=\"json\"),\n                            output=self.canonical(result), db_before=before, db_after=env.get_db_hash(),\n                            cache_hit=reused, snapshot_index=self.current_step)\n        if injected_now:\n            self.injection = {\"source_node\": node_id, \"fault\": self.fault, \"attempt_step\": self.total_steps}\n        self.total_errors += int(bool(result.error))\n        self.context.append(node_id)\n        if not mutates:\n            self.reads.append({\"node_id\": node_id, \"call\": deepcopy(call), \"response\": deepcopy(result),\n                               \"db_hash\": before, \"attempt_step\": self.total_steps,\n                               \"snapshot_index\": self.current_step, \"cache_key\": key})\n            self.cache[key] = {\"node_id\": node_id, \"response\": deepcopy(result),\n                               \"call\": deepcopy(call), \"db_hash\": before}\n            if result.error or injected_now:\n                self.verified_cache.discard(key)\n            elif self.recoveries:\n                # Fresh post-recovery reads use the trusted local tool. An\n                # already verified cache hit keeps that verification status.\n                self.verified_cache.add(key)\n        return result\n\n    def verify_recovery_cache(self):\n        \"\"\"Check saved read values against the restored DB; count all overhead.\"\"\"\n        self.verified_cache.clear()\n        current = self.o.environment.get_db_hash()\n        for key, cached in self.cache.items():\n            if (cached[\"node_id\"] == self.detected or cached[\"response\"].error\n                    or cached[\"db_hash\"] != current):\n                continue\n            fresh = self.original_response(cached[\"call\"])\n            self.validation_calls += 1\n            if not fresh.error and self.canonical(fresh) == self.canonical(cached[\"response\"]):\n                self.verified_cache.add(key)\n\n    def detect(self):\n        \"\"\"Wait until at least one subsequent orchestrator step, then revalidate.\n\n        Read versions that no longer match the current DB are not compared.\n        The source is the earliest observed mismatch, not injection metadata.\n        \"\"\"\n        current = self.o.environment.get_db_hash()\n        for read in self.reads:\n            if self.total_steps - read[\"attempt_step\"] < 2 or read[\"db_hash\"] != current:\n                continue\n            fresh = self.original_response(read[\"call\"])\n            self.validation_calls += 1\n            if self.canonical(fresh) != self.canonical(read[\"response\"]):\n                return {**read, \"revalidated_response\": deepcopy(fresh)}\n        return None\n\n    def classify_mismatch(self, suspect):\n        \"\"\"Classify observable read evidence, never experiment/injection labels.\"\"\"\n        observed = self.canonical(suspect[\"response\"])\n        fresh = self.canonical(suspect[\"revalidated_response\"])\n        if observed[\"error\"]:\n            return \"tool_error\"\n        if observed[\"content\"] == {}:\n            return \"empty_read\"\n        old, new = observed[\"content\"], fresh[\"content\"]\n        if isinstance(old, dict) and isinstance(new, dict) and old.get(\"user_id\") != new.get(\"user_id\"):\n            return \"wrong_user_id\"\n        return \"inconsistent_read\"\n\n    def deliver_reflection(self):\n        from tau2.data_model.message import UserMessage\n        # The source snapshot can have an outstanding assistant tool call.\n        # Insert before that call so no user message separates call and result.\n        note = UserMessage(role=\"user\", timestamp=self.o.message.timestamp, content=(\n            \"[System note: a tool call earlier in this conversation returned invalid data. \"\n            \"The conversation has been rolled back to just before that call. \"\n            \"Please continue normally.]\"))\n        for history in (self.o.agent_state.messages, self.o.trajectory):\n            index = next((i for i, message in enumerate(history) if message is self.o.message), len(history))\n            history.insert(index, note.model_copy(deep=True))\n        self.events[-1][\"reflection_injected\"] = True\n        self.events[-1][\"reflection_delivery\"] = \"agent_state_and_trajectory_before_pending_call\"\n\n    def deliver_correction(self, suspect):\n        from tau2.data_model.message import MultiToolMessage, ToolMessage\n        # Re-read against the restored database. Deliver directly: the latest\n        # snapshot may already contain the bad result awaiting model dispatch.\n        fresh = self.original_response(suspect[\"call\"])\n        self.tool_executions += 1\n        self.events[-1][\"verbal_correction_prefetched\"] = not fresh.error\n        if fresh.error:\n            raise RuntimeError(\"Correction read failed; no corrected value was delivered\")\n        old = suspect[\"response\"]\n        locations = set()\n\n        def replace(message, location):\n            if isinstance(message, MultiToolMessage):\n                return message.model_copy(update={\"tool_messages\": [\n                    replace(m, location) for m in message.tool_messages]}, deep=True)\n            if (isinstance(message, ToolMessage) and message.id == old.id\n                    and message.requestor == old.requestor and self.canonical(message) == self.canonical(old)):\n                locations.add(location)\n                # Retain call identity and ordering metadata for evaluator replay.\n                return message.model_copy(update={\"content\": fresh.content, \"error\": fresh.error}, deep=True)\n            return message\n\n        self.o.message = replace(self.o.message, \"pending_message\")\n        for location, history in ((\"agent_state\", self.o.agent_state.messages),\n                                  (\"user_state\", self.o.user_state.messages),\n                                  (\"trajectory\", self.o.trajectory)):\n            history[:] = [replace(message, location) for message in history]\n        delivered = bool(locations.intersection({\"pending_message\", \"agent_state\"}))\n        self.events[-1].update(correction_delivered=delivered, correction_delivery_locations=sorted(locations))\n        if not delivered:\n            raise RuntimeError(\"Correction had no matching model-visible tool response\")\n        # Preserve original observed evidence in the DAG; record the intervention\n        # separately. This does not establish that derived reasoning was repaired.\n        node = self.node(\"correction\", [suspect[\"node_id\"]], output=self.canonical(fresh),\n                         tool=suspect[\"call\"].model_dump(mode=\"json\"),\n                         db_after=self.o.environment.get_db_hash())\n        self.context.append(node)\n\n    def recover(self, suspect):\n        source = suspect[\"node_id\"]\n        affected = closure(self.nodes, {source})\n        effective = self.strategy\n        observed_kind = None\n        if self.strategy == \"adaptive\":\n            observed_kind = self.classify_mismatch(suspect)\n            # Fixed heuristic, not an oracle or a claim of optimal routing.\n            effective = \"verbal_correction\" if observed_kind == \"tool_error\" else \"source_rollback\"\n        if effective == \"restart\":\n            target = self.snapshots[0]\n            invalidated = {n[\"id\"] for n in self.nodes}\n        elif effective in (\"visible_retry\", \"verbal_correction\"):\n            target = self.snapshots[-1]\n            invalidated = {n[\"id\"] for n in self.nodes if n[\"attempt_step\"] >= target[\"attempt_step\"]}\n        elif effective == \"checkpoint\":\n            # Fixed periodic checkpoint rule, deliberately independent of source.\n            target = next(s for s in reversed(self.snapshots) if s[\"attempt_step\"] % 4 == 0)\n            invalidated = {n[\"id\"] for n in self.nodes if n[\"attempt_step\"] >= target[\"attempt_step\"]}\n        elif effective in (\"source_rollback\", \"selective\", \"rollback_with_reflection\"):\n            target = self.snapshots[suspect[\"snapshot_index\"]]\n            invalidated = affected if effective == \"selective\" else {\n                n[\"id\"] for n in self.nodes if n[\"attempt_step\"] >= target[\"attempt_step\"]}\n        else:\n            raise ValueError(\"No recovery boundary for strategy\")\n        self.invalidated.update(invalidated)\n        for node in self.nodes:\n            if node[\"id\"] in invalidated:\n                node[\"status\"] = \"invalidated\"\n        self.events.append({\"detected_at_attempt_step\": self.total_steps, \"predicted_source_node\": source,\n                            \"boundary_attempt_step\": target[\"attempt_step\"], \"invalidated_nodes\": sorted(invalidated, key=int),\n                            \"dependency_affected_nodes\": sorted(affected, key=int),\n                            \"db_hash_restored\": target[\"db\"].get_hash(),\n                            \"state_restored\": list(FIELDS) + [\"retail_db\"],\n                            \"pre_recovery_trace\": [m.model_dump(mode=\"json\") for m in self.o.trajectory]})\n        if self.strategy == \"adaptive\":\n            self.events[-1].update(effective_strategy=effective, observed_fault_type=observed_kind,\n                                   routing_evidence=\"observed_read_mismatch\")\n        self.restore(target)\n        self.recoveries += 1\n        if effective == \"selective\":\n            self.verify_recovery_cache()\n            self.events[-1][\"verified_cache_entries\"] = len(self.verified_cache)\n        elif effective == \"rollback_with_reflection\":\n            self.deliver_reflection()\n        elif effective == \"verbal_correction\":\n            self.deliver_correction(suspect)\n\n    def run(self):\n        from tau2.data_model.simulation import TerminationReason\n        from tau2.evaluator.evaluator import evaluate_simulation, EvaluationType\n        from tau2.utils.utils import get_now\n\n        self.invalidated = set()\n        self.o._run_start_time, self.o._run_start_perf = get_now(), time.perf_counter()\n        self.o.initialize()\n        finalized = False\n        try:\n            while not self.o.done:\n                if self.total_steps >= self.max_steps:\n                    self.o.done, self.o.termination_reason = True, TerminationReason.MAX_STEPS\n                    # Official finalization expects a delivery role, not a pending tool call.\n                    if self.o.to_role.value == \"env\":\n                        from tau2.orchestrator.orchestrator import Role\n                        self.o.to_role = Role.AGENT\n                    break\n                if self.detected is None and (suspect := self.detect()):\n                    self.detected = suspect[\"node_id\"]\n                    if self.strategy != \"no_recovery\":\n                        self.recover(suspect)\n                        continue\n                self.current_step = len(self.snapshots)\n                self.snapshots.append(self.snapshot())\n                self.step_node = self.node(\"dispatch\", list(self.context), recipient=str(self.o.to_role))\n                before = len(self.o.trajectory)\n                if self.o.to_role.value in (\"agent\", \"user\") and self.provider_interval:\n                    # Same fixed pacing for both participants and every strategy.\n                    time.sleep(self.provider_interval)\n                    self.o._check_timeout()\n                    if self.o.done:\n                        break\n                self.o.step()\n                added = self.o.trajectory[before:]\n                self.nodes[int(self.step_node) - 1][\"messages\"] = [m.model_dump(mode=\"json\") for m in added]\n                self.context.append(self.step_node)\n                self.total_steps += 1\n                self.o._check_termination()\n                if self.total_errors >= self.o.max_errors and self.o.to_role.value != \"env\":\n                    self.o.done, self.o.termination_reason = True, TerminationReason.TOO_MANY_ERRORS\n            simulation = self.o._finalize()\n            finalized = True\n            simulation.policy = self.o.environment.get_policy()\n            simulation.reward_info = evaluate_simulation(simulation, self.o.task, EvaluationType.ALL,\n                                                        solo_mode=False, domain=\"retail\")\n            # Sum attempted generation messages, including branches discarded on recovery.\n            messages = [m for n in self.nodes if n[\"kind\"] == \"dispatch\" for m in n.get(\"messages\", [])\n                        if m.get(\"role\") in (\"assistant\", \"user\")]\n            true_source = (self.injection or {}).get(\"source_node\")\n            return {\"strategy\": self.strategy, \"task_id\": self.o.task.id, \"seed\": self.o.seed, \"fault\": self.fault,\n                    \"reward\": simulation.reward_info.reward, \"fault_exercised\": self.injection is not None,\n                    \"recovery_success\": None if true_source is None or self.strategy == \"no_recovery\" else simulation.reward_info.reward == 1,\n                    \"exact_source_accuracy\": None if true_source is None or self.detected is None else self.detected == true_source,\n                    \"source_scoring_only\": self.injection, \"predicted_source_node\": self.detected,\n                    \"total_attempt_steps\": self.total_steps, \"tool_executions\": self.tool_executions,\n                    \"total_tool_errors\": self.total_errors,\n                    \"validation_tool_calls\": self.validation_calls, \"cached_reads_reused\": self.cache_hits,\n                    \"total_tool_invocations\": self.tool_executions + self.validation_calls,\n                    \"model_calls\": len(messages), \"attempted_usage\": [m.get(\"usage\") for m in messages],\n                    \"estimated_attempt_cost_usd\": sum(m.get(\"cost\") or 0 for m in messages),\n                    \"cost_usage_complete\": all(m.get(\"cost\") is not None and m.get(\"usage\") is not None for m in messages),\n                    \"duration\": time.perf_counter() - self.o._run_start_perf,\n                    \"termination_reason\": simulation.termination_reason.value,\n                    \"events\": self.events, \"trace\": self.nodes, \"simulation\": simulation.model_dump(mode=\"json\")}\n        finally:\n            self.o.environment.get_response = self.original_response\n            if not finalized:\n                self.o._cleanup()\n\n\ndef main():\n    os.environ.setdefault(\"LOGURU_LEVEL\", \"ERROR\")\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument(\"--task\", choices=(\"0\", \"1\", \"2\"), default=\"0\")\n    parser.add_argument(\"--seed\", type=int, choices=(306, 307, 308), default=306)\n    parser.add_argument(\"--fault\", choices=FAULTS, default=\"empty_read\")\n    parser.add_argument(\"--strategies\", nargs=\"+\", choices=STRATEGIES, default=[\"no_recovery\", \"selective\"])\n    parser.add_argument(\"--output\", required=True)\n    args = parser.parse_args()\n    lock = json.loads((BASELINES / \"upstream-lock.json\").read_text())\n    verify_checkout(lock[\"tau_bench\"])\n    from dotenv import dotenv_values\n    config = dotenv_values(ROOT / \"Backend/.env\")\n    key = os.environ.get(\"GEMINI_API_KEY\") or config.get(\"GEMINI_API_KEY\") or config.get(\"GOOGLE_API_KEY\")\n    if not key:\n        raise RuntimeError(\"Configure Gemini API key locally\")\n    os.environ[\"GEMINI_API_KEY\"] = key\n    os.environ[\"GOOGLE_API_KEY\"] = key\n    from tau2.data_model.simulation import TextRunConfig\n    from tau2.run import build_orchestrator, load_tasks\n    task = next(t for t in load_tasks(\"retail\", \"base\") if t.id == args.task)\n    model = \"gemini/gemini-3.5-flash-lite\"\n    configuration = TextRunConfig(domain=\"retail\", llm_agent=model, llm_user=model,\n                                  llm_args_agent={\"temperature\": 0, \"timeout\": 45, \"num_retries\": 0},\n                                  llm_args_user={\"temperature\": 0, \"timeout\": 45, \"num_retries\": 0},\n                                  max_steps=60, max_errors=10, timeout=180, seed=args.seed)\n    output = Path(args.output)\n    if output.exists():\n        raise FileExistsError(\"Preserve existing evidence; choose a new output path\")\n    output.parent.mkdir(parents=True, exist_ok=True)\n    record = {\"schema_version\": 1, \"action\": \"tau-recovery\", \"method_version\": METHOD_VERSION,\n              \"started_at\": datetime.now(timezone.utc).isoformat(),\n              \"upstream\": lock[\"tau_bench\"], \"configuration\": configuration.model_dump(mode=\"json\"),\n              \"protocol\": \"docs/research/tau-recovery-protocol.json\", \"task\": task.model_dump(mode=\"json\"),\n              \"protocol_sha256\": hashlib.sha256((ROOT / \"docs/research/tau-recovery-protocol.json\").read_bytes()).hexdigest(),\n              \"adapter_sha256\": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),\n              \"adapter_source\": Path(__file__).read_text(encoding=\"utf-8\"),\n              \"protocol_definition\": json.loads((ROOT / \"docs/research/tau-recovery-protocol.json\").read_text()),\n              \"input_sha256\": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()\n                               for p in (ROOT / \".research-upstream/tau-bench/data/tau2/domains/retail\").glob(\"*\")\n                               if p.name in (\"tasks.json\", \"split_tasks.json\", \"db.json\", \"policy.md\")},\n              \"limitations\": \"Controlled-fault extension on released tasks; not unchanged suite scores or a published recovery implementation. Conservative dependencies may yield no selective advantage.\",\n              \"results\": []}\n    output.write_text(redact(json.dumps(record, indent=2), os.environ), encoding=\"utf-8\")\n    for strategy in args.strategies:\n        print(f\"Task {args.task}, seed {args.seed}, fault {args.fault}, strategy {strategy}\", flush=True)\n        controller = None\n        try:\n            orch = build_orchestrator(configuration, task, seed=args.seed)\n            controller = RecoveryController(orch, strategy, args.fault, provider_interval=6)\n            row = controller.run()\n        except Exception as exc:\n            row = {\"strategy\": strategy, \"task_id\": args.task, \"seed\": args.seed, \"fault\": args.fault,\n                   \"reward\": None, \"execution_error\": redact(f\"{type(exc).__name__}: {exc}\", os.environ)}\n            if controller:\n                row.update(trace=controller.nodes, events=controller.events, source_scoring_only=controller.injection,\n                           fault_exercised=controller.injection is not None, total_attempt_steps=controller.total_steps,\n                           cost_usage_complete=False)\n        record[\"results\"].append(row)\n        record[\"ended_at\"] = datetime.now(timezone.utc).isoformat()\n        output.write_text(redact(json.dumps(record, indent=2), os.environ), encoding=\"utf-8\")\n        print(f\"Reward: {row.get('reward')}; fault exercised: {row.get('fault_exercised')}; error: {bool(row.get('execution_error'))}\", flush=True)\n    if any(r.get(\"execution_error\") for r in record[\"results\"]):\n        raise SystemExit(1)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+  "protocol_definition": {
+    "protocol_id": "tau-retail-controlled-recovery-v4-observed-routing-and-delivery",
+    "amendments": [
+      {
+        "date": "2026-10-22",
+        "reason": "Offline audit found undelivered corrections, failed reflection insertion and injected-label adaptive routing",
+        "change": "New comparison group: deliver fresh corrections directly to matching model-visible tool messages, insert a concrete reflection message into agent input before an outstanding tool call, and route adaptive from observed mismatch evidence. Use fresh seeds 306-308. Old adapters and outcomes remain separate. Historical model/seed/strategy amendments below do not describe this version.",
+        "original_protocol": "docs/research/protocol-archive/tau-recovery-v3-before-delivery-fix-20261022.json",
+        "original_adapter": "docs/research/protocol-archive/tau-recovery-v3-before-delivery-fix-20261022.py",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-07",
+        "reason": "First selective attempt hit provider free-tier per-minute quota",
+        "change": "Six-second fixed delay before every agent/user generation, identical for all strategies; included in 180-second wall budget",
+        "original_protocol": "baselines/results/tau-recovery-pilot-network-20261007/protocol-v1.json",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-09",
+        "reason": "Argument-matched cache reuse needs explicit value validation and recovery-only eligibility",
+        "change": "Validate cached reads against restored identical DB, exclude detected source/error results, no pre-recovery cache hits; count validation overhead and total tool invocations",
+        "original_protocol": "docs/research/protocol-archive/tau-recovery-v2-before-verified-cache-20261009.json",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-12",
+        "reason": "Expand seed coverage to reduce variance; include tasks 1 and 2 to test generalization; upgrade agent/user model",
+        "change": "Seeds expanded from [300,301,302] to [300,301,302,303,304,305]. Tasks 1 and 2 added. Phase 4+ (seeds 303-305) and Phase 5 (tasks 1-2) use gemini/gemini-3.6-flash for both agent and user simulator; Phases 1-3 (seeds 300-302, task 0) used gemini/gemini-3.5-flash-lite. Model version is recorded per-cell in adapter_source. Phases are not pooled across model versions.",
+        "original_outcomes_retained": true
+      },
+      {
+        "date": "2026-10-14",
+        "reason": "Add three literature-motivated recovery strategies to compare against original six on seeds 300-302",
+        "change": "Three new strategies added: rollback_with_reflection (source: arXiv 2609.18304 \u2014 same rollback as source_rollback plus verbal note in restored trajectory), verbal_correction (source: arXiv 2605.06737 / Reflexion / CRITIC \u2014 one-step rollback with corrected result pre-fetched), adaptive (source: arXiv 2608.11977 \u2014 fault-type-aware meta-strategy routing to empirically best method). Phase 4b runs these three strategies on task 0, seeds 300-302, all 3 faults using gemini-3.5-flash-lite for direct comparison with Phases 1-3. controlled_runs_planned updated from 162 to 216 (3 tasks x 3 seeds-base x 3 faults x 9 strategies + 3 new-strategy rows for seeds 300-302). unfaulted references unchanged at 9 for task-0 base seeds.",
+        "original_outcomes_retained": true
+      }
+    ],
+    "frozen_before_first_adapter_trial": "2026-10-22",
+    "scope": "Controlled recovery extension using official released retail tasks, tools, policy and unchanged evaluator; distinct from unmodified benchmark results",
+    "task_split": "base",
+    "task_ids": [
+      "0",
+      "1",
+      "2"
+    ],
+    "seeds": [
+      306,
+      307,
+      308
+    ],
+    "faults": [
+      "empty_read",
+      "wrong_user_id",
+      "tool_error"
+    ],
+    "injection_rule": "First successful get_user_details response, one injection per run; never reinject after rollback",
+    "strategies": [
+      "no_recovery",
+      "restart",
+      "visible_retry",
+      "checkpoint",
+      "source_rollback",
+      "selective",
+      "rollback_with_reflection",
+      "verbal_correction",
+      "adaptive"
+    ],
+    "controlled_runs_planned": 243,
+    "unfaulted_reference_runs_planned": 9,
+    "pilot": {
+      "task_id": "0",
+      "seed": 306,
+      "fault": "empty_read",
+      "strategies": [
+        "no_recovery",
+        "selective"
+      ]
+    },
+    "agent": "official llm_agent",
+    "user": "official user_simulator",
+    "agent_and_user_model": "gemini/gemini-3.5-flash-lite",
+    "temperature": 0,
+    "provider_call_timeout_seconds": 45,
+    "provider_retries": 0,
+    "provider_pacing_seconds_before_each_generation": 6,
+    "attempt_step_budget": 60,
+    "max_tool_errors": 10,
+    "wall_time_seconds": 180,
+    "max_recovery_events": 1,
+    "checkpoint_interval_attempt_steps": 4,
+    "source_detector": "Earliest version-matched recorded read whose canonical content/error differs on deterministic re-execution; after at least one downstream step; hidden injection labels excluded",
+    "dependency_rule": "Model/user generations depend on observed prefix; calls depend on producing dispatch and prior writes; database-version-keyed read cache; conservative closure",
+    "safe_restore": "Retail-only in-memory copy of agent/user states, pending message/routing, trajectory, local counters and DB; global attempt/time/usage counts never reset",
+    "primary_measure": "Official evaluator reward conditional on fault exercised; also report unconditioned reward and coverage",
+    "secondary_measures": [
+      "exact source accuracy",
+      "attempt steps",
+      "tool executions",
+      "validation tool calls",
+      "cached read reuse",
+      "attempted model calls and usage",
+      "wall time",
+      "estimated attempted cost",
+      "total tool invocations including validation"
+    ],
+    "failure_reporting": "Provider/runtime/evaluator failures retained with null reward; fault not reached marked not exercised; no favorable-result replacement",
+    "analysis": "Paired task/fault/seed results, denominators and coverage; descriptive intervals only with sample counts; no significance claim from pilot",
+    "notes": [
+      "Faults are researcher-defined; public tasks/evaluator do not make the fault protocol an official recovery benchmark.",
+      "Seed does not guarantee identical provider output or deterministic paired trajectories.",
+      "Source rollback and selective recovery may coincide under conservative dependencies; do not tune faults to force an advantage.",
+      "Full matrix is planned, not yet completed. Published recovery methods are not relabeled as implemented.",
+      "v4 starts a separate comparison group. Earlier live outcomes do not evaluate corrected mechanisms. Cache-hit counts alone do not establish net work savings.",
+      "Adaptive is a fixed heuristic: observed error flag routes to verbal_correction; all other read mismatches route to source_rollback. It receives no injected fault-type label. Routing is not claimed optimal.",
+      "Verbal correction re-reads against the restored DB and replaces matching pending/history tool messages by call ID, requestor and original value. It does not guarantee repair of derived reasoning. Failed delivery is an ungraded execution failure.",
+      "Reflection is a controller-authored user message in agent state and trajectory, inserted before the outstanding assistant tool call. It is not model-generated reflection. Failed insertion is not silently ignored."
+    ],
+    "cache_reuse_rule": "After selective recovery only; exact tool/arguments/requestor/DB-hash match; saved value independently revalidated against restored DB; detected source and errors excluded; writes never cached. Equal tool outputs do not establish reasoning independence.",
+    "timeout_semantics": "Cooperative upstream timeout, not a hard deadline. Report elapsed time and overruns separately from official reward."
+  },
+  "input_sha256": {
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\db.json": "dbde692e380bb4ad17f9f7841172cf1e69bebad2daa405628ccdc52a42b3b9b0",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\policy.md": "4313d3fef8acf919f555fa17fbce929cc3ed1cef2dd8f0d35ff5c8c3364de176",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\split_tasks.json": "5f9949b833e6b99584b87e84ef22f9d81789ea67a52e534c6f7aa91eff08adc7",
+    ".research-upstream\\tau-bench\\data\\tau2\\domains\\retail\\tasks.json": "f44563d8f36362e2dc58282bb02cfb85010d22f27d9439808758d3e9b2bc16d2"
+  },
+  "limitations": "Controlled-fault extension on released tasks; not unchanged suite scores or a published recovery implementation. Conservative dependencies may yield no selective advantage.",
+  "results": [
+    {
+      "strategy": "verbal_correction",
+      "task_id": "0",
+      "seed": 308,
+      "fault": "empty_read",
+      "reward": null,
+      "execution_error": "RateLimitError: litellm.RateLimitError: litellm.RateLimitError: geminiException - {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 500, model: gemini-3.5-flash-lite\\nPlease retry in 9m35.384202645s.\",\n    \"status\": \"RESOURCE_EXHAUSTED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Learn more about Gemini API quotas\",\n            \"url\": \"https://ai.google.dev/gemini-api/docs/rate-limits\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.QuotaFailure\",\n        \"violations\": [\n          {\n            \"quotaMetric\": \"generativelanguage.googleapis.com/generate_content_free_tier_requests\",\n            \"quotaId\": \"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\n            \"quotaDimensions\": {\n              \"location\": \"global\",\n              \"model\": \"gemini-3.5-flash-lite\"\n            },\n            \"quotaValue\": \"500\"\n          }\n        ]\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.RetryInfo\",\n        \"retryDelay\": \"575s\"\n      }\n    ]\n  }\n}\n",
+      "trace": [
+        {
+          "id": "1",
+          "kind": "dispatch",
+          "depends_on": [],
+          "attempt_step": 0,
+          "status": "active",
+          "recipient": "Role.USER"
+        }
+      ],
+      "events": [],
+      "source_scoring_only": null,
+      "fault_exercised": false,
+      "total_attempt_steps": 0,
+      "cost_usage_complete": false
+    }
+  ],
+  "ended_at": "2026-10-23T06:50:24.728408+00:00"
+}
